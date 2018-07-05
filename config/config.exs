@@ -22,7 +22,7 @@ config :logger, :console,
   format: "$time $metadata[$level] $message\n",
   metadata: [:user_id]
 
-config :td_bg, :phoenix_swagger,
+config :td_lm, :phoenix_swagger,
   swagger_files: %{
     "priv/static/swagger.json" => [router: TdLmWeb.Router]
  }

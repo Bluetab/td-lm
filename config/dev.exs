@@ -45,3 +45,5 @@ config :td_lm, TdLm.Repo,
   database: "td_lm_dev",
   hostname: "localhost",
   pool_size: 10
+
+  config :td_perms, redis_uri: "redis://localhost"

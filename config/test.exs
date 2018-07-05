@@ -17,3 +17,5 @@ config :td_lm, TdLm.Repo,
   database: "td_lm_test",
   hostname: "localhost",
   pool: Ecto.Adapters.SQL.Sandbox
+
+  config :td_perms, redis_uri: "redis://localhost"
