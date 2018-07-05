@@ -33,12 +33,27 @@ defmodule TdLm.Mixfile do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:phoenix, "~> 1.3.3"},
+      {:phoenix, "~> 1.3.0"},
       {:phoenix_pubsub, "~> 1.0"},
       {:phoenix_ecto, "~> 3.2"},
       {:postgrex, ">= 0.0.0"},
       {:gettext, "~> 0.11"},
-      {:cowboy, "~> 1.0"}
+      {:con_cache, "~> 0.13.0"},
+      {:cowboy, "~> 1.0"},
+      {:cabbage, git: "https://github.com/eriosv/cabbage.git"},
+      {:httpoison, "~> 1.0"},
+      {:edeliver, "~> 1.4.5"},
+      {:distillery, ">= 0.8.0", warn_missing: false},
+      {:credo, "~> 0.9.0-rc1", only: [:dev, :test], runtime: false},
+      {:guardian, "~> 1.0"},
+      {:canada, "~> 1.0.1"},
+      {:ex_machina, "~> 2.1", only: :test},
+      {:corsica, "~> 1.0"},
+      {:phoenix_swagger, "~> 0.7.0"},
+      {:ex_json_schema, "~> 0.5"},
+      {:json_diff, "~> 0.1.0"},
+      {:csv, "~> 2.0.0"},
+      {:td_perms, git: "https://github.com/Bluetab/td-perms.git"}
     ]
   end
 
