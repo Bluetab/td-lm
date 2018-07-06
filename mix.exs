@@ -43,7 +43,7 @@ defmodule TdLm.Mixfile do
       {:cabbage, git: "https://github.com/eriosv/cabbage.git"},
       {:httpoison, "~> 1.0"},
       {:edeliver, "~> 1.4.5"},
-      {:distillery, ">= 0.8.0", warn_missing: false},
+      {:distillery, ">= 0.9.0", warn_missing: false},
       {:credo, "~> 0.9.0-rc1", only: [:dev, :test], runtime: false},
       {:guardian, "~> 1.0"},
       {:canada, "~> 1.0.1"},
