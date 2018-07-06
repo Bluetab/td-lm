@@ -17,6 +17,16 @@ config :td_lm, TdLmWeb.Endpoint,
   pubsub: [name: TdLm.PubSub,
            adapter: Phoenix.PubSub.PG2]
 
+# Configures Auth module Guardian
+config :td_lm, TdLm.Auth.Guardian,
+     allowed_algos: ["HS512"], # optional
+     issuer: "tdauth",
+     ttl: { 1, :hours },
+     secret_key: "SuperSecretTruedat"
+
+
+config :td_lm, hashing_module: Comeonin.Bcrypt
+
 # Configures Elixir's Logger
 config :logger, :console,
   format: "$time $metadata[$level] $message\n",
