@@ -14,6 +14,23 @@ defmodule TdLmWeb.SwaggerDefinitions do
           properties do
             field(Schema.ref(:Field))
           end
+        end,
+      ConceptField:
+        swagger_schema do
+          title("Concept Field")
+          description("Concept Field representation")
+
+          properties do
+            id(:integer, "Concept Field Id", required: true)
+            concept(:string, "Business Concept", required: true)
+            field(:object, "Data field", required: true)
+          end
+        end,
+      ConceptFieldResponse:
+        swagger_schema do
+          properties do
+            data(Schema.ref(:ConceptField))
+          end
         end
     }
   end
