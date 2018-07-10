@@ -1,6 +1,5 @@
 defmodule TdLmWeb.ErrorView do
   use TdLmWeb, :view
-  alias Phoenix.Controller
 
   def render("401.json", _assigns) do
     %{errors: %{detail: "Invalid credentials"}}
