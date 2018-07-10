@@ -37,7 +37,9 @@ config :td_lm, :phoenix_swagger,
     "priv/static/swagger.json" => [router: TdLmWeb.Router]
  }
 
-  config :td_perms, permissions: [
+ config :td_lm, permission_resolver: TdPerms.Permissions
+
+ config :td_perms, permissions: [
     :is_admin,
     :create_acl_entry,
     :update_acl_entry,

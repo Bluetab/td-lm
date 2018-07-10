@@ -1,6 +1,8 @@
 defmodule TdLmWeb.Router do
   use TdLmWeb, :router
 
+  @endpoint_url "#{Application.get_env(:td_lm, TdLmWeb.Endpoint)[:url][:host]}:#{Application.get_env(:td_lm, TdLmWeb.Endpoint)[:url][:port]}"
+
   pipeline :api do
     plug TdLm.Auth.Pipeline.Unsecure
     plug :accepts, ["json"]
@@ -21,6 +23,11 @@ defmodule TdLmWeb.Router do
 
   scope "/api", TdLmWeb do
     pipe_through [:api, :api_secure, :api_authorized]
-    # resources "/business_concept", LinkController, except: [:new, :edit, :update] do
+    resources "/business_concept", LinkController, except: [:new, :edit, :update] do
+      get    "/fields/:concept_field_id", LinkController, :get_field
+      get    "/fields", LinkController, :get_fields
+      post   "/fields", LinkController, :add_field
+      delete "/fields/:concept_field_id", LinkController, :delete_field
+    end
   end
 end

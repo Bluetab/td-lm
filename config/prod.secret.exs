@@ -19,4 +19,10 @@ config :td_lm, TdLm.Repo,
   database: "td_lm_prod",
   pool_size: 15
 
-  config :td_perms, redis_uri: "redis://localhost"
+config :td_perms, redis_uri: "redis://localhost"
+
+config :td_lm, :audit_service, api_service: TdLmWeb.ApiServices.HttpTdAuditService,
+  audit_host: "localhost",
+  audit_port: "4007",
+  audit_domain: ""
+
