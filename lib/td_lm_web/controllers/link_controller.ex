@@ -6,6 +6,7 @@ defmodule TdLmWeb.LinkController do
   alias TdLm.Audit
   alias TdLm.ConceptFields
   alias TdLmWeb.ConceptFieldView
+  alias TdLmWeb.ErrorView
   alias TdLmWeb.SwaggerDefinitions
 
   @events %{
@@ -54,14 +55,14 @@ defmodule TdLmWeb.LinkController do
       false ->
         conn
         |> put_status(:forbidden)
-        |> render(ErrorView, :"403.json")
+        |> render(ErrorView, "403.json")
 
       error ->
         Logger.error("While adding  concept fields... #{inspect(error)}")
 
         conn
         |> put_status(:unprocessable_entity)
-        |> render(ErrorView, :"422.json")
+        |> render(ErrorView, "422.json")
     end
   end
 end

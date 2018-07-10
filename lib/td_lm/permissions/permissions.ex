@@ -9,10 +9,6 @@ defmodule TdLm.Permissions do
 
   @permission_resolver Application.get_env(:td_lm, :permission_resolver)
 
-  def get_domain_permissions(%User{jti: jti}) do
-    @permission_resolver.get_acls_by_resource_type(jti, "domain")
-  end
-
   @doc """
   Check if user has a permission in a domain.
 
