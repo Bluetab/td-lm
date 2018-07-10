@@ -30,7 +30,7 @@ defmodule TdLmWeb.LinkController do
     user = conn.assigns[:current_user]
     create_attrs = %{concept: id, field: field}
 
-    with true <- can?(user, add_field(id)),
+    with true <- can?(user, add_field(domain_id)),
      {:ok, concept_field} <- ConceptFields.create_concept_field(create_attrs) do
 
       audit = %{
