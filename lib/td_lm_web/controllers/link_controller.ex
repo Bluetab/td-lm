@@ -6,11 +6,16 @@ defmodule TdLmWeb.LinkController do
   alias TdLm.Audit
   alias TdLm.ConceptFields
   alias TdLmWeb.ConceptFieldView
+  alias TdLmWeb.SwaggerDefinitions
 
   @events %{
     add_concept_field: "add_concept_field",
     delete_concept_field: "delete_concept_field"
   }
+
+  def swagger_definitions do
+    SwaggerDefinitions.field_definitions()
+  end
 
   swagger_path :add_field do
     post("/business_concept/{business_concept_id}/fields")
