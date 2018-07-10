@@ -1,4 +1,5 @@
 defmodule TdLmWeb.SwaggerDefinitions do
+  @moduledoc false
   import PhoenixSwagger
 
   def field_definitions do
