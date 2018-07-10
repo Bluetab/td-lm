@@ -18,13 +18,14 @@ defmodule TdLmWeb.LinkController do
   end
 
   swagger_path :add_field do
-    post("/business_concept/{business_concept_id}/fields")
-    description("Updates Business Concept Version Field")
+    post("/business_concept/{business_concept_id}/domain/{domain_id}/fields")
+    description("Adds a new link between an existing business concept and a new field")
     produces("application/json")
 
     parameters do
       field(:body, Schema.ref(:AddField), "Concept field")
       business_concept_id(:path, :integer, "Business Concept ID", required: true)
+      domain_id(:path, :integer, "Domain ID", required: true)
     end
 
     response(200, "OK", Schema.ref(:ConceptFieldResponse))

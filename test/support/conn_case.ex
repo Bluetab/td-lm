@@ -16,6 +16,7 @@ defmodule TdLmWeb.ConnCase do
   use ExUnit.CaseTemplate
   alias Ecto.Adapters.SQL.Sandbox
   alias Phoenix.ConnTest
+  import TdLmWeb.Authentication, only: :functions
 
   using do
     quote do
@@ -28,12 +29,24 @@ defmodule TdLmWeb.ConnCase do
     end
   end
 
+  @admin_user_name "app-admin"
+
   setup tags do
     :ok = Sandbox.checkout(TdLm.Repo)
     unless tags[:async] do
       Sandbox.mode(TdLm.Repo, {:shared, self()})
     end
-    {:ok, conn: ConnTest.build_conn()}
+
+    cond do
+      tags[:admin_authenticated] ->
+        user = create_user(@admin_user_name, is_admin: true)
+        create_user_auth_conn(user)
+      tags[:authenticated_user] ->
+        user = create_user(tags[:authenticated_user], is_admin: false)
+        create_user_auth_conn(user)
+       true ->
+         {:ok, conn: ConnTest.build_conn()}
+    end
   end
 
 end
