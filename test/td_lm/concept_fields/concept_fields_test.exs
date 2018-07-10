@@ -5,7 +5,7 @@ defmodule TdDq.ConceptFieldsTest do
 
   describe "concept_fields" do
 
-    defp fixture_valid_concept_field() do
+    defp fixture_valid_concept_field do
       %{concept: "BC ID 1", field: %{"ou" => "World Dev Indicators", "Field" => "Series name"}}
     end
 
