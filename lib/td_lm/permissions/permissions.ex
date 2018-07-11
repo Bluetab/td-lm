@@ -18,8 +18,8 @@ defmodule TdLm.Permissions do
       false
 
   """
-  def authorized?(%User{jti: jti}, permission, domain_id) do
-    @permission_resolver.has_permission?(jti, permission, "domain", domain_id)
+  def authorized?(%User{jti: jti}, permission, resource_type, id) do
+    @permission_resolver.has_permission?(jti, permission, resource_type, id)
   end
 
 end

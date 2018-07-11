@@ -26,12 +26,8 @@ defmodule TdLmWeb.Router do
   scope "/api", TdLmWeb do
     pipe_through([:api, :api_secure, :api_authorized])
 
-    post "/business_concept/:business_concept_id/domain/:domain_id", LinkController, :add_field
-    #   get("/fields/:concept_field_id", LinkController, :get_field)
-    #   get("/fields", LinkController, :get_fields)
-    #   post("/domain/:domain_id/fields", LinkController, :add_field)
-    #   delete("/fields/:concept_field_id", LinkController, :delete_field)
-    # end
+    post "/:resource_type/:resource_id/links", LinkController, :add_link
+    get "/:resource_type/:resource_id/links", LinkController, :get_links
   end
 
   def swagger_info do

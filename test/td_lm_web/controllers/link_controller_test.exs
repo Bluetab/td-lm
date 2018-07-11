@@ -1,6 +1,7 @@
 defmodule TdLmWeb.LinkControllerTest do
   use TdLmWeb.ConnCase
   use PhoenixSwagger.SchemaTest, "priv/static/swagger.json"
+  alias TdLm.ResourceFields
   alias TdLmWeb.ApiServices.MockTdAuditService
 
   setup_all do
@@ -14,6 +15,9 @@ defmodule TdLmWeb.LinkControllerTest do
 
   @not_admin_user_name "MyNotAdminUser"
   @error_messages %{unauthorized: "Invalid authorization"}
+  @list_rs_fields [%{resource_id: 1, resource_type: "business_concept", field: %{"ou" => "World Dev Indicators 1", "Field" => "Series name 1"}},
+  %{resource_id: 1, resource_type: "business_concept", field: %{"ou" => "World Dev Indicators 2", "Field" => "Series name 2"}},
+  %{resource_id: 1, resource_type: "business_concept", field: %{"ou" => "World Dev Indicators 3", "Field" => "Series name 3"}}]
 
   describe "create link" do
     @tag :admin_authenticated
@@ -25,16 +29,17 @@ defmodule TdLmWeb.LinkControllerTest do
             conn,
             link_path(
               conn,
-              :add_field,
-              fixture_params.business_concept_id,
-              fixture_params.domain_id
+              :add_link,
+              fixture_params.resource_type,
+              fixture_params.resource_id
             ),
             field: fixture_params.field
           )
         resp = json_response(conn, 200)
-        validate_resp_schema(conn, schema, "ConceptFieldResponse")
-        {resp_bc_id, _} = Integer.parse(resp["concept"])
-        assert fixture_params.business_concept_id == resp_bc_id
+        validate_resp_schema(conn, schema, "ResourceFieldResponse")
+        {resp_rs_id, _} = Integer.parse(resp["resource_id"])
+        assert fixture_params.resource_id == resp_rs_id
+        assert fixture_params.resource_type == resp["resource_type"]
         assert fixture_params.field == resp["field"]
     end
 
@@ -47,9 +52,9 @@ defmodule TdLmWeb.LinkControllerTest do
             conn,
             link_path(
               conn,
-              :add_field,
-              fixture_params.business_concept_id,
-              fixture_params.domain_id
+              :add_link,
+              fixture_params.resource_type,
+              fixture_params.resource_id
             ),
             field: fixture_params.field
           )
@@ -59,7 +64,11 @@ defmodule TdLmWeb.LinkControllerTest do
   end
 
   defp add_request_fixture do
-    %{business_concept_id: 1, domain_id: 1, field: %{"ou" => "World Dev Indicators", "Field" => "Series name"}}
+    %{resource_id: 1, resource_type: "business_concept", field: %{"ou" => "World Dev Indicators", "Field" => "Series name"}}
   end
 
+  defp list_fixture do
+    @list_rs_fields
+      |> Enum.map(&ConceptFields.create_resource_field/&1)
+  end
 end

@@ -7,7 +7,7 @@ defmodule TdLm.Permissions.MockPermissionResolver do
   """
   alias Poision
 
-  def has_permission?(session_id, permission, resource_type, resource_id) do
+  def has_permission?(_session_id, _permission, _resource_type, _resource_id) do
     false
   end
 end
