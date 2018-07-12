@@ -27,6 +27,13 @@ defmodule TdDq.ResourceFieldsTest do
       assert result.resource_id == valid_resource_field.resource_id &&
       result.resource_type == valid_resource_field.resource_type &&
       result.field == valid_resource_field.field
+
+      result_query = ResourceFields.get_resource_field!(result.id)
+      assert result.id == result_query.id &&
+      result.resource_id == result_query.resource_id &&
+      result.resource_type == result_query.resource_type &&
+      result.field == result_query.field
+
     end
 
     test "create_resource_field/1 having not field in data returns an error" do
