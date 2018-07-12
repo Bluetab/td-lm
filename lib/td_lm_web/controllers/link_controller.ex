@@ -86,7 +86,7 @@ defmodule TdLmWeb.LinkController do
 
     with true <- can?(user, get_links(%{id: id, resource_type: resource_type})) do
       resource_fields =
-        ResourceFields.list_resource_fields(inspect(id), resource_type)
+        ResourceFields.list_resource_fields(id, resource_type)
 
       render(conn, ResourceFieldView, "resource_fields.json", resource_fields: resource_fields)
     else

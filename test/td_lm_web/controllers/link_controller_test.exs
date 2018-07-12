@@ -15,9 +15,9 @@ defmodule TdLmWeb.LinkControllerTest do
 
   @not_admin_user_name "MyNotAdminUser"
   @error_messages %{unauthorized: "Invalid authorization"}
-  @list_rs_fields [%{resource_id: 1, resource_type: "business_concept", field: %{"ou" => "World Dev Indicators 1", "Field" => "Series name 1"}},
-  %{resource_id: 1, resource_type: "business_concept", field: %{"ou" => "World Dev Indicators 2", "Field" => "Series name 2"}},
-  %{resource_id: 1, resource_type: "business_concept", field: %{"ou" => "World Dev Indicators 3", "Field" => "Series name 3"}}]
+  @list_rs_fields [%{resource_id: "1", resource_type: "business_concept", field: %{"ou" => "World Dev Indicators 1", "Field" => "Series name 1"}},
+  %{resource_id: "1", resource_type: "business_concept", field: %{"ou" => "World Dev Indicators 2", "Field" => "Series name 2"}},
+  %{resource_id: "1", resource_type: "business_concept", field: %{"ou" => "World Dev Indicators 3", "Field" => "Series name 3"}}]
 
   describe "create link" do
     @tag :admin_authenticated
@@ -63,12 +63,37 @@ defmodule TdLmWeb.LinkControllerTest do
     end
   end
 
+  describe "Query links for a given resource id and resource type" do
+    @tag :admin_authenticated
+    test "renders the list",
+      %{conn: conn, swagger_schema: schema} do
+        list_fixture()
+        target_resource_id = "1"
+        target_resource_type = "business_concept"
+        conn =
+          get(
+            conn,
+            link_path(
+              conn,
+              :get_links,
+              target_resource_type,
+              target_resource_id
+            )
+          )
+        resp = json_response(conn, 200)
+        validate_resp_schema(conn, schema, "ResourceFieldsResponse")
+        assert length(resp["data"]) == length(@list_rs_fields)
+        assert Enum.all?(resp["data"], &(&1["resource_id"] == target_resource_id))
+        assert Enum.all?(resp["data"], &(&1["resource_type"] == target_resource_type))
+    end
+  end
+
   defp add_request_fixture do
     %{resource_id: 1, resource_type: "business_concept", field: %{"ou" => "World Dev Indicators", "Field" => "Series name"}}
   end
 
   defp list_fixture do
     @list_rs_fields
-      |> Enum.map(&ConceptFields.create_resource_field/&1)
+      |> Enum.map(&(ResourceFields.create_resource_field(&1)))
   end
 end

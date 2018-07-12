@@ -5,9 +5,18 @@ defmodule TdDq.ResourceFieldsTest do
 
   describe "resource_fields" do
 
+    @list_rs_fields [%{resource_id: "1", resource_type: "business_concept", field: %{"ou" => "World Dev Indicators 1", "Field" => "Series name 1"}},
+      %{resource_id: "1", resource_type: "business_concept", field: %{"ou" => "World Dev Indicators 2", "Field" => "Series name 2"}},
+      %{resource_id: "1", resource_type: "business_concept", field: %{"ou" => "World Dev Indicators 3", "Field" => "Series name 3"}}]
+
     defp fixture_valid_resource_field do
       %{resource_id: "BC ID 1", resource_type: "business_concept",
         field: %{"ou" => "World Dev Indicators", "Field" => "Series name"}}
+    end
+
+    defp list_fixture do
+      @list_rs_fields
+        |> Enum.map(&(ResourceFields.create_resource_field(&1)))
     end
 
     test "create_resource_field/1 with valid data creates a resouce_field" do
@@ -27,5 +36,14 @@ defmodule TdDq.ResourceFieldsTest do
         |> ResourceFields.create_resource_field
     end
 
+    test "list_resource_fields/2 returns a list of fields for a given resource id" do
+      list_fixture()
+      test_id = "1"
+      resource_type = "business_concept"
+      result_list = ResourceFields.list_resource_fields(test_id, resource_type)
+      assert length(result_list) == length(@list_rs_fields)
+      assert Enum.all?(result_list, &(&1.resource_id == test_id))
+      assert Enum.all?(result_list, &(&1.resource_type == resource_type))
+    end
   end
 end
