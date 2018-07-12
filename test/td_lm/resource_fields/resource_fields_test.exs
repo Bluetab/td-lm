@@ -19,6 +19,12 @@ defmodule TdDq.ResourceFieldsTest do
         |> Enum.map(&(ResourceFields.create_resource_field(&1)))
     end
 
+    defp fixture_create_bc do
+      {:ok, result} = fixture_valid_resource_field()
+       |> ResourceFields.create_resource_field
+      result
+    end
+
     test "create_resource_field/1 with valid data creates a resouce_field" do
       valid_resource_field = fixture_valid_resource_field()
       {:ok, %ResourceField{} = result} =
@@ -51,6 +57,14 @@ defmodule TdDq.ResourceFieldsTest do
       assert length(result_list) == length(@list_rs_fields)
       assert Enum.all?(result_list, &(&1.resource_id == test_id))
       assert Enum.all?(result_list, &(&1.resource_type == resource_type))
+    end
+
+    test "delete_resource_field/1 deletes the expected resource_field" do
+      created_resource_field = fixture_create_bc()
+      test_id = "1"
+      resource_type = "business_concept"
+      ResourceFields.delete_resource_field(created_resource_field)
+      assert Enum.empty?(ResourceFields.list_resource_fields(test_id, resource_type))
     end
   end
 end

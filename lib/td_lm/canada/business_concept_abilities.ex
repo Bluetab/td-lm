@@ -16,4 +16,8 @@ defmodule TdLm.Canada.TaxonomyAbilities do
   def can?(%User{} = user, :get_link, %{id: id, resource_type: "business_concept"}) do
     Permissions.authorized?(user, :view_business_concept, "business_concept", id)
   end
+
+  def can?(%User{} = user, :delete_link, %{id: id, resource_type: "business_concept"}) do
+    Permissions.authorized?(user, :update_business_concept, "business_concept", id)
+  end
 end
