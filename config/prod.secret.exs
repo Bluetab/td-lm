@@ -17,6 +17,7 @@ config :td_lm, TdLm.Repo,
   username: "postgres",
   password: "postgres",
   database: "td_lm_prod",
+  hostname: "localhost",
   pool_size: 15
 
 config :td_perms, redis_uri: "redis://localhost"
