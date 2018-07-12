@@ -2,49 +2,49 @@ defmodule TdLmWeb.SwaggerDefinitions do
   @moduledoc false
   import PhoenixSwagger
 
-  def field_definitions do
+  def link_definitions do
     %{
       Field:
         swagger_schema do
           title("Field")
-          description("Field representation")
+          description("Link representation")
           type(:object)
         end,
-      AddField:
+        AddField:
         swagger_schema do
           properties do
             field(Schema.ref(:Field))
           end
         end,
-      ResourceFields:
+      ResourceLinks:
         swagger_schema do
-        title("Resource Fields")
-        description("A collection of resource fields")
+        title("Resource Links")
+        description("A collection of resource links")
         type(:array)
-        items(Schema.ref(:ResourceField))
+        items(Schema.ref(:ResourceLink))
       end,
-      ResourceFieldsResponse:
+      ResourceLinksResponse:
         swagger_schema do
           properties do
-            data(Schema.ref(:ResourceFields))
+            data(Schema.ref(:ResourceLinks))
           end
         end,
-      ResourceField:
+      ResourceLink:
         swagger_schema do
-          title("Resource Field")
-          description("Resource Field representation")
+          title("Resource Link")
+          description("Resource Link representation")
 
           properties do
-            id(:integer, "Resource Field Id", required: true)
+            id(:integer, "Resource Link Id", required: true)
             resource_id(:string, "Resource", required: true)
             resource_type(:string, "Resource", required: true)
-            field(:object, "Data field", required: true)
+            field(:object, "Data link", required: true)
           end
         end,
-      ResourceFieldResponse:
+      ResourceLinkResponse:
         swagger_schema do
           properties do
-            data(Schema.ref(:ResourceField))
+            data(Schema.ref(:ResourceLink))
           end
         end
     }

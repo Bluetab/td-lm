@@ -14,5 +14,13 @@ defmodule TdBg.Canada.Abilities do
     def can?(%User{} = user, :get_links, params) do
       TaxonomyAbilities.can?(user, :get_links, params)
     end
+
+    def can?(%User{} = user, :get_link, params) do
+      TaxonomyAbilities.can?(user, :get_link, params)
+    end
+
+    def can?(%User{} = user, :delete_link, params) do
+      TaxonomyAbilities.can?(user, :delete_link, params)
+    end
   end
 end

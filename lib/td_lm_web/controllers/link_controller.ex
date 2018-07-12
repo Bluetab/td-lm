@@ -4,18 +4,18 @@ defmodule TdLmWeb.LinkController do
   use TdLmWeb, :controller
   use PhoenixSwagger
   alias TdLm.Audit
-  alias TdLm.ResourceFields
+  alias TdLm.ResourceLinks
   alias TdLmWeb.ErrorView
-  alias TdLmWeb.ResourceFieldView
+  alias TdLmWeb.ResourceLinkView
   alias TdLmWeb.SwaggerDefinitions
 
   @events %{
-    add_resource_field: "add_resource_field",
-    delete_resource_field: "delete_resource_field"
+    add_resource_link: "add_resource_link",
+    delete_resource_link: "delete_resource_link"
   }
 
   def swagger_definitions do
-    SwaggerDefinitions.field_definitions()
+    SwaggerDefinitions.link_definitions()
   end
 
   swagger_path :add_link do
@@ -29,7 +29,7 @@ defmodule TdLmWeb.LinkController do
       id(:path, :string, "Resource ID", required: true)
     end
 
-    response(200, "OK", Schema.ref(:ResourceFieldResponse))
+    response(200, "OK", Schema.ref(:ResourceLinkResponse))
     response(400, "Client Error")
   end
 
@@ -38,7 +38,7 @@ defmodule TdLmWeb.LinkController do
     create_attrs = %{resource_id: id, resource_type: resource_type, field: field}
 
     with true <- can?(user, add_link(%{id: id, resource_type: resource_type})),
-         {:ok, resource_field} <- ResourceFields.create_resource_field(create_attrs) do
+         {:ok, resource_link} <- ResourceLinks.create_resource_link(create_attrs) do
       audit = %{
         "audit" => %{
           "resource_id" => id,
@@ -47,9 +47,9 @@ defmodule TdLmWeb.LinkController do
         }
       }
 
-      Audit.create_event(conn, audit, @events.add_resource_field)
+      Audit.create_event(conn, audit, @events.add_resource_link)
 
-      render(conn, ResourceFieldView, "resource_field.json", resource_field: resource_field)
+      render(conn, ResourceLinkView, "resource_link.json", resource_link: resource_link)
     else
       false ->
         conn
@@ -57,7 +57,7 @@ defmodule TdLmWeb.LinkController do
         |> render(ErrorView, "403.json")
 
       error ->
-        Logger.error("While adding  resource fields... #{inspect(error)}")
+        Logger.error("While adding resource links... #{inspect(error)}")
 
         conn
         |> put_status(:unprocessable_entity)
@@ -75,7 +75,7 @@ defmodule TdLmWeb.LinkController do
       resource_id(:path, :string, "Resource Id", required: true)
     end
 
-    response(200, "OK", Schema.ref(:ResourceFieldsResponse))
+    response(200, "OK", Schema.ref(:ResourceLinksResponse))
     response(400, "Client Error")
   end
 
@@ -83,9 +83,9 @@ defmodule TdLmWeb.LinkController do
     user = conn.assigns[:current_user]
 
     with true <- can?(user, get_links(%{id: id, resource_type: resource_type})) do
-      resource_fields = ResourceFields.list_resource_fields(id, resource_type)
+      resource_links = ResourceLinks.list_resource_links(id, resource_type)
 
-      render(conn, ResourceFieldView, "resource_fields.json", resource_fields: resource_fields)
+      render(conn, ResourceLinkView, "resource_links.json", resource_links: resource_links)
     else
       false ->
         conn
@@ -93,7 +93,7 @@ defmodule TdLmWeb.LinkController do
         |> render(ErrorView, :"403.json")
 
       error ->
-        Logger.error("While getting resource fields... #{inspect(error)}")
+        Logger.error("While getting resource links... #{inspect(error)}")
 
         conn
         |> put_status(:unprocessable_entity)
@@ -112,7 +112,7 @@ defmodule TdLmWeb.LinkController do
       field_id(:path, :integer, "ID of the field", required: true)
     end
 
-    response(200, "OK", Schema.ref(:ResourceFieldsResponse))
+    response(200, "OK", Schema.ref(:ResourceLinksResponse))
     response(400, "Client Error")
   end
 
@@ -123,9 +123,9 @@ defmodule TdLmWeb.LinkController do
       }) do
     user = conn.assigns[:current_user]
 
-    with true <- can?(user, get_field(%{id: id, resource_type: resource_type})) do
-      resource_field = ResourceFields.get_resource_field!(field_id)
-      render(conn, ResourceFieldView, "resource_field.json", resource_field: resource_field)
+    with true <- can?(user, get_link(%{id: id, resource_type: resource_type})) do
+      resource_link = ResourceLinks.get_resource_link!(field_id)
+      render(conn, ResourceLinkView, "resource_link.json", resource_link: resource_link)
     else
       false ->
         conn
@@ -133,7 +133,7 @@ defmodule TdLmWeb.LinkController do
         |> render(ErrorView, :"403.json")
 
       error ->
-        Logger.error("While getting resource field... #{inspect(error)}")
+        Logger.error("While getting resource link... #{inspect(error)}")
 
         conn
         |> put_status(:unprocessable_entity)
@@ -162,13 +162,13 @@ defmodule TdLmWeb.LinkController do
         "field_id" => field_id
       }) do
     user = conn.assigns[:current_user]
-    resource_field = ResourceFields.get_resource_field!(field_id)
+    resource_link = ResourceLinks.get_resource_link!(field_id)
 
     with true <- can?(user, delete_link(%{id: resource_id, resource_type: resource_type})) do
-      ResourceFields.delete_resource_field(resource_field)
+      ResourceLinks.delete_resource_link(resource_link)
 
       audit_payload =
-        resource_field
+        resource_link
         |> Map.drop([:__meta__])
         |> Map.from_struct()
 
@@ -180,7 +180,7 @@ defmodule TdLmWeb.LinkController do
         }
       }
 
-      Audit.create_event(conn, audit, @events.delete_resource_field)
+      Audit.create_event(conn, audit, @events.delete_resource_link)
       send_resp(conn, :no_content, "")
     else
       false ->
@@ -189,7 +189,7 @@ defmodule TdLmWeb.LinkController do
         |> render(ErrorView, :"403.json")
 
       error ->
-        Logger.error("While deleting resource field... #{inspect(error)}")
+        Logger.error("While deleting resource link... #{inspect(error)}")
 
         conn
         |> put_status(:unprocessable_entity)

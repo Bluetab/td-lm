@@ -1,7 +1,7 @@
 defmodule TdLmWeb.LinkControllerTest do
   use TdLmWeb.ConnCase
   use PhoenixSwagger.SchemaTest, "priv/static/swagger.json"
-  alias TdLm.ResourceFields
+  alias TdLm.ResourceLinks
   alias TdLmWeb.ApiServices.MockTdAuditService
   import TdLmWeb.Authentication, only: :functions
 
@@ -16,7 +16,7 @@ defmodule TdLmWeb.LinkControllerTest do
 
   @not_admin_user_name "MyNotAdminUser"
   @error_messages %{unauthorized: "Invalid authorization"}
-  @list_rs_fields [
+  @list_rs_links [
     %{
       resource_id: "1",
       resource_type: "business_concept",
@@ -55,7 +55,7 @@ defmodule TdLmWeb.LinkControllerTest do
         )
 
       resp = json_response(conn, 200)
-      validate_resp_schema(conn, schema, "ResourceFieldResponse")
+      validate_resp_schema(conn, schema, "ResourceLinkResponse")
       assert fixture_params.resource_id == resp["resource_id"]
       assert fixture_params.resource_type == resp["resource_type"]
       assert fixture_params.field == resp["field"]
@@ -101,8 +101,8 @@ defmodule TdLmWeb.LinkControllerTest do
         )
 
       resp = json_response(conn, 200)
-      validate_resp_schema(conn, schema, "ResourceFieldsResponse")
-      assert length(resp["data"]) == length(@list_rs_fields)
+      validate_resp_schema(conn, schema, "ResourceLinksResponse")
+      assert length(resp["data"]) == length(@list_rs_links)
       assert Enum.all?(resp["data"], &(&1["resource_id"] == target_resource_id))
       assert Enum.all?(resp["data"], &(&1["resource_type"] == target_resource_type))
     end
@@ -126,7 +126,7 @@ defmodule TdLmWeb.LinkControllerTest do
         )
 
       resp = json_response(conn, 200)
-      validate_resp_schema(conn, schema, "ResourceFieldResponse")
+      validate_resp_schema(conn, schema, "ResourceLinkResponse")
       assert fixture_params.resource_id == resp["resource_id"]
       assert fixture_params.resource_type == resp["resource_type"]
       assert fixture_params.field == resp["field"]
@@ -178,13 +178,13 @@ defmodule TdLmWeb.LinkControllerTest do
   defp insert_fixture do
     {_, fixture_params} =
       add_request_fixture()
-      |> ResourceFields.create_resource_field()
+      |> ResourceLinks.create_resource_link()
 
     fixture_params
   end
 
   defp list_fixture do
-    @list_rs_fields
-    |> Enum.map(&ResourceFields.create_resource_field(&1))
+    @list_rs_links
+    |> Enum.map(&ResourceLinks.create_resource_link(&1))
   end
 end
