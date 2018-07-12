@@ -29,6 +29,7 @@ defmodule TdLmWeb.Router do
     post "/:resource_type/:resource_id/links", LinkController, :add_link
     get "/:resource_type/:resource_id/links", LinkController, :get_links
     get "/:resource_type/:resource_id/links/:field_id", LinkController, :get_link
+    delete "/:resource_type/:resource_id/links/:field_id", LinkController, :delete_link
   end
 
   def swagger_info do

@@ -34,13 +34,11 @@ defmodule TdLmWeb.LinkController do
   end
 
   def add_link(conn, %{"resource_type" => resource_type, "resource_id" => id, "field" => field}) do
-
     user = conn.assigns[:current_user]
     create_attrs = %{resource_id: id, resource_type: resource_type, field: field}
 
     with true <- can?(user, add_link(%{id: id, resource_type: resource_type})),
-     {:ok, resource_field} <- ResourceFields.create_resource_field(create_attrs) do
-
+         {:ok, resource_field} <- ResourceFields.create_resource_field(create_attrs) do
       audit = %{
         "audit" => %{
           "resource_id" => id,
@@ -74,7 +72,7 @@ defmodule TdLmWeb.LinkController do
 
     parameters do
       resource_type(:path, :string, "Resource Type", required: true)
-      id(:path, :string, "Resource Id", required: true)
+      resource_id(:path, :string, "Resource Id", required: true)
     end
 
     response(200, "OK", Schema.ref(:ResourceFieldsResponse))
@@ -85,8 +83,7 @@ defmodule TdLmWeb.LinkController do
     user = conn.assigns[:current_user]
 
     with true <- can?(user, get_links(%{id: id, resource_type: resource_type})) do
-      resource_fields =
-        ResourceFields.list_resource_fields(id, resource_type)
+      resource_fields = ResourceFields.list_resource_fields(id, resource_type)
 
       render(conn, ResourceFieldView, "resource_fields.json", resource_fields: resource_fields)
     else
@@ -110,6 +107,7 @@ defmodule TdLmWeb.LinkController do
     produces("application/json")
 
     parameters do
+      resource_type(:path, :string, "Resource Type", required: true)
       resource_id(:path, :string, "ID of the Resource", required: true)
       field_id(:path, :integer, "ID of the field", required: true)
     end
@@ -136,6 +134,62 @@ defmodule TdLmWeb.LinkController do
 
       error ->
         Logger.error("While getting resource field... #{inspect(error)}")
+
+        conn
+        |> put_status(:unprocessable_entity)
+        |> render(ErrorView, :"422.json")
+    end
+  end
+
+  swagger_path :delete_link do
+    delete("/{resource_type}/{resource_id}/links/{field_id}")
+    description("Deletes the link between a resource and a given field")
+    produces("application/json")
+
+    parameters do
+      resource_type(:path, :string, "Resource Type", required: true)
+      resource_id(:path, :string, "Resource ID", required: true)
+      field_id(:path, :integer, "Field ID", required: true)
+    end
+
+    response(204, "No Content")
+    response(400, "Client Error")
+  end
+
+  def delete_link(conn, %{
+        "resource_type" => resource_type,
+        "resource_id" => resource_id,
+        "field_id" => field_id
+      }) do
+    user = conn.assigns[:current_user]
+    resource_field = ResourceFields.get_resource_field!(field_id)
+
+    with true <- can?(user, delete_link(%{id: resource_id, resource_type: resource_type})) do
+      ResourceFields.delete_resource_field(resource_field)
+
+      audit_payload =
+        resource_field
+        |> Map.drop([:__meta__])
+        |> Map.from_struct()
+
+      audit = %{
+        "audit" => %{
+          "resource_id" => resource_id,
+          "resource_type" => resource_type,
+          "payload" => audit_payload
+        }
+      }
+
+      Audit.create_event(conn, audit, @events.delete_resource_field)
+      send_resp(conn, :no_content, "")
+    else
+      false ->
+        conn
+        |> put_status(:forbidden)
+        |> render(ErrorView, :"403.json")
+
+      error ->
+        Logger.error("While deleting resource field... #{inspect(error)}")
 
         conn
         |> put_status(:unprocessable_entity)
