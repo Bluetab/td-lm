@@ -103,4 +103,43 @@ defmodule TdLmWeb.LinkController do
         |> render(ErrorView, :"422.json")
     end
   end
+
+  swagger_path :get_link do
+    get("/{resource_type}/{resource_id}/links/{field_id}")
+    description("Get field of a given resource entity")
+    produces("application/json")
+
+    parameters do
+      resource_id(:path, :string, "ID of the Resource", required: true)
+      field_id(:path, :integer, "ID of the field", required: true)
+    end
+
+    response(200, "OK", Schema.ref(:ResourceFieldsResponse))
+    response(400, "Client Error")
+  end
+
+  def get_link(conn, %{
+        "resource_id" => id,
+        "field_id" => field_id,
+        "resource_type" => resource_type
+      }) do
+    user = conn.assigns[:current_user]
+
+    with true <- can?(user, get_field(%{id: id, resource_type: resource_type})) do
+      resource_field = ResourceFields.get_resource_field!(field_id)
+      render(conn, ResourceFieldView, "resource_field.json", resource_field: resource_field)
+    else
+      false ->
+        conn
+        |> put_status(:forbidden)
+        |> render(ErrorView, :"403.json")
+
+      error ->
+        Logger.error("While getting resource field... #{inspect(error)}")
+
+        conn
+        |> put_status(:unprocessable_entity)
+        |> render(ErrorView, :"422.json")
+    end
+  end
 end
