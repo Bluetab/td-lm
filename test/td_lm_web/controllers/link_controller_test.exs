@@ -37,8 +37,7 @@ defmodule TdLmWeb.LinkControllerTest do
           )
         resp = json_response(conn, 200)
         validate_resp_schema(conn, schema, "ResourceFieldResponse")
-        {resp_rs_id, _} = Integer.parse(resp["resource_id"])
-        assert fixture_params.resource_id == resp_rs_id
+        assert fixture_params.resource_id == resp["resource_id"]
         assert fixture_params.resource_type == resp["resource_type"]
         assert fixture_params.field == resp["field"]
     end
@@ -88,8 +87,38 @@ defmodule TdLmWeb.LinkControllerTest do
     end
   end
 
+  describe "User should be able to query an existing field by its id" do
+    @tag :admin_authenticated
+    test "renders field when it is consulted by id",
+      %{conn: conn, swagger_schema: schema} do
+        fixture_params = insert_fixture()
+        conn =
+          get(
+            conn,
+            link_path(
+              conn,
+              :get_link,
+              fixture_params.resource_type,
+              fixture_params.resource_id,
+              fixture_params.id
+            )
+          )
+        resp = json_response(conn, 200)
+        validate_resp_schema(conn, schema, "ResourceFieldResponse")
+        assert fixture_params.resource_id == resp["resource_id"]
+        assert fixture_params.resource_type == resp["resource_type"]
+        assert fixture_params.field == resp["field"]
+      end
+  end
+
   defp add_request_fixture do
-    %{resource_id: 1, resource_type: "business_concept", field: %{"ou" => "World Dev Indicators", "Field" => "Series name"}}
+    %{resource_id: "1", resource_type: "business_concept", field: %{"ou" => "World Dev Indicators", "Field" => "Series name"}}
+  end
+
+  defp insert_fixture do
+    {_, fixture_params} = add_request_fixture()
+      |> ResourceFields.create_resource_field
+    fixture_params
   end
 
   defp list_fixture do
