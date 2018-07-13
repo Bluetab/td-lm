@@ -15,6 +15,7 @@ use Mix.Config
 # which you typically run after static files are built.
 config :td_lm, TdLmWeb.Endpoint,
   http: [port: 4012],
+  server: true,
   url: [host: "truedat.bluetab.net", port: 8011],
   cache_static_manifest: "priv/static/cache_manifest.json"
 
