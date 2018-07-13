@@ -26,7 +26,7 @@ defmodule TdLmWeb.LinkController do
     parameters do
       field(:body, Schema.ref(:AddField), "Resource field")
       resource_type(:path, :string, "Resource Type", required: true)
-      id(:path, :string, "Resource ID", required: true)
+      resource_id(:path, :string, "Resource ID", required: true)
     end
 
     response(200, "OK", Schema.ref(:ResourceLinkResponse))

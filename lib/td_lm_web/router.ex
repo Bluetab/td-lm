@@ -40,6 +40,7 @@ defmodule TdLmWeb.Router do
         title: "TdLm"
       },
       host: @endpoint_url,
+      basePath: "/api",
       securityDefinitions: %{
         bearer: %{
           type: "apiKey",

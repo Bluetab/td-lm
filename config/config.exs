@@ -39,6 +39,10 @@ config :td_lm, :phoenix_swagger,
 
  config :td_lm, permission_resolver: TdPerms.Permissions
 
+ config :td_lm, :audit_service,
+   protocol: "http",
+   audits_path: "/api/audits/"
+
  config :td_perms, permissions: [
     :is_admin,
     :create_acl_entry,
