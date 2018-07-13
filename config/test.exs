@@ -3,7 +3,7 @@ use Mix.Config
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
 config :td_lm, TdLmWeb.Endpoint,
-  http: [port: 4013],
+  http: [port: 4012],
   server: false
 
 # Print only warnings and errors during test

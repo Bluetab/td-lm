@@ -7,8 +7,8 @@ use Mix.Config
 # watchers to your application. For example, we use it
 # with brunch.io to recompile .js and .css sources.
 config :td_lm, TdLmWeb.Endpoint,
-  http: [port: 4013],
-  url: [host: "localhost", port: 4013],
+  http: [port: 4012],
+  url: [host: "localhost", port: 4012],
   debug_errors: true,
   code_reloader: true,
   check_origin: false,
