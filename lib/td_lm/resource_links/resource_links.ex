@@ -33,4 +33,8 @@ defmodule TdLm.ResourceLinks do
     Repo.delete(resource_link)
   end
 
+  def list_links do
+    Repo.all(ResourceLink)
+  end
+
 end

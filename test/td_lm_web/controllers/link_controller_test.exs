@@ -108,6 +108,19 @@ defmodule TdLmWeb.LinkControllerTest do
     end
   end
 
+  describe "Query all links" do
+    @tag :admin_authenticated
+    test "renders the list", %{conn: conn, swagger_schema: schema} do
+      list_fixture()
+
+      conn = get(conn, link_path(conn, :index))
+
+      resp = json_response(conn, 200)
+      validate_resp_schema(conn, schema, "ResourceLinksResponse")
+      assert length(resp["data"]) == length(@list_rs_links)
+    end
+  end
+
   describe "User should be able to query an existing link by its id" do
     @tag :admin_authenticated
     test "renders field when it is consulted by id", %{conn: conn, swagger_schema: schema} do

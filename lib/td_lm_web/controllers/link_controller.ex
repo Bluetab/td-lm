@@ -141,6 +141,25 @@ defmodule TdLmWeb.LinkController do
     end
   end
 
+  swagger_path :index do
+    get("/links")
+    description("Get all links")
+    produces("application/json")
+
+    response(200, "OK", Schema.ref(:ResourceLinksResponse))
+    response(400, "Client Error")
+  end
+  def index(conn, _params) do
+    user = conn.assigns[:current_user]
+
+    resource_links = ResourceLinks.list_links()
+      |> Enum.reduce([], fn(link, acc) ->
+          if can?(user, get_link(%{id: link.id, resource_type: link.resource_type})), do: acc ++ [link]
+      end)
+
+    render(conn, ResourceLinkView, "resource_links.json", resource_links: resource_links)
+  end
+
   swagger_path :delete_link do
     delete("/{resource_type}/{resource_id}/links/{field_id}")
     description("Deletes the link between a resource and a given field")
