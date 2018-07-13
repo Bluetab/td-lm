@@ -27,3 +27,9 @@ config :td_lm, :audit_service, api_service: TdLmWeb.ApiServices.HttpTdAuditServi
   audit_port: "4007",
   audit_domain: ""
 
+  config :td_lm, TdLm.Auth.Guardian,
+    allowed_algos: ["HS512"], # optional
+    issuer: "tdauth",
+    ttl: { 1, :hours },
+    secret_key: "SuperSecretTruedat"
+
