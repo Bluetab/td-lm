@@ -11,8 +11,8 @@ defmodule TdLmWeb.LinkController do
   alias TdLmWeb.SwaggerDefinitions
 
   @events %{
-    add_resource_link: "add_resource_link",
-    delete_resource_link: "delete_resource_link"
+    add_resource_link: "add_concept_field",
+    delete_resource_link: "delete_concept_field"
   }
 
   def swagger_definitions do
