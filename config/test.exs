@@ -25,4 +25,6 @@ config :td_lm, :audit_service, api_service: TdLmWeb.ApiServices.MockTdAuditServi
 
 config :td_lm, permission_resolver: TdLm.Permissions.MockPermissionResolver
 
+config :td_lm, cache_links_on_startup: false
+
 config :td_perms, redis_uri: "redis://localhost"
