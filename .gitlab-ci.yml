@@ -2,19 +2,18 @@ stages:
   - build
   - test
   - deploy
-  - pushToECR
 
 build:
   stage: build
   script:
-    - docker run --rm -v $(pwd):/code:ro -w /code --entrypoint=/code/ci/build.sh bluetab/amazonlinux-phoenix-postgresql:20180621095335
+    - docker run --rm -v $(pwd):/code:ro -w /code --entrypoint=/code/ci/build.sh bluetab/amazonlinux-phoenix-postgresql-redis:20180709225133
   artifacts:
     untracked: true
 
 test:
   stage: test
   script:
-    - docker run --rm -v $(pwd):/code:ro -w /code --entrypoint=/code/ci/test.sh bluetab/amazonlinux-phoenix-postgresql:20180621095335
+    - docker run --rm -v $(pwd):/code:ro -w /code --entrypoint=/code/ci/test.sh bluetab/amazonlinux-phoenix-postgresql-redis:20180709225133
   artifacts:
     untracked: true
 
@@ -33,11 +32,11 @@ deploy:
   only:
     - master
 
-pushToECR:
-  stage: pushToECR
+publish:
+  stage: deploy
   script:
     - git branch -f master HEAD
-    - export VERSION=$(cat version)
+    - export VERSION=$(grep -e '\bversion:' mix.exs | cut -d\" -f2)
     - export PROJECT_NAME=${PWD##*/}
     - export AWS_ACCESS_KEY_ID=$(echo $AWS_ACCESS_KEY_ID | sed -e "s/\//\\\\\//g")
     - export AWS_SECRET_ACCESS_KEY=$(echo $AWS_SECRET_ACCESS_KEY | sed -e "s/\//\\\\\//g")

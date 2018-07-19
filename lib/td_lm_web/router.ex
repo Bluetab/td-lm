@@ -24,6 +24,11 @@ defmodule TdLmWeb.Router do
   end
 
   scope "/api", TdLmWeb do
+    pipe_through :api
+    get  "/ping", PingController, :ping
+  end
+
+  scope "/api", TdLmWeb do
     pipe_through([:api, :api_secure, :api_authorized])
 
     post "/:resource_type/:resource_id/links", LinkController, :add_link
