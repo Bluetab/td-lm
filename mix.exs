@@ -5,7 +5,7 @@ defmodule TdLm.Mixfile do
   def project do
     [
       app: :td_lm,
-      version: "1.0.2",
+      version: "1.0.3",
       elixir: "~> 1.6",
       elixirc_paths: elixirc_paths(Mix.env),
       compilers: [:phoenix, :gettext] ++ Mix.compilers,
@@ -45,7 +45,7 @@ defmodule TdLm.Mixfile do
       {:httpoison, "~> 1.0"},
       {:edeliver, "~> 1.4.5"},
       {:distillery, ">= 0.9.0", warn_missing: false},
-      {:credo, "~> 0.9.0-rc1", only: [:dev, :test], runtime: false},
+      {:credo, "~> 0.9.3", only: [:dev, :test], runtime: false},
       {:guardian, "~> 1.0"},
       {:canada, "~> 1.0.1"},
       {:ex_machina, "~> 2.1", only: :test},
