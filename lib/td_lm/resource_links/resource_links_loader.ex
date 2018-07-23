@@ -39,9 +39,11 @@ defmodule TdLm.ResourceLinksLoader do
   @impl true
   def handle_call({:delete, field_id, resource_type, resource}, _from, state) do
     {res, q} = FieldLinkCache.delete_resource_from_link(%{
-      id: field_id,
-      resource_type: resource_type,
-      resource: resource
+      resource_origin: %{
+        resource_id: field_id,
+        resource_type: resource_type
+      },
+      resource_target: resource
     })
     Logger.info("Deleted #{q} links with result #{res}")
     {:reply, :ok, state}
@@ -75,9 +77,11 @@ defmodule TdLm.ResourceLinksLoader do
       |> Enum.map(&Map.take(&1, [:field, :resource_id, :resource_type]))
       |> Enum.map(
         &%{
-          id: &1.field["field_id"],
-          resource_type: "field",
-          resource: %{resource_id: &1.resource_id, resource_type: &1.resource_type}
+          resource_origin: %{
+            resource_id: &1.field["field_id"],
+            resource_type: "field"
+          },
+          resource_target: %{resource_id: &1.resource_id, resource_type: &1.resource_type}
         }
       )
       |> Enum.map(&FieldLinkCache.put_field_link(&1))
