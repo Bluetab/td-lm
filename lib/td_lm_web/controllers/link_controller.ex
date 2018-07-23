@@ -11,8 +11,8 @@ defmodule TdLmWeb.LinkController do
   alias TdLmWeb.SwaggerDefinitions
 
   @events %{
-    add_resource_link: "add_concept_field",
-    delete_resource_link: "delete_concept_field"
+    add_resource_link: "add_resource_field",
+    delete_resource_link: "delete_resource_field"
   }
 
   def swagger_definitions do
@@ -40,8 +40,7 @@ defmodule TdLmWeb.LinkController do
 
     with true <- can?(user, add_link(%{id: id, resource_type: resource_type})),
          {:ok, resource_link} <- ResourceLinks.create_resource_link(create_attrs) do
-
-       audit = %{
+      audit = %{
         "audit" => %{
           "resource_id" => id,
           "resource_type" => resource_type,
@@ -52,7 +51,6 @@ defmodule TdLmWeb.LinkController do
       Audit.create_event(conn, audit, @events.add_resource_link)
       ResourceLinksLoader.refresh(resource_link.id)
       render(conn, ResourceLinkView, "resource_link.json", resource_link: resource_link)
-
     else
       false ->
         conn
@@ -152,12 +150,15 @@ defmodule TdLmWeb.LinkController do
     response(200, "OK", Schema.ref(:ResourceLinksResponse))
     response(400, "Client Error")
   end
+
   def index(conn, _params) do
     user = conn.assigns[:current_user]
 
-    resource_links = ResourceLinks.list_links()
-      |> Enum.reduce([], fn(link, acc) ->
-          if can?(user, get_link(%{id: link.id, resource_type: link.resource_type})), do: acc ++ [link]
+    resource_links =
+      ResourceLinks.list_links()
+      |> Enum.reduce([], fn link, acc ->
+        if can?(user, get_link(%{id: link.id, resource_type: link.resource_type})),
+          do: acc ++ [link]
       end)
 
     render(conn, ResourceLinkView, "resource_links.json", resource_links: resource_links)
@@ -203,7 +204,12 @@ defmodule TdLmWeb.LinkController do
       }
 
       Audit.create_event(conn, audit, @events.delete_resource_link)
-      ResourceLinksLoader.delete(resource_link.field["field_id"], "field", %{resource_type: resource_type, resource_id: resource_id})
+
+      ResourceLinksLoader.delete(resource_link.field["field_id"], "field", %{
+        resource_type: resource_type,
+        resource_id: resource_id
+      })
+
       send_resp(conn, :no_content, "")
     else
       false ->
