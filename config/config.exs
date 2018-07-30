@@ -43,7 +43,7 @@ config :td_lm, :phoenix_swagger,
    protocol: "http",
    audits_path: "/api/audits/"
 
- config :td_perms, permissions: [
+   config :td_perms, permissions: [
     :is_admin,
     :create_acl_entry,
     :update_acl_entry,
@@ -63,9 +63,9 @@ config :td_lm, :phoenix_swagger,
     :reject_business_concept,
     :deprecate_business_concept,
     :manage_business_concept_alias,
+    :view_data_structure,
     :view_draft_business_concepts,
     :view_approval_pending_business_concepts,
-    :view_data_structure,
     :view_published_business_concepts,
     :view_versioned_business_concepts,
     :view_rejected_business_concepts,
