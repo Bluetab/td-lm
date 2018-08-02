@@ -1,4 +1,4 @@
-defmodule TdLm.Canada.TaxonomyAbilities do
+defmodule TdLm.Canada.BusinessConceptAbilities do
   @moduledoc false
 
   alias TdLm.Accounts.User
