@@ -91,14 +91,14 @@ defmodule TdLmWeb.LinkController do
       false ->
         conn
         |> put_status(:forbidden)
-        |> render(ErrorView, :"403.json")
+        |> render(ErrorView, "403.json")
 
       error ->
         Logger.error("While getting resource links... #{inspect(error)}")
 
         conn
         |> put_status(:unprocessable_entity)
-        |> render(ErrorView, :"422.json")
+        |> render(ErrorView, "422.json")
     end
   end
 
@@ -131,14 +131,14 @@ defmodule TdLmWeb.LinkController do
       false ->
         conn
         |> put_status(:forbidden)
-        |> render(ErrorView, :"403.json")
+        |> render(ErrorView, "403.json")
 
       error ->
         Logger.error("While getting resource link... #{inspect(error)}")
 
         conn
         |> put_status(:unprocessable_entity)
-        |> render(ErrorView, :"422.json")
+        |> render(ErrorView, "422.json")
     end
   end
 
@@ -215,14 +215,14 @@ defmodule TdLmWeb.LinkController do
       false ->
         conn
         |> put_status(:forbidden)
-        |> render(ErrorView, :"403.json")
+        |> render(ErrorView, "403.json")
 
       error ->
         Logger.error("While deleting resource link... #{inspect(error)}")
 
         conn
         |> put_status(:unprocessable_entity)
-        |> render(ErrorView, :"422.json")
+        |> render(ErrorView, "422.json")
     end
   end
 end
