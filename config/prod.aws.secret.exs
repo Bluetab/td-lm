@@ -24,8 +24,8 @@ config :td_perms, redis_uri: "${REDIS_URI}"
 
 config :td_lm, :audit_service,
   api_service: TdLmWeb.ApiServices.HttpTdAuditService,
-  auth_host: "${API_AUDIT_HOST}",
-  auth_port: "${API_AUDIT_PORT}",
+  audit_host: "${API_AUDIT_HOST}",
+  audit_port: "${API_AUDIT_PORT}",
   audit_domain: ""
 
 config :td_lm, TdLm.Auth.Guardian,
