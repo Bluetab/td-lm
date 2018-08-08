@@ -1,27 +1,35 @@
-defmodule TdLm.ResourceLinksLoader do
+defmodule TdLm.ResourceLinkLoader do
   @moduledoc """
   GenServer to load teh links into into Redis
   """
 
   use GenServer
 
+  alias Ecto.Adapters.SQL
+  alias TdLm.Repo
   alias TdLm.ResourceLinks
+  alias TdPerms.BusinessConceptCache
   alias TdPerms.FieldLinkCache
 
   require Logger
 
   @cache_links_on_startup Application.get_env(:td_lm, :cache_links_on_startup)
 
+  @count_query """
+    select resource_id as concept_id, count(*) as count
+    from resource_links group by resource_id
+  """
+
   def start_link(name \\ nil) do
     GenServer.start_link(__MODULE__, nil, name: name)
   end
 
   def refresh(link_id) do
-    GenServer.call(TdLm.ResourceLinksLoader, {:refresh, link_id})
+    GenServer.call(TdLm.ResourceLinkLoader, {:refresh, link_id})
   end
 
   def delete(field_id, resource_type, resource) do
-    GenServer.call(TdLm.ResourceLinksLoader, {:delete, field_id, resource_type, resource})
+    GenServer.call(TdLm.ResourceLinkLoader, {:delete, field_id, resource_type, resource})
   end
 
   @impl true
@@ -52,6 +60,7 @@ defmodule TdLm.ResourceLinksLoader do
   @impl true
   def handle_info(:load_link_cache, state) do
     load_all_links()
+    load_counts()
     {:noreply, state}
   end
 
@@ -93,4 +102,28 @@ defmodule TdLm.ResourceLinksLoader do
       Logger.info("Cached #{length(results)} links")
     end
   end
+
+  defp put_count(business_concept_id, count) do
+    BusinessConceptCache.put_field_values(business_concept_id, link_count: count)
+  end
+
+  defp load_counts do
+    Repo
+    |> SQL.query!(@count_query)
+    |> Map.get(:rows)
+    |> load_counts
+  end
+
+  def load_counts(counts) do
+    results = counts
+    |> Enum.map(&put_count(Enum.at(&1, 0), Enum.at(&1, 1)))
+    |> Enum.map(fn {res, _} -> res end)
+
+    if Enum.any?(results, &(&1 != :ok)) do
+      Logger.warn("Cache loading failed")
+    else
+      Logger.info("Cached #{length(results)} resource link counts")
+    end
+  end
+
 end

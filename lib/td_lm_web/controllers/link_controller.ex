@@ -4,8 +4,8 @@ defmodule TdLmWeb.LinkController do
   use TdLmWeb, :controller
   use PhoenixSwagger
   alias TdLm.Audit
+  alias TdLm.ResourceLinkLoader
   alias TdLm.ResourceLinks
-  alias TdLm.ResourceLinksLoader
   alias TdLmWeb.ErrorView
   alias TdLmWeb.ResourceLinkView
   alias TdLmWeb.SwaggerDefinitions
@@ -49,7 +49,7 @@ defmodule TdLmWeb.LinkController do
       }
 
       Audit.create_event(conn, audit, @events.add_resource_link)
-      ResourceLinksLoader.refresh(resource_link.id)
+      ResourceLinkLoader.refresh(resource_link.id)
       render(conn, ResourceLinkView, "resource_link.json", resource_link: resource_link)
     else
       false ->
@@ -205,7 +205,7 @@ defmodule TdLmWeb.LinkController do
 
       Audit.create_event(conn, audit, @events.delete_resource_link)
 
-      ResourceLinksLoader.delete(resource_link.field["field_id"], "field", %{
+      ResourceLinkLoader.delete(resource_link.field["field_id"], "field", %{
         resource_type: resource_type,
         resource_id: resource_id
       })
