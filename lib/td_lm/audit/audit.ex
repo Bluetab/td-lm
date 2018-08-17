@@ -20,7 +20,7 @@ defmodule TdLm.Audit do
   end
 
   def add_user_info(conn, %{"audit" => event_params}) do
-    current_user = conn.assigns[:current_user]
+    current_user = conn.assigns[:current_resource]
     event_params =
       event_params
       |> Map.put("user_id", current_user.id)

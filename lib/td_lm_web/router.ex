@@ -15,7 +15,7 @@ defmodule TdLmWeb.Router do
   end
 
   pipeline :api_authorized do
-    plug(TdLm.Auth.CurrentUser)
+    plug(TdLm.Auth.CurrentResource)
     plug(Guardian.Plug.LoadResource)
   end
 
@@ -33,8 +33,8 @@ defmodule TdLmWeb.Router do
 
     post "/:resource_type/:resource_id/links", LinkController, :add_link
     get "/:resource_type/:resource_id/links", LinkController, :get_links
-    get "/:resource_type/:resource_id/links/:field_id", LinkController, :get_link
-    delete "/:resource_type/:resource_id/links/:field_id", LinkController, :delete_link
+    get "/:resource_type/:resource_id/links/:id", LinkController, :get_link
+    delete "/:resource_type/:resource_id/links/:id", LinkController, :delete_link
     get "/links", LinkController, :index
   end
 

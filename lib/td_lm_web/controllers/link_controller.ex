@@ -1,5 +1,6 @@
 defmodule TdLmWeb.LinkController do
   require Logger
+  use TdHypermedia, :controller
   import Canada, only: [can?: 2]
   use TdLmWeb, :controller
   use PhoenixSwagger
@@ -35,10 +36,10 @@ defmodule TdLmWeb.LinkController do
   end
 
   def add_link(conn, %{"resource_type" => resource_type, "resource_id" => id, "field" => field}) do
-    user = conn.assigns[:current_user]
+    user = conn.assigns[:current_resource]
     create_attrs = %{resource_id: id, resource_type: resource_type, field: field}
 
-    with true <- can?(user, add_link(%{id: id, resource_type: resource_type})),
+    with true <- can?(user, add_link(%{resource_id: id, resource_type: resource_type})),
          {:ok, resource_link} <- ResourceLinks.create_resource_link(create_attrs) do
       audit = %{
         "audit" => %{
@@ -81,12 +82,18 @@ defmodule TdLmWeb.LinkController do
   end
 
   def get_links(conn, %{"resource_id" => id, "resource_type" => resource_type}) do
-    user = conn.assigns[:current_user]
+    user = conn.assigns[:current_resource]
 
-    with true <- can?(user, get_links(%{id: id, resource_type: resource_type})) do
+    with true <- can?(user, get_links(%{resource_id: id, resource_type: resource_type})) do
       resource_links = ResourceLinks.list_resource_links(id, resource_type)
+      link_resource = %{resource_type: resource_type, resource_id: id}
 
-      render(conn, ResourceLinkView, "resource_links.json", resource_links: resource_links)
+      render(conn,
+        ResourceLinkView,
+        "resource_links.json",
+        #hypermedia: collection_hypermedia("link", conn, resource_links, ResourceLink),
+        hypermedia: collection_hypermedia("link", conn, resource_links, link_resource),
+        resource_links: resource_links)
     else
       false ->
         conn
@@ -103,14 +110,14 @@ defmodule TdLmWeb.LinkController do
   end
 
   swagger_path :get_link do
-    get("/{resource_type}/{resource_id}/links/{field_id}")
+    get("/{resource_type}/{resource_id}/links/{id}")
     description("Get field of a given resource entity")
     produces("application/json")
 
     parameters do
       resource_type(:path, :string, "Resource Type", required: true)
       resource_id(:path, :string, "ID of the Resource", required: true)
-      field_id(:path, :integer, "ID of the field", required: true)
+      id(:path, :integer, "ID of the link", required: true)
     end
 
     response(200, "OK", Schema.ref(:ResourceLinksResponse))
@@ -118,14 +125,14 @@ defmodule TdLmWeb.LinkController do
   end
 
   def get_link(conn, %{
-        "resource_id" => id,
-        "field_id" => field_id,
-        "resource_type" => resource_type
+        "resource_type" => resource_type,
+        "resource_id" => resource_id,
+        "id" => id
       }) do
-    user = conn.assigns[:current_user]
+    user = conn.assigns[:current_resource]
 
-    with true <- can?(user, get_link(%{id: id, resource_type: resource_type})) do
-      resource_link = ResourceLinks.get_resource_link!(field_id)
+    with true <- can?(user, get_link(%{resource_id: resource_id, resource_type: resource_type})) do
+      resource_link = ResourceLinks.get_resource_link!(id)
       render(conn, ResourceLinkView, "resource_link.json", resource_link: resource_link)
     else
       false ->
@@ -152,7 +159,7 @@ defmodule TdLmWeb.LinkController do
   end
 
   def index(conn, _params) do
-    user = conn.assigns[:current_user]
+    user = conn.assigns[:current_resource]
 
     resource_links =
       ResourceLinks.list_links()
@@ -161,18 +168,21 @@ defmodule TdLmWeb.LinkController do
           do: acc ++ [link]
       end)
 
-    render(conn, ResourceLinkView, "resource_links.json", resource_links: resource_links)
+      render(conn,
+        ResourceLinkView,
+        "resource_links.json",
+        resource_links: resource_links)
   end
 
   swagger_path :delete_link do
-    delete("/{resource_type}/{resource_id}/links/{field_id}")
+    delete("/{resource_type}/{resource_id}/links/{id}")
     description("Deletes the link between a resource and a given field")
     produces("application/json")
 
     parameters do
       resource_type(:path, :string, "Resource Type", required: true)
       resource_id(:path, :string, "Resource ID", required: true)
-      field_id(:path, :integer, "Field ID", required: true)
+      field_id(:path, :integer, "Link ID", required: true)
     end
 
     response(204, "No Content")
@@ -182,12 +192,12 @@ defmodule TdLmWeb.LinkController do
   def delete_link(conn, %{
         "resource_type" => resource_type,
         "resource_id" => resource_id,
-        "field_id" => field_id
+        "id" => id
       }) do
-    user = conn.assigns[:current_user]
-    resource_link = ResourceLinks.get_resource_link!(field_id)
+    user = conn.assigns[:current_resource]
+    resource_link = ResourceLinks.get_resource_link!(id)
 
-    with true <- can?(user, delete_link(%{id: resource_id, resource_type: resource_type})) do
+    with true <- can?(user, delete_link(%{resource_id: resource_id, resource_type: resource_type})) do
       ResourceLinks.delete_resource_link(resource_link)
 
       audit_payload =

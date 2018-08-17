@@ -12,19 +12,20 @@ defmodule TdLm.Canada.BusinessConceptAbilities do
                           :view_rejected_business_concepts,
                           :view_versioned_business_concepts]
 
-  def can?(%User{} = user, :add_link, %{id: id, resource_type: "business_concept"}) do
-    Permissions.authorized?(user, :create_business_concept_link, "business_concept", id)
+  def can?(%User{} = user, :add_link, %{resource_id: id, resource_type: "business_concept"}) do
+    Permissions.authorized?(user, :manage_business_concept_links, "business_concept", id)
   end
 
-  def can?(%User{} = user, :get_links, %{id: id, resource_type: "business_concept"}) do
+  def can?(%User{} = user, :get_links, %{resource_id: id, resource_type: "business_concept"}) do
     Permissions.authorized_any?(user, @view_business_concept, "business_concept", id)
   end
 
-  def can?(%User{} = user, :get_link, %{id: id, resource_type: "business_concept"}) do
+  def can?(%User{} = user, :get_link, %{resource_id: id, resource_type: "business_concept"}) do
     Permissions.authorized_any?(user, @view_business_concept, "business_concept", id)
   end
 
-  def can?(%User{} = user, :delete_link, %{id: id, resource_type: "business_concept"}) do
-    Permissions.authorized?(user, :delete_business_concept_link, "business_concept", id)
+  def can?(%User{} = user, :delete_link, %{resource_id: id, resource_type: "business_concept"}) do
+    Permissions.authorized?(user, :manage_business_concept_links, "business_concept", id)
   end
+
 end
