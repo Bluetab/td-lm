@@ -71,7 +71,7 @@ config :td_lm, :phoenix_swagger,
     :view_rejected_business_concepts,
     :view_deprecated_business_concepts,
     :manage_business_concept_links,
-    :create_quality_rule
+    :manage_quality_rule
   ]
 
 config :td_lm, cache_links_on_startup: true
