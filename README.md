@@ -1,4 +1,4 @@
-# /truedat Data Dictionary
+# /truedat Link Manager
 
 TdLM is a back-end service developed as part of truedat project that supports the management of objects linkage between services
 
