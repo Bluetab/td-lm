@@ -5,7 +5,7 @@ defmodule TdLm.Mixfile do
   def project do
     [
       app: :td_lm,
-      version: "1.0.3",
+      version: "2.6.0",
       elixir: "~> 1.6",
       elixirc_paths: elixirc_paths(Mix.env),
       compilers: [:phoenix, :gettext] ++ Mix.compilers,
