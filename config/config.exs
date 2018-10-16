@@ -72,7 +72,7 @@ config :td_lm, :phoenix_swagger,
    :view_deprecated_business_concepts,
    :manage_business_concept_links,
    :manage_quality_rule,
-   :view_confidential_business_concepts
+   :manage_confidential_business_concepts
  ]
 
 config :td_lm, cache_links_on_startup: true
