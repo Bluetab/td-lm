@@ -5,7 +5,7 @@ defmodule TdLm.Mixfile do
   def project do
     [
       app: :td_lm,
-      version: case System.get_env("APP_VERSION") do nil -> "2.6.0-local"; v -> v end,
+      version: case System.get_env("APP_VERSION") do nil -> "2.8.0-local"; v -> v end,
       elixir: "~> 1.6",
       elixirc_paths: elixirc_paths(Mix.env),
       compilers: [:phoenix, :gettext] ++ Mix.compilers,
@@ -54,7 +54,7 @@ defmodule TdLm.Mixfile do
       {:ex_json_schema, "~> 0.5"},
       {:json_diff, "~> 0.1.0"},
       {:csv, "~> 2.0.0"},
-      {:td_perms, git: "https://github.com/Bluetab/td-perms.git", tag: "v0.3.10"},
+      {:td_perms, git: "https://github.com/Bluetab/td-perms.git", tag: "2.8.1"},
       {:td_hypermedia, git: "https://github.com/Bluetab/td-hypermedia.git", tag: "v0.1.2"}
     ]
   end
@@ -69,8 +69,8 @@ defmodule TdLm.Mixfile do
     [
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
-      "test": ["ecto.create --quiet", "ecto.migrate", "test"],
-      "compile": ["compile", &pxh_swagger_generate/1]
+      test: ["ecto.create --quiet", "ecto.migrate", "test"],
+      compile: ["compile", &pxh_swagger_generate/1]
     ]
   end
 

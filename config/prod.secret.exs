@@ -20,7 +20,7 @@ config :td_lm, TdLm.Repo,
   hostname: "${DB_HOST}",
   pool_size: 15
 
-config :td_perms, redis_uri: "${REDIS_URI}"
+config :td_perms, redis_host: "${REDIS_HOST}"
 
 config :td_lm, :audit_service,
   api_service: TdLmWeb.ApiServices.HttpTdAuditService,
