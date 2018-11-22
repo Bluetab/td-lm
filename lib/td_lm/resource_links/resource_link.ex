@@ -7,11 +7,11 @@ defmodule TdLm.ResourceLinks.ResourceLink do
   alias TdLm.ResourceLinks.ResourceLink
 
   schema "resource_links" do
-    field :resource_id, :string
-    field :resource_type, :string
-    field :field, :map
+    field(:resource_id, :string)
+    field(:resource_type, :string)
+    field(:field, :map)
 
-    timestamps()
+    timestamps(type: :utc_datetime)
   end
 
   @doc false
@@ -20,5 +20,4 @@ defmodule TdLm.ResourceLinks.ResourceLink do
     |> cast(attrs, [:resource_id, :resource_type, :field])
     |> validate_required([:resource_id, :resource_type, :field])
   end
-
 end
