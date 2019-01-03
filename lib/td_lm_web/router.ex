@@ -36,6 +36,8 @@ defmodule TdLmWeb.Router do
     get "/:resource_type/:resource_id/links/:id", LinkController, :get_link
     delete "/:resource_type/:resource_id/links/:id", LinkController, :delete_link
     get "/links", LinkController, :index
+
+    resources "/relations", RelationController, except: [:new, :edit]
   end
 
   def swagger_info do
