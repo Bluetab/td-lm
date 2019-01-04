@@ -4,7 +4,6 @@ defmodule TdLm.Canada.BusinessConceptAbilities do
   alias TdLm.Accounts.User
   alias TdLm.Permissions
 
-  # TODO: simplify business concept view permissions
   @view_business_concept [:view_approval_pending_business_concepts,
                           :view_deprecated_business_concepts,
                           :view_draft_business_concepts,
