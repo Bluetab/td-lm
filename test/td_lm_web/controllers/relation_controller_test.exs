@@ -61,7 +61,8 @@ defmodule TdLmWeb.RelationControllerTest do
                "source_id" => "some source_id",
                "source_type" => "some source_type",
                "target_id" => "some target_id",
-               "target_type" => "some target_type"
+               "target_type" => "some target_type",
+               "context" => %{}
              }
     end
 
@@ -93,7 +94,8 @@ defmodule TdLmWeb.RelationControllerTest do
                "source_id" => "some updated source_id",
                "source_type" => "some updated source_type",
                "target_id" => "some updated target_id",
-               "target_type" => "some updated target_type"
+               "target_type" => "some updated target_type",
+               "context" => %{}
              }
     end
 

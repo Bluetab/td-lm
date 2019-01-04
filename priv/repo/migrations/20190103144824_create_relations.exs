@@ -8,6 +8,7 @@ defmodule TdLm.Repo.Migrations.CreateRelations do
       add :source_type, :string
       add :target_id, :string
       add :target_type, :string
+      add :context, :map
 
       timestamps()
     end
