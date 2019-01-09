@@ -62,7 +62,6 @@ defmodule TdLmWeb.SwaggerDefinitions do
                   source_type(:string, "Type of the source of the relation to be created", required: true)
                   target_id(:string, "Id of the source of the relation to be created", required: true)
                   target_type(:string, "Type of the source of the relation to be created", required: true)
-                  relation_type(:string, "Type of the persisted relation to be created", required: true)
                   context(:object, "Context informtation of the source and the target")
                 end
               end
@@ -104,7 +103,6 @@ defmodule TdLmWeb.SwaggerDefinitions do
                   source_type(:string, "Type of the source of the relation to be updated", required: true)
                   target_id(:string, "Id of the source of the relation to be updated", required: true)
                   target_type(:string, "Type of the source of the relation to be updated", required: true)
-                  relation_type(:string, "Type of the persisted relation to be updated", required: true)
                   context(:object, "Context informtation of the source and the updated")
                 end
               end
@@ -136,7 +134,6 @@ defmodule TdLmWeb.SwaggerDefinitions do
             source_type(:string, "Type of the source of the relation", required: true)
             target_id(:string, "Id of the source of the relation", required: true)
             target_type(:string, "Type of the source of the relation", required: true)
-            relation_type(:string, "Type of the persisted relation", required: true)
             context(:object, "Context informtation of the source and the target", required: true)
           end
         end,

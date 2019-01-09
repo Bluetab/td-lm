@@ -12,21 +12,18 @@ defmodule TdLmWeb.RelationControllerTest do
   end
 
   @create_attrs %{
-    relation_type: "some relation_type",
     source_id: "some source_id",
     source_type: "some source_type",
     target_id: "some target_id",
     target_type: "some target_type"
   }
   @update_attrs %{
-    relation_type: "some updated relation_type",
     source_id: "some updated source_id",
     source_type: "some updated source_type",
     target_id: "some updated target_id",
     target_type: "some updated target_type"
   }
   @invalid_attrs %{
-    relation_type: nil,
     source_id: nil,
     source_type: nil,
     target_id: nil,
@@ -60,7 +57,6 @@ defmodule TdLmWeb.RelationControllerTest do
 
       assert json_response(conn, 200)["data"] == %{
                "id" => id,
-               "relation_type" => "some relation_type",
                "source_id" => "some source_id",
                "source_type" => "some source_type",
                "target_id" => "some target_id",
@@ -97,7 +93,6 @@ defmodule TdLmWeb.RelationControllerTest do
 
       assert json_response(conn, 200)["data"] == %{
                "id" => id,
-               "relation_type" => "some updated relation_type",
                "source_id" => "some updated source_id",
                "source_type" => "some updated source_type",
                "target_id" => "some updated target_id",

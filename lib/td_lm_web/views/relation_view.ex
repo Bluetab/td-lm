@@ -19,7 +19,6 @@ defmodule TdLmWeb.RelationView do
   def render("relation.json", %{relation: relation}) do
     %{id: relation.id,
       context: relation.context,
-      relation_type: relation.relation_type,
       source_id: relation.source_id,
       source_type: relation.source_type,
       target_id: relation.target_id,

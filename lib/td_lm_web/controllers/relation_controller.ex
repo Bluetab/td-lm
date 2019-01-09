@@ -12,7 +12,7 @@ defmodule TdLmWeb.RelationController do
 
   action_fallback(TdLmWeb.FallbackController)
 
-  @permission_attributes [:source_id, :source_type, :target_id, :target_type, :relation_type]
+  @permission_attributes [:source_id, :source_type, :target_id, :target_type]
 
   def swagger_definitions do
     SwaggerDefinitions.relation_definitions()
