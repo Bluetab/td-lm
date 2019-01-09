@@ -55,9 +55,62 @@ defmodule TdLmWeb.SwaggerDefinitions do
       AddRelation:
         swagger_schema do
           properties do
-            field(Schema.ref(:Relation))
+            relation(
+              Schema.new do
+                properties do
+                  source_id(:string, "Id of the source of the relation to be created", required: true)
+                  source_type(:string, "Type of the source of the relation to be created", required: true)
+                  target_id(:string, "Id of the source of the relation to be created", required: true)
+                  target_type(:string, "Type of the source of the relation to be created", required: true)
+                  relation_type(:string, "Type of the persisted relation to be created", required: true)
+                  context(:object, "Context informtation of the source and the target")
+                end
+              end
+            )
           end
         end,
+      Actions:
+        swagger_schema do
+          title("Actions")
+          description("Relation actions")
+
+          properties do
+            action(
+              Schema.new do
+                properties do
+                  method(:string)
+                  input(:object)
+                  link(:string)
+                end
+              end
+            )
+          end
+
+          example(%{
+            create: %{
+              method: "POST",
+              href: "/api/domains",
+              input: %{}
+            }
+          })
+        end,
+      UpdateRelation:
+        swagger_schema do
+          properties do
+            relation(
+              Schema.new do
+                properties do
+                  source_id(:string, "Id of the source of the relation to be updated", required: true)
+                  source_type(:string, "Type of the source of the relation to be updated", required: true)
+                  target_id(:string, "Id of the source of the relation to be updated", required: true)
+                  target_type(:string, "Type of the source of the relation to be updated", required: true)
+                  relation_type(:string, "Type of the persisted relation to be updated", required: true)
+                  context(:object, "Context informtation of the source and the updated")
+                end
+              end
+            )
+          end
+      end,
       Relations:
         swagger_schema do
         title("Relations")
@@ -69,6 +122,7 @@ defmodule TdLmWeb.SwaggerDefinitions do
         swagger_schema do
           properties do
             data(Schema.ref(:Relations))
+            actions(Schema.ref(:Actions))
           end
         end,
       Relation:
@@ -80,8 +134,8 @@ defmodule TdLmWeb.SwaggerDefinitions do
             id(:integer, "Relation Id", required: true)
             source_id(:string, "Id of the source of the relation", required: true)
             source_type(:string, "Type of the source of the relation", required: true)
-            source_id(:string, "Id of the source of the relation", required: true)
-            soource_type(:string, "Type of the source of the relation", required: true)
+            target_id(:string, "Id of the source of the relation", required: true)
+            target_type(:string, "Type of the source of the relation", required: true)
             relation_type(:string, "Type of the persisted relation", required: true)
             context(:object, "Context informtation of the source and the target", required: true)
           end
