@@ -21,20 +21,12 @@ defmodule TdLm.Resources do
     fields = Relation.__schema__(:fields)
     dynamic = filter(params, fields)
 
-    Repo.all(from p in Relation,
-      where: ^dynamic
+    Repo.all(
+      from(p in Relation,
+        where: ^dynamic,
+        preload: [:tags]
+      )
     )
-  end
-
-  def filter(params, fields) do
-    dynamic = true
-    Enum.reduce(Map.keys(params), dynamic, fn (key, acc) ->
-       key_as_atom = if is_binary(key), do: String.to_atom(key), else: key
-       case Enum.member?(fields, key_as_atom) do
-         true ->  dynamic([p], field(p, ^key_as_atom) == ^params[key] and ^acc)
-         false -> acc
-       end
-    end)
   end
 
   @doc """
@@ -51,7 +43,26 @@ defmodule TdLm.Resources do
       ** (Ecto.NoResultsError)
 
   """
-  def get_relation!(id), do: Repo.get!(Relation, id)
+  def get_relation!(id) do
+    relation = Repo.get!(Relation, id)
+    relation |> Repo.preload(:tags)
+  end
+
+  @doc """
+  Gets a single relation.
+
+  Returns nil if the Relation does not exist.
+
+  ## Examples
+
+      iex> get_relation!(123)
+      %Relation{}
+
+      iex> get_relation!(456)
+      ** nil
+
+  """
+  def get_relation(id), do: Repo.get(Relation, id)
 
   @doc """
   Creates a relation.
@@ -67,7 +78,7 @@ defmodule TdLm.Resources do
   """
   def create_relation(attrs \\ %{}) do
     %Relation{}
-    |> Relation.changeset(attrs)
+    |> Relation.create_changeset(attrs)
     |> Repo.insert()
   end
 
@@ -85,7 +96,7 @@ defmodule TdLm.Resources do
   """
   def update_relation(%Relation{} = relation, attrs) do
     relation
-    |> Relation.changeset(attrs)
+    |> Relation.update_changeset(attrs)
     |> Repo.update()
   end
 
@@ -115,7 +126,7 @@ defmodule TdLm.Resources do
 
   """
   def change_relation(%Relation{} = relation) do
-    Relation.changeset(relation, %{})
+    Relation.create_changeset(relation, %{})
   end
 
   alias TdLm.Resources.Tag
@@ -212,5 +223,26 @@ defmodule TdLm.Resources do
   """
   def change_tag(%Tag{} = tag) do
     Tag.changeset(tag, %{})
+  end
+
+  defp filter(params, fields) do
+    dynamic = true
+
+    Enum.reduce(Map.keys(params), dynamic, fn key, acc ->
+      key_as_atom = if is_binary(key), do: String.to_atom(key), else: key
+
+      case Enum.member?(fields, key_as_atom) do
+        true -> filter_by_type(key_as_atom, params[key], acc)
+        false -> acc
+      end
+    end)
+  end
+
+  defp filter_by_type(atom_key, param_value, acc) when is_map(param_value) do
+    dynamic([p], fragment("(?) @> ?::jsonb", field(p, ^atom_key), ^param_value) and ^acc)
+  end
+
+  defp filter_by_type(atom_key, param_value, acc) do
+    dynamic([p], field(p, ^atom_key) == ^param_value and ^acc)
   end
 end

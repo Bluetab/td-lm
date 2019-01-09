@@ -25,35 +25,19 @@ defmodule TdBg.Canada.Abilities do
       BusinessConceptAbilities.can?(user, :delete_link, params)
     end
 
-    def can?(%User{} = user, :create, %{"relation_type" => "business_concept_to_field"} = params) do
+    def can?(%User{} = user, :create, params) do
       BusinessConceptAbilities.can?(user, :create, params)
     end
 
-    def can?(%User{} = user, :create, %{"relation_type" => "master_business_concept_to_field"} = params) do
-      BusinessConceptAbilities.can?(user, :create, params)
-    end
-
-    def can?(%User{} = user, :show, %{"relation_type" => "business_concept_to_field"} = params) do
+    def can?(%User{} = user, :show, params) do
       BusinessConceptAbilities.can?(user, :show, params)
     end
 
-    def can?(%User{} = user, :show, %{"relation_type" => "master_business_concept_to_field"} = params) do
-      BusinessConceptAbilities.can?(user, :show, params)
-    end
-
-    def can?(%User{} = user, :update, %{"relation_type" => "business_concept_to_field"} = params) do
+    def can?(%User{} = user, :update, params) do
       BusinessConceptAbilities.can?(user, :update, params)
     end
 
-    def can?(%User{} = user, :update, %{"relation_type" => "master_business_concept_to_field"} = params) do
-      BusinessConceptAbilities.can?(user, :update, params)
-    end
-
-    def can?(%User{} = user, :delete, %{"relation_type" => "business_concept_to_field"} = params) do
-      BusinessConceptAbilities.can?(user, :delete, params)
-    end
-
-    def can?(%User{} = user, :delete, %{"relation_type" => "master_business_concept_to_field"} = params) do
+    def can?(%User{} = user, :delete, params) do
       BusinessConceptAbilities.can?(user, :delete, params)
     end
 
