@@ -17,8 +17,24 @@ defmodule TdLm.Resources do
       [%Relation{}, ...]
 
   """
-  def list_relations do
-    Repo.all(Relation)
+  def list_relations(params \\ %{}) do
+    fields = Relation.__schema__(:fields)
+    dynamic = filter(params, fields)
+
+    Repo.all(from p in Relation,
+      where: ^dynamic
+    )
+  end
+
+  def filter(params, fields) do
+    dynamic = true
+    Enum.reduce(Map.keys(params), dynamic, fn (key, acc) ->
+       key_as_atom = if is_binary(key), do: String.to_atom(key), else: key
+       case Enum.member?(fields, key_as_atom) do
+         true ->  dynamic([p], field(p, ^key_as_atom) == ^params[key] and ^acc)
+         false -> acc
+       end
+    end)
   end
 
   @doc """
