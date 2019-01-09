@@ -10,7 +10,7 @@ defmodule TdLmWeb.RelationController do
   alias TdLmWeb.ErrorView
   alias TdLmWeb.SwaggerDefinitions
 
-  action_fallback TdLmWeb.FallbackController
+  action_fallback(TdLmWeb.FallbackController)
 
   @permission_attributes [:source_id, :source_type, :target_id, :target_type, :relation_type]
 
@@ -28,7 +28,7 @@ defmodule TdLmWeb.RelationController do
 
   def index(conn, params) do
     user = conn.assigns[:current_resource]
-    
+
     relations =
       params
       |> Resources.list_relations()
@@ -37,9 +37,10 @@ defmodule TdLmWeb.RelationController do
         can?(user, show(params))
       end)
 
-    render(conn, 
-      "index.json", 
-      hypermedia: collection_hypermedia("relation", conn, relations, params), 
+    render(
+      conn,
+      "index.json",
+      hypermedia: collection_hypermedia("relation", conn, relations, params),
       relations: relations
     )
   end
@@ -62,21 +63,21 @@ defmodule TdLmWeb.RelationController do
     user = conn.assigns[:current_resource]
 
     with true <- can?(user, create(relation_params)),
-      {:ok, %Relation{} = relation} <- Resources.create_relation(relation_params) do
+         {:ok, %Relation{} = relation} <- Resources.create_relation(relation_params) do
+      conn
+      |> put_status(:created)
+      |> put_resp_header("location", relation_path(conn, :show, relation))
+      |> render("show.json", relation: relation)
+    else
+      false ->
         conn
-        |> put_status(:created)
-        |> put_resp_header("location", relation_path(conn, :show, relation))
-        |> render("show.json", relation: relation)
-      else
-        false ->
-          conn
-          |> put_status(:forbidden)
-          |> render(ErrorView, "403.json")
-  
-        _error ->
-          conn
-          |> put_status(:unprocessable_entity)
-          |> render(ErrorView, "422.json")
+        |> put_status(:forbidden)
+        |> render(ErrorView, "403.json")
+
+      _error ->
+        conn
+        |> put_status(:unprocessable_entity)
+        |> render(ErrorView, "422.json")
     end
   end
 
@@ -96,7 +97,7 @@ defmodule TdLmWeb.RelationController do
 
   def show(conn, %{"id" => id} = params) do
     user = conn.assigns[:current_resource]
-    
+
     with true <- can?(user, show(params)) do
       relation = Resources.get_relation!(id)
       render(conn, "show.json", relation: relation)
@@ -135,19 +136,19 @@ defmodule TdLmWeb.RelationController do
     params = stringify_map(Map.take(relation, @permission_attributes))
 
     with true <- can?(user, update(params)),
-      {:ok, %Relation{} = relation} <- Resources.update_relation(relation, relation_params) do
-        render(conn, "show.json", relation: relation)
-      else
-        false ->
-          conn
-          |> put_status(:forbidden)
-          |> render(ErrorView, "403.json")
-  
-        _error ->
-          conn
-          |> put_status(:unprocessable_entity)
-          |> render(ErrorView, "422.json")
-      end
+         {:ok, %Relation{} = relation} <- Resources.update_relation(relation, relation_params) do
+      render(conn, "show.json", relation: relation)
+    else
+      false ->
+        conn
+        |> put_status(:forbidden)
+        |> render(ErrorView, "403.json")
+
+      _error ->
+        conn
+        |> put_status(:unprocessable_entity)
+        |> render(ErrorView, "422.json")
+    end
   end
 
   swagger_path :delete do
@@ -168,10 +169,10 @@ defmodule TdLmWeb.RelationController do
 
     relation = Resources.get_relation!(id)
     params = stringify_map(Map.take(relation, @permission_attributes))
-    
+
     with true <- can?(user, delete(params)),
-      {:ok, %Relation{}} <- Resources.delete_relation(relation) do
-        send_resp(conn, :no_content, "")
+         {:ok, %Relation{}} <- Resources.delete_relation(relation) do
+      send_resp(conn, :no_content, "")
     else
       false ->
         conn

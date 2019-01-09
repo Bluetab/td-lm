@@ -67,7 +67,7 @@ defmodule TdLmWeb.RelationControllerTest do
                "target_type" => "some target_type",
                "context" => %{}
              }
-      
+
       validate_resp_schema(conn, schema, "RelationResponse")
     end
 
@@ -104,6 +104,7 @@ defmodule TdLmWeb.RelationControllerTest do
                "target_type" => "some updated target_type",
                "context" => %{}
              }
+
       validate_resp_schema(conn, schema, "RelationResponse")
     end
 
