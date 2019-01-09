@@ -14,7 +14,7 @@ defmodule TdLm.Resources.Tag do
       join_through: "relations_tags",
       on_delete: :delete_all
     )
-    
+
     timestamps()
   end
 
