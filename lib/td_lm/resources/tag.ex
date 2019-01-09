@@ -1,10 +1,12 @@
 defmodule TdLm.Resources.Tag do
+  @moduledoc """
+  Entity to support the tag model
+  """
   use Ecto.Schema
   import Ecto.Changeset
 
-
   schema "tags" do
-    field :value, :map, default: %{}
+    field(:value, :map, default: %{})
 
     timestamps()
   end
