@@ -5,9 +5,16 @@ defmodule TdLm.Resources.Tag do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias TdLm.Resources.Relation
+
   schema "tags" do
     field(:value, :map, default: %{})
 
+    many_to_many(:relations, Relation,
+      join_through: "relations_tags",
+      on_delete: :delete_all
+    )
+    
     timestamps()
   end
 
