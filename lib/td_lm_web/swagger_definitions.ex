@@ -10,7 +10,7 @@ defmodule TdLmWeb.SwaggerDefinitions do
           description("Link representation")
           type(:object)
         end,
-        AddField:
+      AddField:
         swagger_schema do
           properties do
             field(Schema.ref(:Field))
@@ -45,6 +45,51 @@ defmodule TdLmWeb.SwaggerDefinitions do
         swagger_schema do
           properties do
             data(Schema.ref(:ResourceLink))
+          end
+        end
+    }
+  end
+
+  def relation_definitions do
+    %{
+      AddRelation:
+        swagger_schema do
+          properties do
+            field(Schema.ref(:Relation))
+          end
+        end,
+      Relations:
+        swagger_schema do
+        title("Relations")
+        description("A collection of relations")
+        type(:array)
+        items(Schema.ref(:Relation))
+      end,
+      RelationsResponse:
+        swagger_schema do
+          properties do
+            data(Schema.ref(:Relations))
+          end
+        end,
+      Relation:
+        swagger_schema do
+          title("Relation")
+          description("Representation of a relation")
+
+          properties do
+            id(:integer, "Relation Id", required: true)
+            source_id(:string, "Id of the source of the relation", required: true)
+            source_type(:string, "Type of the source of the relation", required: true)
+            source_id(:string, "Id of the source of the relation", required: true)
+            soource_type(:string, "Type of the source of the relation", required: true)
+            relation_type(:string, "Type of the persisted relation", required: true)
+            context(:object, "Context informtation of the source and the target", required: true)
+          end
+        end,
+      RelationResponse:
+        swagger_schema do
+          properties do
+            data(Schema.ref(:Relation))
           end
         end
     }
