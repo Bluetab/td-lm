@@ -1,5 +1,6 @@
 defmodule TdLmWeb.RelationControllerTest do
   use TdLmWeb.ConnCase
+  use PhoenixSwagger.SchemaTest, "priv/static/swagger.json"
 
   alias TdLm.Resources
   alias TdLm.Resources.Relation
@@ -39,17 +40,19 @@ defmodule TdLmWeb.RelationControllerTest do
 
   describe "index" do
     @tag :admin_authenticated
-    test "lists all relations", %{conn: conn} do
+    test "lists all relations", %{conn: conn, swagger_schema: schema} do
       conn = get(conn, relation_path(conn, :index))
       assert json_response(conn, 200)["data"] == []
+      validate_resp_schema(conn, schema, "RelationsResponse")
     end
   end
 
   describe "create relation" do
     @tag :admin_authenticated
-    test "renders relation when data is valid", %{conn: conn} do
+    test "renders relation when data is valid", %{conn: conn, swagger_schema: schema} do
       conn = post(conn, relation_path(conn, :create), relation: @create_attrs)
       assert %{"id" => id} = json_response(conn, 201)["data"]
+      validate_resp_schema(conn, schema, "RelationResponse")
 
       conn = recycle_and_put_headers(conn)
 
@@ -64,6 +67,8 @@ defmodule TdLmWeb.RelationControllerTest do
                "target_type" => "some target_type",
                "context" => %{}
              }
+      
+      validate_resp_schema(conn, schema, "RelationResponse")
     end
 
     @tag :admin_authenticated
@@ -79,10 +84,12 @@ defmodule TdLmWeb.RelationControllerTest do
     @tag :admin_authenticated
     test "renders relation when data is valid", %{
       conn: conn,
+      swagger_schema: schema,
       relation: %Relation{id: id} = relation
     } do
       conn = put(conn, relation_path(conn, :update, relation), relation: @update_attrs)
       assert %{"id" => ^id} = json_response(conn, 200)["data"]
+      validate_resp_schema(conn, schema, "RelationResponse")
 
       conn = recycle_and_put_headers(conn)
 
@@ -97,6 +104,7 @@ defmodule TdLmWeb.RelationControllerTest do
                "target_type" => "some updated target_type",
                "context" => %{}
              }
+      validate_resp_schema(conn, schema, "RelationResponse")
     end
 
     @tag :admin_authenticated
