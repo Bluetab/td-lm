@@ -38,6 +38,7 @@ defmodule TdLmWeb.Router do
     get "/links", LinkController, :index
 
     resources "/relations", RelationController, except: [:new, :edit]
+    resources "/tags", TagController, except: [:new, :edit]
   end
 
   def swagger_info do
