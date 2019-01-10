@@ -51,7 +51,7 @@ defmodule TdLmWeb.RelationController do
     produces("application/json")
 
     parameters do
-      relation(:relation, Schema.ref(:AddRelation), "Parameters used to create a relation")
+      relation(:body, Schema.ref(:AddRelation), "Parameters used to create a relation")
     end
 
     response(200, "OK", Schema.ref(:RelationResponse))
@@ -121,7 +121,7 @@ defmodule TdLmWeb.RelationController do
 
     parameters do
       id(:path, :integer, "ID of the relation", required: true)
-      relation(:relation, Schema.ref(:UpdateRelation), "Parameters used to create a relation")
+      relation(:body, Schema.ref(:UpdateRelation), "Parameters used to create a relation")
     end
 
     response(200, "OK", Schema.ref(:RelationResponse))

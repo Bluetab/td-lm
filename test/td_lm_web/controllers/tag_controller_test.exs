@@ -1,5 +1,6 @@
 defmodule TdLmWeb.TagControllerTest do
   use TdLmWeb.ConnCase
+  use PhoenixSwagger.SchemaTest, "priv/static/swagger.json"
 
   alias TdLm.Resources
   alias TdLm.Resources.Tag
@@ -21,22 +22,25 @@ defmodule TdLmWeb.TagControllerTest do
 
   describe "index" do
     @tag :admin_authenticated
-    test "lists all tags", %{conn: conn} do
+    test "lists all tags", %{conn: conn, swagger_schema: schema} do
       conn = get(conn, tag_path(conn, :index))
       assert json_response(conn, 200)["data"] == []
+      validate_resp_schema(conn, schema, "TagsResponse")
     end
   end
 
   describe "create tag" do
     @tag :admin_authenticated
-    test "renders tag when data is valid", %{conn: conn} do
+    test "renders tag when data is valid", %{conn: conn, swagger_schema: schema} do
       conn = post(conn, tag_path(conn, :create), tag: @create_attrs)
       assert %{"id" => id} = json_response(conn, 201)["data"]
+      validate_resp_schema(conn, schema, "TagResponse")
 
       conn = recycle_and_put_headers(conn)
 
       conn = get(conn, tag_path(conn, :show, id))
       assert json_response(conn, 200)["data"] == %{"id" => id, "value" => %{}}
+      validate_resp_schema(conn, schema, "TagResponse")
     end
 
     @tag :admin_authenticated
@@ -50,14 +54,16 @@ defmodule TdLmWeb.TagControllerTest do
     setup [:create_tag]
 
     @tag :admin_authenticated
-    test "renders tag when data is valid", %{conn: conn, tag: %Tag{id: id} = tag} do
+    test "renders tag when data is valid", %{conn: conn, swagger_schema: schema, tag: %Tag{id: id} = tag} do
       conn = put(conn, tag_path(conn, :update, tag), tag: @update_attrs)
       assert %{"id" => ^id} = json_response(conn, 200)["data"]
+      validate_resp_schema(conn, schema, "TagResponse")
 
       conn = recycle_and_put_headers(conn)
 
       conn = get(conn, tag_path(conn, :show, id))
       assert json_response(conn, 200)["data"] == %{"id" => id, "value" => %{}}
+      validate_resp_schema(conn, schema, "TagResponse")
     end
 
     @tag :admin_authenticated

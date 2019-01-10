@@ -145,4 +145,62 @@ defmodule TdLmWeb.SwaggerDefinitions do
         end
     }
   end
+
+  def tag_definitions do
+    %{
+      CreateTag:
+        swagger_schema do
+          properties do
+            tag(
+              Schema.new do
+                properties do
+                  value(:object, "Object value of a tag", required: true)
+                end
+              end
+            )
+          end
+        end,
+      UpdateTag:
+        swagger_schema do
+          properties do
+            tag(
+              Schema.new do
+                properties do
+                  value(:object, "Object value of a tag", required: true)
+                end
+              end
+            )
+          end
+      end,
+      Tags:
+        swagger_schema do
+        title("Tags")
+        description("A collection of tags")
+        type(:array)
+        items(Schema.ref(:Tag))
+      end,
+      TagsResponse:
+        swagger_schema do
+          properties do
+            data(Schema.ref(:Tags))
+          end
+        end,
+      Tag:
+        swagger_schema do
+          title("Tag")
+          description("Representation of a tag")
+
+          properties do
+            id(:integer, "Tag Id", required: true)
+            value(:object, "Object value of a tag", required: true)
+          end
+        end,
+      TagResponse:
+        swagger_schema do
+          properties do
+            data(Schema.ref(:Tag))
+          end
+        end
+    }
+  end
 end
