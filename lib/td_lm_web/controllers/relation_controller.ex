@@ -192,8 +192,8 @@ defmodule TdLmWeb.RelationController do
 
   defp stringify_key(key) do
     case is_atom(key) do
-      true -> key
-      false -> Atom.to_string(key)
+      true -> Atom.to_string(key)
+      false -> key
     end
   end
 end

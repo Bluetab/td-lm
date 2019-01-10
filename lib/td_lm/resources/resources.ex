@@ -55,10 +55,10 @@ defmodule TdLm.Resources do
 
   ## Examples
 
-      iex> get_relation!(123)
+      iex> get_relation(123)
       %Relation{}
 
-      iex> get_relation!(456)
+      iex> get_relation(456)
       ** nil
 
   """
@@ -159,6 +159,22 @@ defmodule TdLm.Resources do
 
   """
   def get_tag!(id), do: Repo.get!(Tag, id)
+
+  @doc """
+  Gets a single tag.
+
+  Returns nil if the Tag does not exist.
+
+  ## Examples
+
+      iex> get_tag(123)
+      %Tag{}
+
+      iex> get_tag(456)
+      ** nil
+
+  """
+  def get_tag(id), do: Repo.get(Tag, id)
 
   @doc """
   Creates a tag.
