@@ -1,12 +1,12 @@
 defmodule TdLmWeb.TagController do
   use TdLmWeb, :controller
   use PhoenixSwagger
-  
+
   alias TdLm.Resources
   alias TdLm.Resources.Tag
   alias TdLmWeb.SwaggerDefinitions
 
-  action_fallback TdLmWeb.FallbackController
+  action_fallback(TdLmWeb.FallbackController)
 
   def swagger_definitions do
     SwaggerDefinitions.tag_definitions()
@@ -101,6 +101,7 @@ defmodule TdLmWeb.TagController do
 
   def delete(conn, %{"id" => id}) do
     tag = Resources.get_tag!(id)
+
     with {:ok, %Tag{}} <- Resources.delete_tag(tag) do
       send_resp(conn, :no_content, "")
     end
