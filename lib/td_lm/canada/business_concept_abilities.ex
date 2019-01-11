@@ -27,19 +27,19 @@ defmodule TdLm.Canada.BusinessConceptAbilities do
     Permissions.authorized?(user, :manage_business_concept_links, "business_concept", id)
   end
 
-  def can?(%User{} = user, :show, %{"source_id" => id, "source_type" => "business_concept"}) do
+  def can?(%User{} = user, :show, %{"resource_id" => id, "resource_type" => "business_concept"}) do
     Permissions.authorized_any?(user, @view_business_concept, "business_concept", id)
   end
 
-  def can?(%User{} = user, :update, %{"source_id" => id, "source_type" => "business_concept"}) do
+  def can?(%User{} = user, :update, %{"resource_id" => id, "resource_type" => "business_concept"}) do
     Permissions.authorized_any?(user, :manage_business_concept_links, "business_concept", id)
   end
 
-  def can?(%User{} = user, :create, %{"source_id" => id, "source_type" => "business_concept"}) do
+  def can?(%User{} = user, :create, %{"resource_id" => id, "resource_type" => "business_concept"}) do
     Permissions.authorized_any?(user, :manage_business_concept_links, "business_concept", id)
   end
 
-  def can?(%User{} = user, :delete, %{"source_id" => id, "source_type" => "business_concept"}) do
+  def can?(%User{} = user, :delete, %{"resource_id" => id, "resource_type" => "business_concept"}) do
     Permissions.authorized_any?(user, :manage_business_concept_links, "business_concept", id)
   end
 
