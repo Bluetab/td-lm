@@ -4,8 +4,14 @@ defmodule TdLmWeb.RelationControllerTest do
 
   alias TdLm.Resources
   alias TdLm.Resources.Relation
+  alias TdLmWeb.ApiServices.MockTdAuditService
 
   import TdLmWeb.Authentication, only: :functions
+
+  setup_all do
+    start_supervised(MockTdAuditService)
+    :ok
+  end
 
   setup %{conn: conn} do
     {:ok, conn: put_req_header(conn, "accept", "application/json")}
@@ -61,7 +67,8 @@ defmodule TdLmWeb.RelationControllerTest do
                "source_type" => "some source_type",
                "target_id" => "some target_id",
                "target_type" => "some target_type",
-               "context" => %{}
+               "context" => %{},
+               "tags" => []
              }
 
       validate_resp_schema(conn, schema, "RelationResponse")
@@ -97,7 +104,8 @@ defmodule TdLmWeb.RelationControllerTest do
                "source_type" => "some updated source_type",
                "target_id" => "some updated target_id",
                "target_type" => "some updated target_type",
-               "context" => %{}
+               "context" => %{},
+               "tags" => []
              }
 
       validate_resp_schema(conn, schema, "RelationResponse")

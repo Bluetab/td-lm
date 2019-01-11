@@ -5,6 +5,8 @@ defmodule TdLmWeb.RelationController do
 
   import Canada, only: [can?: 2]
 
+  alias TdLm.Audit
+  alias TdLm.RelationLoader
   alias TdLm.Resources
   alias TdLm.Resources.Relation
   alias TdLmWeb.ErrorView
@@ -13,6 +15,10 @@ defmodule TdLmWeb.RelationController do
   action_fallback(TdLmWeb.FallbackController)
 
   @permission_attributes [:source_id, :source_type, :target_id, :target_type]
+  @events %{
+    add_relation: "add_relation",
+    delete_relation: "delete_relation"
+  }
 
   def swagger_definitions do
     SwaggerDefinitions.relation_definitions()
@@ -33,9 +39,11 @@ defmodule TdLmWeb.RelationController do
       params
       |> Resources.list_relations()
       |> Enum.filter(fn rel ->
-        params = stringify_map(rel)
-        can?(user, show(params))
+        rel_params = format_params_to_check_permissions(rel)
+        can?(user, show(rel_params))
       end)
+
+    params = params |> format_params_to_check_permissions()
 
     render(
       conn,
@@ -61,9 +69,18 @@ defmodule TdLmWeb.RelationController do
 
   def create(conn, %{"relation" => relation_params}) do
     user = conn.assigns[:current_resource]
+    params = relation_params |> format_params_to_check_permissions()
 
-    with true <- can?(user, create(relation_params)),
+    with true <- can?(user, create(params)),
          {:ok, %Relation{} = relation} <- Resources.create_relation(relation_params) do
+      Audit.create_event(
+        conn,
+        audit_create_attribures(relation_params, relation),
+        @events.add_relation
+      )
+
+      RelationLoader.refresh(relation.id)
+
       conn
       |> put_status(:created)
       |> put_resp_header("location", relation_path(conn, :show, relation))
@@ -97,6 +114,7 @@ defmodule TdLmWeb.RelationController do
 
   def show(conn, %{"id" => id} = params) do
     user = conn.assigns[:current_resource]
+    params = params |> format_params_to_check_permissions()
 
     with true <- can?(user, show(params)) do
       relation = Resources.get_relation!(id)
@@ -133,7 +151,7 @@ defmodule TdLmWeb.RelationController do
     user = conn.assigns[:current_resource]
 
     relation = Resources.get_relation!(id)
-    params = stringify_map(Map.take(relation, @permission_attributes))
+    params = relation |> format_params_to_check_permissions()
 
     with true <- can?(user, update(params)),
          {:ok, %Relation{} = relation} <- Resources.update_relation(relation, relation_params) do
@@ -168,10 +186,13 @@ defmodule TdLmWeb.RelationController do
     user = conn.assigns[:current_resource]
 
     relation = Resources.get_relation!(id)
-    params = stringify_map(Map.take(relation, @permission_attributes))
+    params = relation |> format_params_to_check_permissions()
 
     with true <- can?(user, delete(params)),
          {:ok, %Relation{}} <- Resources.delete_relation(relation) do
+      Audit.create_event(conn, audit_delete_attribures(relation), @events.delete_relation)
+      RelationLoader.delete(relation)
+
       send_resp(conn, :no_content, "")
     else
       false ->
@@ -184,6 +205,64 @@ defmodule TdLmWeb.RelationController do
         |> put_status(:unprocessable_entity)
         |> render(ErrorView, "422.json")
     end
+  end
+
+  defp audit_create_attribures(create_attributes, relation) do
+    resource_id = create_attributes |> Map.get("source_id")
+    resource_type = create_attributes |> Map.get("source_type")
+    relation_types = fetch_relation_types(relation)
+
+    payload = create_attributes |> Map.put("relation_types", relation_types)
+
+    build_audit_map(resource_id, resource_type, payload)
+  end
+
+  defp audit_delete_attribures(relation) do
+    resource_id = relation |> Map.get(:source_id)
+    resource_type = relation |> Map.get(:source_type)
+    relation_types = fetch_relation_types(relation)
+
+    payload =
+      relation
+      |> Map.drop([:__meta__])
+      |> Map.from_struct()
+      |> Map.put("relation_types", relation_types)
+
+    build_audit_map(resource_id, resource_type, payload)
+  end
+
+  defp build_audit_map(resource_id, resource_type, payload) do
+    audit_map =
+      Map.new()
+      |> Map.put("resource_id", resource_id)
+      |> Map.put("resource_type", resource_type)
+      |> Map.put("payload", payload)
+
+    Map.new() |> Map.put("audit", audit_map)
+  end
+
+  defp fetch_relation_types(relation) do
+    relation
+    |> Map.get(:tags)
+    |> Enum.map(&Map.get(&1, :value))
+    |> Enum.map(&Map.get(&1, "type"))
+    |> Enum.filter(&(not is_nil(&1)))
+  end
+
+  defp format_params_to_check_permissions(%Relation{} = relation) do
+    relation
+    |> Map.take(@permission_attributes)
+    |> stringify_map()
+    |> format_params_to_check_permissions()
+  end
+
+  defp format_params_to_check_permissions(params_map) do
+    resource_id = params_map |> Map.get("source_id")
+    resource_type = params_map |> Map.get("source_type")
+
+    Map.new()
+    |> Map.put("resource_id", resource_id)
+    |> Map.put("resource_type", resource_type)
   end
 
   defp stringify_map(map) do
