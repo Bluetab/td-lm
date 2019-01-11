@@ -1,10 +1,10 @@
 defmodule TdLm.Repo.Migrations.InsertNewTag do
   use Ecto.Migration
 
-  alias TdLm.Repo
-  alias TdLm.Resources.Tag
-
   def change do    
-    Repo.insert(%Tag{value: %{"type" => "business_concept_to_field_master"}})
+    execute("""
+    INSERT INTO tags (value, inserted_at, updated_at)
+    VALUES ('{"type": "business_concept_to_field_master"}', NOW(), NOW())
+    """)
   end
 end
