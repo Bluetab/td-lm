@@ -19,10 +19,11 @@ defmodule TdLm.Resources do
   """
   def list_relations(params \\ %{}) do
     fields = Relation.__schema__(:fields)
-    dynamic = filter(params, fields)
+    dynamic = and_filter(params, fields, true)
 
     Repo.all(
-      from(p in Relation,
+      from(
+        p in Relation,
         where: ^dynamic,
         preload: [:tags]
       )
@@ -44,8 +45,9 @@ defmodule TdLm.Resources do
 
   """
   def get_relation!(id) do
-    relation = Repo.get!(Relation, id)
-    relation |> Repo.preload(:tags)
+    Relation
+    |> Repo.get!(id)
+    |> Repo.preload(:tags)
   end
 
   @doc """
@@ -140,8 +142,17 @@ defmodule TdLm.Resources do
       [%Tag{}, ...]
 
   """
-  def list_tags do
-    Repo.all(Tag)
+  def list_tags(params \\ %{}) do
+    fields = Tag.__schema__(:fields)
+    dynamic = filter_tags(params, fields)
+
+    Repo.all(
+      from(
+        p in Tag,
+        where: ^dynamic,
+        preload: [:relations]
+      )
+    )
   end
 
   @doc """
@@ -158,7 +169,11 @@ defmodule TdLm.Resources do
       ** (Ecto.NoResultsError)
 
   """
-  def get_tag!(id), do: Repo.get!(Tag, id)
+  def get_tag!(id) do
+    Tag
+    |> Repo.get!(id)
+    |> Repo.preload(:relations)
+  end
 
   @doc """
   Gets a single tag.
@@ -241,10 +256,24 @@ defmodule TdLm.Resources do
     Tag.changeset(tag, %{})
   end
 
-  defp filter(params, fields) do
-    dynamic = true
+  defp filter_tags(params, fields) do
+    key_as_atom = "value" |> String.to_atom()
 
-    Enum.reduce(Map.keys(params), dynamic, fn key, acc ->
+    conditions =
+      case Map.has_key?(params, "value") && Enum.member?(fields, key_as_atom) do
+        true ->
+          build_filter_for_value(key_as_atom, params)
+
+        false ->
+          true
+      end
+
+    and_params = Map.drop(params, ["value"])
+    and_filter(and_params, fields, conditions)
+  end
+
+  defp and_filter(params, fields, conditions) do
+    Enum.reduce(Map.keys(params), conditions, fn key, acc ->
       key_as_atom = if is_binary(key), do: String.to_atom(key), else: key
 
       case Enum.member?(fields, key_as_atom) do
@@ -252,6 +281,31 @@ defmodule TdLm.Resources do
         false -> acc
       end
     end)
+  end
+
+  defp build_filter_for_value(value_key_as_atom, params) do
+    value_field = params |> Map.get("value") |> Map.get("type")
+    filter_tag_by_type(:tag, value_key_as_atom, value_field)
+  end
+
+  defp filter_tag_by_type(:tag, :value = atom_key, value_field) when is_list(value_field) do
+    Enum.reduce(value_field, nil, fn value, acc ->
+      param_value = Map.new() |> Map.put("type", value)
+      filter_value_in_tag(atom_key, param_value, acc)
+    end)
+  end
+
+  defp filter_tag_by_type(:tag, :value = atom_key, value_field) do
+    param_value = Map.new() |> Map.put("type", value_field)
+    dynamic([p], fragment("(?) @> ?::jsonb", field(p, ^atom_key), ^param_value))
+  end
+
+  def filter_value_in_tag(atom_key, param_value, acc) when is_nil(acc) do
+    dynamic([p], fragment("(?) @> ?::jsonb", field(p, ^atom_key), ^param_value))
+  end
+
+  def filter_value_in_tag(atom_key, param_value, acc) do
+    dynamic([p], fragment("(?) @> ?::jsonb", field(p, ^atom_key), ^param_value) or ^acc)
   end
 
   defp filter_by_type(atom_key, param_value, acc) when is_map(param_value) do

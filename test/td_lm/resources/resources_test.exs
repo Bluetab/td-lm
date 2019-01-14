@@ -118,12 +118,46 @@ defmodule TdLm.ResourcesTest do
 
     test "list_tags/0 returns all tags" do
       tag = tag_fixture()
-      assert Resources.list_tags() == [tag]
+      assert Resources.list_tags() == [tag |> Map.put(:relations, [])]
+    end
+
+    test "list_tags/1 filtering by several return types returns all tags" do
+      tag_1 = tag_fixture(%{value: %{"type" => "First type"}})
+      tag_2 = tag_fixture(%{value: %{"type" => "Second type"}})
+      tag_fixture(%{value: %{"type" => "Third type"}})
+
+      relation_fixture(%{"tag_ids" => [tag_1.id]})
+      relation_fixture(%{"tag_ids" => [tag_2.id]})
+      
+      result_tags = Resources.list_tags(%{"value" => %{"type" => ["First type", "Second type"]}})
+
+      assert length(result_tags) == 2
+      assert Enum.any?(result_tags, fn r_t -> 
+        r_t.id == tag_1.id
+      end)
+      assert Enum.any?(result_tags, fn r_t -> 
+        r_t.id == tag_2.id
+      end)
+
+      result_tags = Resources.list_tags(%{"value" => %{"type" => ["First type", "Second type"]}, "id" => tag_1.id})
+      
+      assert length(result_tags) == 1
+      assert Enum.any?(result_tags, fn r_t -> 
+        r_t.id == tag_1.id
+      end)
+
+      result_tags = Resources.list_tags(%{"value" => %{"type" => "First type"}, "id" => tag_1.id})
+      
+      assert length(result_tags) == 1
+      assert Enum.any?(result_tags, fn r_t -> 
+        r_t.id == tag_1.id
+      end)
     end
 
     test "get_tag!/1 returns the tag with given id" do
       tag = tag_fixture()
-      assert Resources.get_tag!(tag.id) == tag
+      tag_reponse = tag |> Map.put(:relations, [])
+      assert Resources.get_tag!(tag.id) == tag_reponse
     end
 
     test "create_tag/1 with valid data creates a tag" do
@@ -144,8 +178,9 @@ defmodule TdLm.ResourcesTest do
 
     test "update_tag/2 with invalid data returns error changeset" do
       tag = tag_fixture()
+      tag_reponse = tag |> Map.put(:relations, [])
       assert {:error, %Ecto.Changeset{}} = Resources.update_tag(tag, @invalid_attrs)
-      assert tag == Resources.get_tag!(tag.id)
+      assert tag_reponse == Resources.get_tag!(tag.id)
     end
 
     test "delete_tag/1 deletes the tag" do

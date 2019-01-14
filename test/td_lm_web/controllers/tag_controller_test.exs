@@ -39,7 +39,7 @@ defmodule TdLmWeb.TagControllerTest do
       conn = recycle_and_put_headers(conn)
 
       conn = get(conn, tag_path(conn, :show, id))
-      assert json_response(conn, 200)["data"] == %{"id" => id, "value" => %{}}
+      assert json_response(conn, 200)["data"] == %{"id" => id, "value" => %{}, "relations" => []}
       validate_resp_schema(conn, schema, "TagResponse")
     end
 
@@ -62,7 +62,7 @@ defmodule TdLmWeb.TagControllerTest do
       conn = recycle_and_put_headers(conn)
 
       conn = get(conn, tag_path(conn, :show, id))
-      assert json_response(conn, 200)["data"] == %{"id" => id, "value" => %{}}
+      assert json_response(conn, 200)["data"] == %{"id" => id, "value" => %{}, "relations" => []}
       validate_resp_schema(conn, schema, "TagResponse")
     end
 

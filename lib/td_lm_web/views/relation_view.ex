@@ -36,8 +36,13 @@ defmodule TdLmWeb.RelationView do
   end
 
   defp parse_relation_tags(relation) do
-    relation
-    |> Map.get(:tags, [])
-    |> Enum.map(&Enum.take(&1, @tag_attrs))
+    case Ecto.assoc_loaded?(relation.tags) do
+      true ->
+        relation
+          |> Map.get(:tags, [])
+          |> Enum.map(&Enum.take(&1, @tag_attrs))
+      false ->
+        []
+    end
   end
 end

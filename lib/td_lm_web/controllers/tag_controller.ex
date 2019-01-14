@@ -20,8 +20,8 @@ defmodule TdLmWeb.TagController do
     response(400, "Client Error")
   end
 
-  def index(conn, _params) do
-    tags = Resources.list_tags()
+  def index(conn, params) do
+    tags = Resources.list_tags(params)
     render(conn, "index.json", tags: tags)
   end
 
