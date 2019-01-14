@@ -6,8 +6,19 @@ defmodule TdLm.ResourcesTest do
   describe "relations" do
     alias TdLm.Resources.Relation
 
-    @valid_attrs %{context: %{}, source_id: "some source_id", source_type: "some source_type", target_id: "some target_id", target_type: "some target_type"}
-    @update_attrs %{source_id: "some updated source_id", source_type: "some updated source_type", target_id: "some updated target_id", target_type: "some updated target_type"}
+    @valid_attrs %{
+      context: %{},
+      source_id: "some source_id",
+      source_type: "some source_type",
+      target_id: "some target_id",
+      target_type: "some target_type"
+    }
+    @update_attrs %{
+      source_id: "some updated source_id",
+      source_type: "some updated source_type",
+      target_id: "some updated target_id",
+      target_type: "some updated target_type"
+    }
     @invalid_attrs %{source_id: nil, source_type: nil, target_id: nil, target_type: nil}
 
     def relation_fixture(attrs \\ %{}) do
@@ -128,30 +139,38 @@ defmodule TdLm.ResourcesTest do
 
       relation_fixture(%{"tag_ids" => [tag_1.id]})
       relation_fixture(%{"tag_ids" => [tag_2.id]})
-      
+
       result_tags = Resources.list_tags(%{"value" => %{"type" => ["First type", "Second type"]}})
 
       assert length(result_tags) == 2
-      assert Enum.any?(result_tags, fn r_t -> 
-        r_t.id == tag_1.id
-      end)
-      assert Enum.any?(result_tags, fn r_t -> 
-        r_t.id == tag_2.id
-      end)
 
-      result_tags = Resources.list_tags(%{"value" => %{"type" => ["First type", "Second type"]}, "id" => tag_1.id})
-      
+      assert Enum.any?(result_tags, fn r_t ->
+               r_t.id == tag_1.id
+             end)
+
+      assert Enum.any?(result_tags, fn r_t ->
+               r_t.id == tag_2.id
+             end)
+
+      result_tags =
+        Resources.list_tags(%{
+          "value" => %{"type" => ["First type", "Second type"]},
+          "id" => tag_1.id
+        })
+
       assert length(result_tags) == 1
-      assert Enum.any?(result_tags, fn r_t -> 
-        r_t.id == tag_1.id
-      end)
+
+      assert Enum.any?(result_tags, fn r_t ->
+               r_t.id == tag_1.id
+             end)
 
       result_tags = Resources.list_tags(%{"value" => %{"type" => "First type"}, "id" => tag_1.id})
-      
+
       assert length(result_tags) == 1
-      assert Enum.any?(result_tags, fn r_t -> 
-        r_t.id == tag_1.id
-      end)
+
+      assert Enum.any?(result_tags, fn r_t ->
+               r_t.id == tag_1.id
+             end)
     end
 
     test "get_tag!/1 returns the tag with given id" do
