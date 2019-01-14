@@ -35,6 +35,48 @@ defmodule TdLm.ResourcesTest do
       assert Resources.list_relations() == [relation]
     end
 
+    test "list_relations/1 returns the relations filter by the provided params" do
+      tag_1 = tag_fixture(%{value: %{"type" => "First type"}})
+      tag_2 = tag_fixture(%{value: %{"type" => "Second type"}})
+      tag_3 = tag_fixture(%{value: %{"type" => "Third type"}})
+
+      relation_1 = relation_fixture(%{"tag_ids" => [tag_1.id], "source_type" => "new type"})
+      relation_2 = relation_fixture(%{"tag_ids" => [tag_2.id]})
+      relation_3 = relation_fixture(%{"tag_ids" => [tag_3.id]})
+
+      result_list =
+        Resources.list_relations(%{"value" => %{"type" => ["First type", "Second type"]}})
+
+      assert length(result_list) == 2
+
+      assert Enum.any?(result_list, fn r ->
+               r.id == relation_1.id
+             end)
+
+      assert Enum.any?(result_list, fn r ->
+               r.id == relation_2.id
+             end)
+
+      result_list = Resources.list_relations(%{"value" => %{"type" => "Third type"}})
+      assert length(result_list) == 1
+
+      assert Enum.any?(result_list, fn r ->
+               r.id == relation_3.id
+             end)
+
+      result_list =
+        Resources.list_relations(%{
+          "value" => %{"type" => ["First type", "Second type"]},
+          "source_type" => "new type"
+        })
+
+      assert length(result_list) == 1
+
+      assert Enum.any?(result_list, fn r ->
+               r.id == relation_1.id
+             end)
+    end
+
     test "get_relation!/1 returns the relation with given id" do
       relation = relation_fixture()
       assert Resources.get_relation!(relation.id) == relation

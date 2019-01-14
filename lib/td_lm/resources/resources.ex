@@ -21,13 +21,12 @@ defmodule TdLm.Resources do
     fields = Relation.__schema__(:fields)
     dynamic = and_filter(params, fields, true)
 
-    Repo.all(
-      from(
-        p in Relation,
-        where: ^dynamic,
-        preload: [:tags]
-      )
-    )
+    Relation
+    |> preload([:tags])
+    |> join(:left, [p], _ in assoc(p, :tags))
+    |> where(^dynamic)
+    |> include_where_for_external_params(params)
+    |> Repo.all()
   end
 
   @doc """
@@ -297,22 +296,44 @@ defmodule TdLm.Resources do
 
   defp filter_tag_by_type(:tag, :value = atom_key, value_field) do
     param_value = Map.new() |> Map.put("type", value_field)
-    dynamic([p], fragment("(?) @> ?::jsonb", field(p, ^atom_key), ^param_value))
+    dynamic([p, _], fragment("(?) @> ?::jsonb", field(p, ^atom_key), ^param_value))
   end
 
   def filter_value_in_tag(atom_key, param_value, acc) when is_nil(acc) do
-    dynamic([p], fragment("(?) @> ?::jsonb", field(p, ^atom_key), ^param_value))
+    dynamic([p, _], fragment("(?) @> ?::jsonb", field(p, ^atom_key), ^param_value))
   end
 
   def filter_value_in_tag(atom_key, param_value, acc) do
-    dynamic([p], fragment("(?) @> ?::jsonb", field(p, ^atom_key), ^param_value) or ^acc)
+    dynamic([p, _], fragment("(?) @> ?::jsonb", field(p, ^atom_key), ^param_value) or ^acc)
   end
 
   defp filter_by_type(atom_key, param_value, acc) when is_map(param_value) do
-    dynamic([p], fragment("(?) @> ?::jsonb", field(p, ^atom_key), ^param_value) and ^acc)
+    dynamic([p, _], fragment("(?) @> ?::jsonb", field(p, ^atom_key), ^param_value) and ^acc)
   end
 
   defp filter_by_type(atom_key, param_value, acc) do
-    dynamic([p], field(p, ^atom_key) == ^param_value and ^acc)
+    dynamic([p, _], field(p, ^atom_key) == ^param_value and ^acc)
   end
+
+  defp include_where_for_external_params(query, %{"value" => value}) do
+    dynamic = false
+
+    values_type = value |> Map.get("type")
+
+    case is_list(values_type) do
+      true ->
+        condition =
+          Enum.reduce(values_type, dynamic, fn el, acc ->
+            param_value = Map.new() |> Map.put("type", el)
+            dynamic([_, t], fragment("(?) @> ?::jsonb", field(t, :value), ^param_value) or ^acc)
+          end)
+
+        query |> where(^condition)
+
+      false ->
+        query |> where([_, t], fragment("(?) @> ?::jsonb", field(t, :value), ^value))
+    end
+  end
+
+  defp include_where_for_external_params(query, _), do: query
 end
