@@ -41,6 +41,15 @@ defmodule TdLmWeb.RelationControllerTest do
     relation
   end
 
+  describe "search" do
+    @tag :admin_authenticated
+    test "search all relations", %{conn: conn, swagger_schema: schema} do
+      conn = post(conn, relation_path(conn, :search, %{}))
+      assert json_response(conn, 200)["data"] == []
+      validate_resp_schema(conn, schema, "RelationsResponse")
+    end
+  end
+
   describe "index" do
     @tag :admin_authenticated
     test "lists all relations", %{conn: conn, swagger_schema: schema} do

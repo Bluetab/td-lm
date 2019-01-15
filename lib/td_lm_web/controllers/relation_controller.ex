@@ -24,15 +24,15 @@ defmodule TdLmWeb.RelationController do
     SwaggerDefinitions.relation_definitions()
   end
 
-  swagger_path :index do
-    get("/relations")
-    description("Get a list of relations")
+  swagger_path :search do
+    get("/relations/search")
+    description("Search relations")
     produces("application/json")
     response(200, "OK", Schema.ref(:RelationsResponse))
     response(400, "Client Error")
   end
 
-  def index(conn, params) do
+  def search(conn, params) do
     user = conn.assigns[:current_resource]
 
     relations =
@@ -49,6 +49,30 @@ defmodule TdLmWeb.RelationController do
       conn,
       "index.json",
       hypermedia: collection_hypermedia("relation", conn, relations, params),
+      relations: relations
+    )
+  end
+
+  swagger_path :index do
+    get("/relations")
+    description("Get a list of relations")
+    produces("application/json")
+    response(200, "OK", Schema.ref(:RelationsResponse))
+    response(400, "Client Error")
+  end
+
+  def index(conn, _params) do
+    user = conn.assigns[:current_resource]
+
+    relations = Resources.list_relations()
+      |> Enum.filter(fn rel ->
+        rel_params = format_params_to_check_permissions(rel)
+        can?(user, show(rel_params))
+      end)
+
+    render(
+      conn,
+      "index.json",
       relations: relations
     )
   end

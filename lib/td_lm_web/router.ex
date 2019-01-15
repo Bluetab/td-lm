@@ -38,6 +38,7 @@ defmodule TdLmWeb.Router do
     get "/links", LinkController, :index
 
     resources "/relations", RelationController, except: [:new, :edit]
+    post "/relations/search", RelationController, :search
     resources "/tags", TagController, except: [:new, :edit]
   end
 

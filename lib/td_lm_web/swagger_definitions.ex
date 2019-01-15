@@ -142,7 +142,28 @@ defmodule TdLmWeb.SwaggerDefinitions do
           properties do
             data(Schema.ref(:Relation))
           end
-        end
+        end,
+        RelationFilterRequest:
+          swagger_schema do
+            properties do
+              id(:integer, "Relation Id", required: true)
+              source_id(:string, "Id of the source of the relation", required: false)
+              source_type(:string, "Type of the source of the relation", required: false)
+              target_id(:string, "Id of the source of the relation", required: false)
+              target_type(:string, "Type of the source of the relation", required: false)
+              context(:object, "Context informtation of the source and the target", required: false)
+              value(:object, "Context informtation of the source and the target", required: false)
+            end
+
+          example(%{
+            query: "searchterm",
+            filters: %{
+              domain: ["Domain1", "Domain2"],
+              status: ["draft"],
+              data_owner: ["user1"]
+            }
+          })
+        end,
     }
   end
 
