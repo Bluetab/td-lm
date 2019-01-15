@@ -27,6 +27,13 @@ defmodule TdLmWeb.RelationController do
   swagger_path :search do
     get("/relations/search")
     description("Search relations")
+    parameters do
+      search(
+        :body,
+        Schema.ref(:RelationFilterRequest),
+        "Search query and filter parameters"
+      )
+    end
     produces("application/json")
     response(200, "OK", Schema.ref(:RelationsResponse))
     response(400, "Client Error")
