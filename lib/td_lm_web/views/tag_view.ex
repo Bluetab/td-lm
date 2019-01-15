@@ -24,7 +24,7 @@ defmodule TdLmWeb.TagView do
       true ->
         tag
         |> Map.get(:relations, [])
-        |> Enum.map(&Enum.take(&1, @relation_attributes))
+        |> Enum.map(&Map.take(&1, @relation_attributes))
       false ->
         []
     end

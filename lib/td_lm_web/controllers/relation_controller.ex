@@ -25,7 +25,7 @@ defmodule TdLmWeb.RelationController do
   end
 
   swagger_path :search do
-    get("/relations/search")
+    post("/relations/search")
     description("Search relations")
     parameters do
       search(

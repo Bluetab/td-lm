@@ -40,7 +40,7 @@ defmodule TdLmWeb.RelationView do
       true ->
         relation
           |> Map.get(:tags, [])
-          |> Enum.map(&Enum.take(&1, @tag_attrs))
+          |> Enum.map(&Map.take(&1, @tag_attrs))
       false ->
         []
     end
