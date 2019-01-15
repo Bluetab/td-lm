@@ -152,17 +152,17 @@ defmodule TdLmWeb.SwaggerDefinitions do
               target_id(:string, "Id of the source of the relation", required: false)
               target_type(:string, "Type of the source of the relation", required: false)
               context(:object, "Context informtation of the source and the target", required: false)
-              value(:object, "Context informtation of the source and the target", required: false)
+              value(:object, "Value of the relation type", required: false)
             end
 
           example(%{
-            query: "searchterm",
-            filters: %{
-              domain: ["Domain1", "Domain2"],
-              status: ["draft"],
-              data_owner: ["user1"]
-            }
-          })
+            id: "1",
+            source_id: "1",
+            source_type: "business_concept",
+            target_id: "2",
+            target_type: "data_filed",
+            context: %{},
+            value: %{type: "business_concept_to_field"}})
         end,
     }
   end
