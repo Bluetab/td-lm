@@ -256,6 +256,7 @@ defmodule TdLmWeb.RelationController do
     payload =
       relation
       |> Map.drop([:__meta__])
+      |> Map.drop([:tags])
       |> Map.from_struct()
       |> Map.put("relation_types", relation_types)
 
