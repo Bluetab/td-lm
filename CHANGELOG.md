@@ -4,7 +4,7 @@
 
 ### Changed
 
-- Add default type in case in tag in case it does not exist 
+- Add default type in tag in case it does not exist 
 
 ## [2.9.0] 2018-01-17
 
