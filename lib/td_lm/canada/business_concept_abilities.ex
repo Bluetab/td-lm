@@ -44,7 +44,7 @@ defmodule TdLm.Canada.BusinessConceptAbilities do
   end
 
   def can?(%User{} = user, :delete, %{resource_id: id, resource_type: "business_concept"}) do
-    Permissions.authorized_any?(user, :manage_business_concept_links, "business_concept", id)
+    Permissions.authorized?(user, :manage_business_concept_links, "business_concept", id)
   end
 
   def can?(%User{} = _user, _permission, _params) do
