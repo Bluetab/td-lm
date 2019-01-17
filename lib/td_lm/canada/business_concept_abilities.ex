@@ -27,6 +27,10 @@ defmodule TdLm.Canada.BusinessConceptAbilities do
     Permissions.authorized?(user, :manage_business_concept_links, "business_concept", id)
   end
 
+  def can?(%User{} = user, :search, %{resource_id: id, resource_type: "business_concept"}) do
+    Permissions.authorized_any?(user, @view_business_concept, "business_concept", id)
+  end
+
   def can?(%User{} = user, :show, %{resource_id: id, resource_type: "business_concept"}) do
     Permissions.authorized_any?(user, @view_business_concept, "business_concept", id)
   end

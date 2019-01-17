@@ -25,6 +25,10 @@ defmodule TdBg.Canada.Abilities do
       BusinessConceptAbilities.can?(user, :delete_link, params)
     end
 
+    def can?(%User{} = user, :search, params) do
+      BusinessConceptAbilities.can?(user, :search, params)
+    end
+
     def can?(%User{} = user, :create, params) do
       BusinessConceptAbilities.can?(user, :create, params)
     end
