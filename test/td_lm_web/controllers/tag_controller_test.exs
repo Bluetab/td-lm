@@ -24,7 +24,7 @@ defmodule TdLmWeb.TagControllerTest do
     @tag :admin_authenticated
     test "lists all tags", %{conn: conn, swagger_schema: schema} do
       conn = get(conn, tag_path(conn, :index))
-      assert json_response(conn, 200)["data"] == []
+      assert length(json_response(conn, 200)["data"]) == 1
       validate_resp_schema(conn, schema, "TagsResponse")
     end
   end
