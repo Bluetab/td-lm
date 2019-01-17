@@ -53,9 +53,6 @@ defmodule TdLmWeb.RelationController do
 
     params = params |> format_params_to_check_permissions()
 
-    Logger.info("Permision params... #{inspect(params)}")
-    Logger.info("Relations... #{inspect(relations)}")
-
     render(
       conn,
       "index.json",
