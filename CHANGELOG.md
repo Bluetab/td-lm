@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.9.0] 2018-01-17
+
+### Changed
+
+- [TD-933] New relations and tags model to consume links having a relationship on both directions
+
 ## [2.8.0] 2018-11-22
 
 ### Changed
