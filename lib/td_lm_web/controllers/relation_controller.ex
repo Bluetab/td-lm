@@ -293,8 +293,8 @@ defmodule TdLmWeb.RelationController do
     resource_type = params_map |> Map.get("source_type")
 
     Map.new()
-    |> Map.put("resource_id", resource_id)
-    |> Map.put("resource_type", resource_type)
+    |> Map.put(:resource_id, resource_id)
+    |> Map.put(:resource_type, resource_type)
   end
 
   defp stringify_map(map) do
