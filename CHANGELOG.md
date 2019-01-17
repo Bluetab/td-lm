@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.9.1] 2018-01-17
+
+### Changed
+
+- Add default type in case in tag in case it does not exist 
+
 ## [2.9.0] 2018-01-17
 
 ### Changed
