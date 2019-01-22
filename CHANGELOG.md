@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.11.0] 2019-01-22
+
+### Changed
+
+- Update version to catch up with our existing release 
+
 ## [2.9.1] 2018-01-17
 
 ### Changed
