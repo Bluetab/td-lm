@@ -1,28 +1,27 @@
 defmodule TdLm.Repo.Migrations.LoadDataFromResourceLinkIntoRelations do
   use Ecto.Migration
-  
+
   import Ecto.Query
   alias TdLm.Repo
-  alias TdLm.Resources.Relation
 
   def change do
     resource_link_entities = fetch_entities_in_resource_links()
-    Repo.insert_all(Relation, resource_link_entities)
+    Repo.insert_all("relations", resource_link_entities)
   end
 
   defp fetch_entities_in_resource_links do
-    resource_links = 
+    resource_links =
       from(
-        r_l in "resource_links", 
-        select: 
+        r_l in "resource_links",
+        select:
           %{
-            source_id: r_l.resource_id, 
+            source_id: r_l.resource_id,
             source_type: r_l.resource_type,
             target: r_l.field
           }
         )
       |> Repo.all()
-    
+
     parse_resource_link_format(resource_links)
   end
 
@@ -47,7 +46,7 @@ defmodule TdLm.Repo.Migrations.LoadDataFromResourceLinkIntoRelations do
   end
 
   defp build_target_context(target) do
-    target_params = 
+    target_params =
       target
       |> Map.drop(["ou", "field_id"])
 
