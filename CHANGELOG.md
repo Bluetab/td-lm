@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.11.2] 2019-01-23
+
+### Changed
+
+- [TD-967] Include the contextual information of the resources on relation load into cache
+
 ## [2.11.1] 2019-01-23
 
 ### Fixed
