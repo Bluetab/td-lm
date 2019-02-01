@@ -146,7 +146,8 @@ defmodule TdLm.RelationLoader do
   end
 
   defp build_resources(source, target, context) do
-    build_resources(source, target)
+    source
+    |> build_resources(target)
     |> Map.put(:context, context)
   end
 
