@@ -66,12 +66,13 @@ defmodule TdLm.RelationLoader do
     results =
       resources
       |> RelationCache.delete_resource_from_relation(relation_types)
-      |> Enum.map(fn {res, _} -> res end)
+      |> Enum.map(fn {{r_relation, _}, {r_resource, _}} -> [r_relation, r_resource] end)
+      |> List.flatten()
 
     if Enum.any?(results, &(&1 != :ok)) do
-      Logger.warn("Cache loading of relations failed")
+      Logger.warn("Deleted failed")
     else
-      Logger.info("Cached #{length(results)} relations")
+      Logger.info("Deleted #{length(results)} relations and resources")
     end
 
     {:reply, :ok, state}
@@ -103,13 +104,18 @@ defmodule TdLm.RelationLoader do
   def load_relation_data(relations) do
     results =
       relations
-      |> Enum.map(&Map.take(&1, [:target_id, :target_type, :source_id, :source_type, :tags]))
+      |> Enum.map(
+        &Map.take(&1, [:target_id, :target_type, :source_id, :source_type, :context, :tags])
+      )
       |> Enum.map(&load_relation_attributes(&1))
       |> Enum.map(fn {rs, r_ts} ->
         RelationCache.put_relation(rs, r_ts)
       end)
       |> List.flatten()
-      |> Enum.map(fn {res, _} -> res end)
+      |> Enum.map(fn {{r_put_relation, _}, {r_put_resource, _}} ->
+        [r_put_relation, r_put_resource]
+      end)
+      |> List.flatten()
 
     if Enum.any?(results, &(&1 != :ok)) do
       Logger.warn("Cache loading of relations failed")
@@ -121,7 +127,8 @@ defmodule TdLm.RelationLoader do
   defp load_relation_attributes(relation) do
     source = relation |> load_source()
     target = relation |> load_target()
-    resources = build_resources(source, target)
+    context = relation |> Map.get(:context, %{})
+    resources = build_resources(source, target, context)
     relation_types = build_relation_types(relation)
     {resources, relation_types}
   end
@@ -136,6 +143,11 @@ defmodule TdLm.RelationLoader do
     Map.new()
     |> Map.put(:target_id, target_id)
     |> Map.put(:target_type, target_type)
+  end
+
+  defp build_resources(source, target, context) do
+    build_resources(source, target)
+    |> Map.put(:context, context)
   end
 
   defp build_resources(source, target) do
