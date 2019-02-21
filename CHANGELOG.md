@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.14.0] 2019-02-01
+
+### Added
+
+- [TD-1422] Included a worker that checks if a BC has been deleted and updates the DF relations
+
 ## [2.11.2] 2019-02-01
 
 ### Changed

@@ -77,6 +77,10 @@ config :td_lm, :phoenix_swagger,
 
 config :td_lm, cache_links_on_startup: true
 config :td_lm, cache_relations_on_startup: true
+
+config :td_lm, relation_removement: true
+config :td_lm, relation_removement_frequency: 36_00_000
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{Mix.env}.exs"
