@@ -25,6 +25,46 @@ defmodule TdLmWeb.RelationController do
     SwaggerDefinitions.relation_definitions()
   end
 
+  def search(conn, %{"resource_id" => resource_id, "resource_type" => resource_type, "related_to_type" => related_to_type}) do
+    user = conn.assigns[:current_resource]
+
+    params_source = %{
+      "source_type" => resource_type,
+      "source_id" => resource_id,
+      "target_type" => related_to_type
+    }
+    relations_source =
+      params_source
+      |> Resources.list_relations()
+      |> Enum.filter(fn rel ->
+        rel_params = format_params_to_check_permissions(rel)
+        can?(user, show(rel_params))
+      end)
+    params_target = %{
+      "target_type" => resource_type,
+      "target_id" => resource_id,
+      "source_type" => related_to_type
+    }
+    relations_target =
+      params_target
+      |> Resources.list_relations()
+      |> Enum.filter(fn rel ->
+        rel_params = format_params_to_check_permissions(rel)
+        can?(user, show(rel_params))
+      end)
+
+    relations = relations_source ++ relations_target
+
+    params = params_source |> format_params_to_check_permissions()
+
+    render(
+      conn,
+      "index.json",
+      hypermedia: collection_hypermedia("relation", conn, relations, params),
+      relations: relations
+    )
+  end
+
   swagger_path :search do
     post("/relations/search")
     description("Search relations")

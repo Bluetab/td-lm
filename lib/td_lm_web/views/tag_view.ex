@@ -14,20 +14,7 @@ defmodule TdLmWeb.TagView do
 
   def render("tag.json", %{tag: tag}) do
     %{id: tag.id,
-      value: tag.value,
-      relations: parse_relations(tag)
+      value: tag.value
     }
   end
-
-  defp parse_relations(tag) do
-    case Ecto.assoc_loaded?(tag.relations) do
-      true ->
-        tag
-        |> Map.get(:relations, [])
-        |> Enum.map(&Map.take(&1, @relation_attributes))
-      false ->
-        []
-    end
-  end
-
 end
