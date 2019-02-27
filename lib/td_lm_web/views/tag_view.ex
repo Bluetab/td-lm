@@ -2,8 +2,6 @@ defmodule TdLmWeb.TagView do
   use TdLmWeb, :view
   alias TdLmWeb.TagView
 
-  @relation_attributes [:source_id, :source_type, :target_id, :target_type, :context]
-
   def render("index.json", %{tags: tags}) do
     %{data: render_many(tags, TagView, "tag.json")}
   end
