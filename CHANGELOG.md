@@ -1,10 +1,14 @@
 # Changelog
 
-## [¿2.14.0?] Unreleased
+## [Unreleased]
 
 ### Changed
 
 - [TD-754] Changes for creating relation between business concepts
+
+### Added
+
+- [TD-1422] Included a worker that checks if a BC has been deleted and updates the DF relations
 
 ## [2.11.2] 2019-02-01
 
