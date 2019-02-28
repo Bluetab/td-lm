@@ -15,7 +15,6 @@ defmodule TdLmWeb.RelationController do
 
   action_fallback(TdLmWeb.FallbackController)
 
-  @permission_attributes [:source_id, :source_type, :target_id, :target_type]
   @events %{
     add_relation: "add_relation",
     delete_relation: "delete_relation"
@@ -25,9 +24,45 @@ defmodule TdLmWeb.RelationController do
     SwaggerDefinitions.relation_definitions()
   end
 
+  def search(conn, %{
+        "resource_id" => resource_id,
+        "resource_type" => resource_type,
+        "related_to_type" => related_to_type
+      }) do
+    user = conn.assigns[:current_resource]
+
+    relations =
+      [
+        %{
+          "source_type" => resource_type,
+          "source_id" => resource_id,
+          "target_type" => related_to_type
+        },
+        %{
+          "target_type" => resource_type,
+          "target_id" => resource_id,
+          "source_type" => related_to_type
+        }
+      ]
+      |> Enum.flat_map(&Resources.list_relations/1)
+      |> Enum.filter(&can?(user, show(&1)))
+
+    render(
+      conn,
+      "index.json",
+      hypermedia:
+        collection_hypermedia("relation", conn, relations, %{
+          resource_id: resource_id,
+          resource_type: resource_type
+        }),
+      relations: relations
+    )
+  end
+
   swagger_path :search do
     post("/relations/search")
     description("Search relations")
+
     parameters do
       search(
         :body,
@@ -35,6 +70,7 @@ defmodule TdLmWeb.RelationController do
         "Search query and filter parameters"
       )
     end
+
     produces("application/json")
     response(200, "OK", Schema.ref(:RelationsResponse))
     response(400, "Client Error")
@@ -46,17 +82,17 @@ defmodule TdLmWeb.RelationController do
     relations =
       params
       |> Resources.list_relations()
-      |> Enum.filter(fn rel ->
-        rel_params = format_params_to_check_permissions(rel)
-        can?(user, show(rel_params))
-      end)
+      |> Enum.filter(&can?(user, show(&1)))
 
-    params = params |> format_params_to_check_permissions()
+    resource_key = %{
+      resource_id: Map.get(params, "source_id"),
+      resource_type: Map.get(params, "source_type")
+    }
 
     render(
       conn,
       "index.json",
-      hypermedia: collection_hypermedia("relation", conn, relations, params),
+      hypermedia: collection_hypermedia("relation", conn, relations, resource_key),
       relations: relations
     )
   end
@@ -72,11 +108,9 @@ defmodule TdLmWeb.RelationController do
   def index(conn, _params) do
     user = conn.assigns[:current_resource]
 
-    relations = Resources.list_relations()
-      |> Enum.filter(fn rel ->
-        rel_params = format_params_to_check_permissions(rel)
-        can?(user, show(rel_params))
-      end)
+    relations =
+      Resources.list_relations()
+      |> Enum.filter(&can?(user, show(&1)))
 
     render(
       conn,
@@ -99,11 +133,12 @@ defmodule TdLmWeb.RelationController do
     response(422, "Client Error")
   end
 
-  def create(conn, %{"relation" => relation_params}) do
+  def create(conn, %{
+        "relation" => %{"source_id" => source_id, "source_type" => source_type} = relation_params
+      }) do
     user = conn.assigns[:current_resource]
-    params = relation_params |> format_params_to_check_permissions()
 
-    with true <- can?(user, create(params)),
+    with true <- can?(user, create(%{resource_id: source_id, resource_type: source_type})),
          {:ok, %Relation{} = relation} <- Resources.create_relation(relation_params) do
       Audit.create_event(
         conn,
@@ -144,12 +179,11 @@ defmodule TdLmWeb.RelationController do
     response(422, "Client Error")
   end
 
-  def show(conn, %{"id" => id} = params) do
+  def show(conn, %{"id" => id}) do
     user = conn.assigns[:current_resource]
-    params = params |> format_params_to_check_permissions()
+    relation = Resources.get_relation!(id)
 
-    with true <- can?(user, show(params)) do
-      relation = Resources.get_relation!(id)
+    with true <- can?(user, show(relation)) do
       render(conn, "show.json", relation: relation)
     else
       false ->
@@ -181,11 +215,9 @@ defmodule TdLmWeb.RelationController do
 
   def update(conn, %{"id" => id, "relation" => relation_params}) do
     user = conn.assigns[:current_resource]
-
     relation = Resources.get_relation!(id)
-    params = relation |> format_params_to_check_permissions()
 
-    with true <- can?(user, update(params)),
+    with true <- can?(user, update(relation)),
          {:ok, %Relation{} = relation} <- Resources.update_relation(relation, relation_params) do
       render(conn, "show.json", relation: relation)
     else
@@ -216,11 +248,9 @@ defmodule TdLmWeb.RelationController do
 
   def delete(conn, %{"id" => id}) do
     user = conn.assigns[:current_resource]
-
     relation = Resources.get_relation!(id)
-    params = relation |> format_params_to_check_permissions()
 
-    with true <- can?(user, delete(params)),
+    with true <- can?(user, delete(relation)),
          {:ok, %Relation{}} <- Resources.delete_relation(relation) do
       Audit.create_event(conn, audit_delete_attribures(relation), @events.delete_relation)
       RelationLoader.delete(relation)
@@ -280,32 +310,5 @@ defmodule TdLmWeb.RelationController do
     |> Enum.map(&Map.get(&1, :value))
     |> Enum.map(&Map.get(&1, "type"))
     |> Enum.filter(&(not is_nil(&1)))
-  end
-
-  defp format_params_to_check_permissions(%Relation{} = relation) do
-    relation
-    |> Map.take(@permission_attributes)
-    |> stringify_map()
-    |> format_params_to_check_permissions()
-  end
-
-  defp format_params_to_check_permissions(params_map) do
-    resource_id = params_map |> Map.get("source_id")
-    resource_type = params_map |> Map.get("source_type")
-
-    Map.new()
-    |> Map.put(:resource_id, resource_id)
-    |> Map.put(:resource_type, resource_type)
-  end
-
-  defp stringify_map(map) do
-    Map.new(map, fn {key, value} -> {stringify_key(key), value} end)
-  end
-
-  defp stringify_key(key) do
-    case is_atom(key) do
-      true -> Atom.to_string(key)
-      false -> key
-    end
   end
 end

@@ -2,11 +2,17 @@ defmodule TdBg.Canada.Abilities do
   @moduledoc false
   alias TdLm.Accounts.User
   alias TdLm.Canada.BusinessConceptAbilities
+  alias TdLm.Resources.Relation
 
   defimpl Canada.Can, for: User do
     # administrator is superpowerful for Domain
     def can?(%User{is_admin: true} = _user, _permission, _params) do
       true
+    end
+
+    def can?(%User{} = user, action, %Relation{} = relation) do
+      resource_key = get_resource_key(relation)
+      can?(user, action, resource_key)
     end
 
     def can?(%User{} = user, :add_link, params) do
@@ -47,6 +53,10 @@ defmodule TdBg.Canada.Abilities do
 
     def can?(%User{} = _user, _permission, _params) do
       false
+    end
+
+    defp get_resource_key(%Relation{source_type: source_type, source_id: source_id}) do
+      %{resource_id: source_id, resource_type: source_type}
     end
   end
 end

@@ -148,8 +148,7 @@ defmodule TdLm.Resources do
     Repo.all(
       from(
         p in Tag,
-        where: ^dynamic,
-        preload: [:relations]
+        where: ^dynamic
       )
     )
   end
@@ -256,12 +255,10 @@ defmodule TdLm.Resources do
   end
 
   defp filter_tags(params, fields) do
-    key_as_atom = "value" |> String.to_atom()
-
     conditions =
-      case Map.has_key?(params, "value") && Enum.member?(fields, key_as_atom) do
+      case Map.has_key?(params, "value") && Enum.member?(fields, :value) do
         true ->
-          build_filter_for_value(key_as_atom, params)
+          build_filter_for_value(:value, params)
 
         false ->
           true

@@ -88,7 +88,7 @@ defmodule TdLmWeb.TagController do
   end
 
   swagger_path :delete do
-    delete("/tag/{id}")
+    delete("/tags/{id}")
     description("Deletes a tag given an id")
 
     parameters do
