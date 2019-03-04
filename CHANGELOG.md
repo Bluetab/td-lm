@@ -4,6 +4,7 @@
 
 ### Changed
 
+- [TD-1541] Fix relation_remover to remove the relations between bc and df properly 
 - [TD-754] Changes for creating relation between business concepts
 
 ### Added
