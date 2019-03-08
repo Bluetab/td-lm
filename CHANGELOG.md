@@ -1,9 +1,13 @@
 # Changelog
 
+## [Unreleased] 2019-03-04
+
+- [TD-1541] Fix relation_remover to remove the relations between bc and df properly
+
 ## [2.14.0] 2019-03-04
 
 ### Changed
-
+ 
 - [TD-754] Changes for creating relation between business concepts
 
 ### Added

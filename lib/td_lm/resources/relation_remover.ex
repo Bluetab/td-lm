@@ -50,7 +50,6 @@ defmodule TdLm.RelationRemover do
 
     resource_key
     |> Enum.each(fn res -> if is_bc_nil(res) do
-                            RelationCache.delete_element_from_set(res, resource_key)
                             RelationCache.delete_element_from_set(res, "data_field:#{df_id}:relations")
                           end end)
 
