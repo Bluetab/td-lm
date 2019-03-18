@@ -1,6 +1,8 @@
 # Changelog
 
-## [Unreleased] 2019-03-04
+## [2.15.0] 2019-03-18
+
+### Changed
 
 - [TD-1541] Fix relation_remover to remove the relations between bc and df properly
 
