@@ -170,7 +170,7 @@ defmodule TdLm.ResourcesTest do
     end
 
     test "list_tags/0 returns all tags" do
-      assert length(Resources.list_tags()) == 1
+      assert Resources.list_tags() == []
     end
 
     test "list_tags/1 filtering by several return types returns all tags" do

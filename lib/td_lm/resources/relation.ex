@@ -57,13 +57,11 @@ defmodule TdLm.Resources.Relation do
   end
 
   defp parse_tag_ids(%{"tag_ids" => []}), do: []
-
   defp parse_tag_ids(%{"tag_ids" => tag_ids}) do
     tag_ids
     |> Enum.map(&Resources.get_tag(&1))
     |> Enum.filter(&(not is_nil(&1)))
   end
-
   defp parse_tag_ids(_), do: []
 
   defp stringify_map(map) do
