@@ -5,6 +5,7 @@
 ### Added
 
 - [TD-1571] Elixir's Logger config will check for EX_LOGGER_FORMAT variable to override format
+- [TD-1606] Remove default tag and update relations with default tag to have no tags
 
 ## [2.15.0] 2019-03-18
 
