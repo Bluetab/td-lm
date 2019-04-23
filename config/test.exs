@@ -24,6 +24,7 @@ config :td_lm, :audit_service, api_service: TdLmWeb.ApiServices.MockTdAuditServi
   audit_domain: ""
 
 config :td_lm, permission_resolver: TdLm.Permissions.MockPermissionResolver
+config :td_lm, bc_cache: TdPerms.MockBusinessConceptCache
 
 config :td_lm, cache_links_on_startup: false
 config :td_lm, cache_relations_on_startup: false

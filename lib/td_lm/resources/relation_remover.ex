@@ -7,11 +7,11 @@ defmodule TdLm.RelationRemover do
 
   alias TdLm.RelationLoader
   alias TdLm.Resources
-  alias TdPerms.BusinessConceptCache
   alias TdPerms.RelationCache
 
   require Logger
 
+  @bc_cache Application.get_env(:td_lm, :bc_cache)
   @relation_removement Application.get_env(:td_lm, :relation_removement)
   @relation_removement_frequency Application.get_env(:td_lm, :relation_removement_frequency)
 
@@ -29,7 +29,7 @@ defmodule TdLm.RelationRemover do
   end
 
   def handle_info(:work, state) do
-    bcs_to_avoid_deletion = BusinessConceptCache.get_existing_business_concept_set()
+    bcs_to_avoid_deletion = @bc_cache.get_existing_business_concept_set()
 
     relations_from_db = Resources.list_relations()
     relations_from_db

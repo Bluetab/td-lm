@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- [TD-1660] Fix link_count to filter by business_concept-data_field relations
+
 ## [2.17.0] 2019-04-17
 
 ### Changed
