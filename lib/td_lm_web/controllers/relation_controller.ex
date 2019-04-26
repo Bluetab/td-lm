@@ -142,7 +142,7 @@ defmodule TdLmWeb.RelationController do
          {:ok, %Relation{} = relation} <- Resources.create_relation(relation_params) do
       Audit.create_event(
         conn,
-        audit_create_attribures(relation_params, relation),
+        audit_create_attributes(relation_params, relation),
         @events.add_relation
       )
 
@@ -252,7 +252,7 @@ defmodule TdLmWeb.RelationController do
 
     with true <- can?(user, delete(relation)),
          {:ok, %Relation{}} <- Resources.delete_relation(relation) do
-      Audit.create_event(conn, audit_delete_attribures(relation), @events.delete_relation)
+      Audit.create_event(conn, audit_delete_attributes(relation), @events.delete_relation)
       RelationLoader.delete(relation)
 
       send_resp(conn, :no_content, "")
@@ -269,7 +269,7 @@ defmodule TdLmWeb.RelationController do
     end
   end
 
-  defp audit_create_attribures(create_attributes, relation) do
+  defp audit_create_attributes(create_attributes, relation) do
     resource_id = create_attributes |> Map.get("source_id")
     resource_type = create_attributes |> Map.get("source_type")
     relation_types = fetch_relation_types(relation)
@@ -279,7 +279,7 @@ defmodule TdLmWeb.RelationController do
     build_audit_map(resource_id, resource_type, payload)
   end
 
-  defp audit_delete_attribures(relation) do
+  defp audit_delete_attributes(relation) do
     resource_id = relation |> Map.get(:source_id)
     resource_type = relation |> Map.get(:source_type)
     relation_types = fetch_relation_types(relation)

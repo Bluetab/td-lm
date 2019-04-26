@@ -5,20 +5,13 @@ defmodule TdLm.RelationLoader do
 
   use GenServer
 
-  alias Ecto.Adapters.SQL
-  alias TdLm.Repo
   alias TdLm.Resources
-  alias TdPerms.BusinessConceptCache
   alias TdPerms.RelationCache
 
   require Logger
 
+  @bc_cache Application.get_env(:td_lm, :bc_cache)
   @cache_relations_on_startup Application.get_env(:td_lm, :cache_relations_on_startup)
-
-  @count_query """
-    select source_id as concept_id, count(*) as count
-    from relations group by source_id
-  """
 
   def start_link(name \\ nil) do
     GenServer.start_link(__MODULE__, nil, name: name)
@@ -101,7 +94,7 @@ defmodule TdLm.RelationLoader do
     |> load_relation_data()
   end
 
-  def load_relation_data(relations) do
+  defp load_relation_data(relations) do
     results =
       relations
       |> Enum.map(
@@ -165,20 +158,14 @@ defmodule TdLm.RelationLoader do
   end
 
   defp put_count(business_concept_id, count) do
-    BusinessConceptCache.put_field_values(business_concept_id, link_count: count)
+    @bc_cache.put_field_values(business_concept_id, link_count: count)
   end
 
   defp load_counts do
-    Repo
-    |> SQL.query!(@count_query)
-    |> Map.get(:rows)
-    |> load_counts
-  end
-
-  def load_counts(counts) do
+    counts = Resources.count_relations_by_source("business_concept", "data_field")
     results =
       counts
-      |> Enum.map(&put_count(Enum.at(&1, 0), Enum.at(&1, 1)))
+      |> Enum.map(fn {id, count} -> put_count(id, count) end)
       |> Enum.map(fn {res, _} -> res end)
 
     if Enum.any?(results, &(&1 != :ok)) do

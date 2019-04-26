@@ -29,6 +29,22 @@ defmodule TdLm.Resources do
     |> Repo.all()
   end
 
+  def count_relations_by_source(source_type, target_type) do
+    Relation
+    |> Repo.all()
+    |> Enum.group_by(&(&1.source_id))
+    |> Enum.map(fn {key, value} ->
+          {key, count_valid_relations(value, source_type, target_type)}
+        end)
+    |> Map.new()
+  end
+
+  defp count_valid_relations(value, source_type, target_type) do
+    Enum.count(value, fn r ->
+      r.source_type == source_type and r.target_type == target_type
+    end)
+  end
+
   @doc """
   Gets a single relation.
 
