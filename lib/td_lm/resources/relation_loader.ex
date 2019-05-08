@@ -6,6 +6,7 @@ defmodule TdLm.RelationLoader do
   use GenServer
 
   alias TdLm.Resources
+  alias TdPerms.BusinessConceptCache
   alias TdPerms.RelationCache
 
   require Logger
@@ -75,6 +76,9 @@ defmodule TdLm.RelationLoader do
   def handle_info(:load_relation_cache, state) do
     load_all_relations()
     load_counts()
+
+    check_legacy_bc_parent_relations()
+
     {:noreply, state}
   end
 
@@ -173,5 +177,87 @@ defmodule TdLm.RelationLoader do
     else
       Logger.info("Cached #{length(results)} resource link counts")
     end
+  end
+
+  defp check_legacy_bc_parent_relations do
+    %{id: tag_id} = get_or_create_parent_tag()
+    bc_parents = BusinessConceptCache.get_bc_parents!()
+      |> Enum.filter(&(not exist_bc_relation_with_tag?(&1, tag_id)))
+
+    bc_attrs = build_bc_attrs_map(bc_parents)
+
+    bc_parents
+      |> Enum.map(fn {id, parent_id} ->
+          source = Map.get(bc_attrs, parent_id)
+          target = Map.get(bc_attrs, id)
+          %{
+            source_id: parent_id,
+            source_type: "business_concept",
+            target_id: id,
+            target_type: "business_concept",
+            context: %{
+              source: source,
+              target: target
+            }
+          }
+        end)
+      |> Enum.map(&Map.put(&1, :tag_ids, [tag_id]))
+      |> Enum.map(&Resources.create_relation/1)
+  end
+
+  defp build_bc_attrs_map(bc_parents) do
+    fields = [
+      "business_concept_version_id",
+      "name",
+      "current_version"
+    ]
+
+    bc_parents
+      |> Enum.flat_map(fn {id, parent_id} -> [id, parent_id] end)
+      |> Enum.uniq
+      |> Enum.map(fn id ->
+          {:ok, bc_attrs} = BusinessConceptCache.get_field_values(id, fields)
+          {id, %{
+            id: Map.get(bc_attrs, "business_concept_version_id"),
+            name: Map.get(bc_attrs, "name"),
+            version: Map.get(bc_attrs, "current_version"),
+            business_concept_id: id,
+          }}
+        end)
+      |> Map.new
+  end
+
+  defp get_or_create_parent_tag do
+    tag_value = %{
+      target_type: "business_concept",
+      type: "bc_parent"
+    }
+
+    tag = %{value: tag_value}
+      |> Resources.list_tags
+      |> Enum.at(0)
+
+    case tag do
+      nil ->
+        value = tag_value
+          |> Map.put(:label, "padre de")
+        {:ok, t} = Resources.create_tag(%{value: value})
+        t
+      t -> t
+    end
+  end
+
+  defp exist_bc_relation_with_tag?({target_id, source_id}, tag_id) do
+    relation_filter = %{
+      source_id: source_id,
+      source_type: "business_concept",
+      target_id: target_id,
+      target_type: "business_concept"
+    }
+    relation_filter
+      |> Resources.list_relations
+      |> Enum.flat_map(&Map.get(&1, :tags, []))
+      |> Enum.map(&Map.get(&1, :id))
+      |> Enum.member?(tag_id)
   end
 end

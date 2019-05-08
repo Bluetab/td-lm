@@ -172,25 +172,13 @@ defmodule TdLmWeb.SwaggerDefinitions do
       CreateTag:
         swagger_schema do
           properties do
-            tag(
-              Schema.new do
-                properties do
-                  value(:object, "Object value of a tag", required: true)
-                end
-              end
-            )
+            tag(Schema.ref(:TagEdit))
           end
         end,
       UpdateTag:
         swagger_schema do
           properties do
-            tag(
-              Schema.new do
-                properties do
-                  value(:object, "Object value of a tag", required: true)
-                end
-              end
-            )
+            tag(Schema.ref(:TagEdit))
           end
       end,
       Tags:
@@ -213,7 +201,32 @@ defmodule TdLmWeb.SwaggerDefinitions do
 
           properties do
             id(:integer, "Tag Id", required: true)
-            value(:object, "Object value of a tag", required: true)
+            value(
+              Schema.new do
+                properties do
+                  type(:string, "Tag type code", required: true)
+                  label(:string, "Tag label", required: false)
+                  target_type(:string, "Target type", required: false)
+                end
+              end
+            )
+          end
+        end,
+      TagEdit:
+        swagger_schema do
+          title("Tag")
+          description("Representation of a tag")
+
+          properties do
+            value(
+              Schema.new do
+                properties do
+                  type(:string, "Tag type code", required: true)
+                  label(:string, "Tag label", required: false)
+                  target_type(:string, "Target type", required: false)
+                end
+              end
+            )
           end
         end,
       TagResponse:

@@ -7,8 +7,8 @@ defmodule TdLmWeb.TagControllerTest do
 
   import TdLmWeb.Authentication, only: :functions
 
-  @create_attrs %{value: %{}}
-  @update_attrs %{value: %{}}
+  @create_attrs %{value: %{type: "test"}}
+  @update_attrs %{value: %{type: "updated test"}}
   @invalid_attrs %{value: nil}
 
   def fixture(:tag) do
@@ -39,7 +39,7 @@ defmodule TdLmWeb.TagControllerTest do
       conn = recycle_and_put_headers(conn)
 
       conn = get(conn, tag_path(conn, :show, id))
-      assert json_response(conn, 200)["data"] == %{"id" => id, "value" => %{}}
+      assert json_response(conn, 200)["data"] == %{"id" => id, "value" => %{"type" => "test"}}
       validate_resp_schema(conn, schema, "TagResponse")
     end
 
@@ -62,7 +62,7 @@ defmodule TdLmWeb.TagControllerTest do
       conn = recycle_and_put_headers(conn)
 
       conn = get(conn, tag_path(conn, :show, id))
-      assert json_response(conn, 200)["data"] == %{"id" => id, "value" => %{}}
+      assert json_response(conn, 200)["data"] == %{"id" => id, "value" => %{"type" => "updated test"}}
       validate_resp_schema(conn, schema, "TagResponse")
     end
 
