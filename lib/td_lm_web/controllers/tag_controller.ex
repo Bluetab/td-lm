@@ -13,7 +13,6 @@ defmodule TdLmWeb.TagController do
   end
 
   swagger_path :index do
-    get("/tags")
     description("Get a list of tags")
     produces("application/json")
     response(200, "OK", Schema.ref(:TagsResponse))
@@ -26,7 +25,6 @@ defmodule TdLmWeb.TagController do
   end
 
   swagger_path :create do
-    post("/tags")
     description("Creates a new tag")
     produces("application/json")
 
@@ -42,13 +40,12 @@ defmodule TdLmWeb.TagController do
     with {:ok, %Tag{} = tag} <- Resources.create_tag(tag_params) do
       conn
       |> put_status(:created)
-      |> put_resp_header("location", tag_path(conn, :show, tag))
+      |> put_resp_header("location", Routes.tag_path(conn, :show, tag))
       |> render("show.json", tag: tag)
     end
   end
 
   swagger_path :show do
-    get("/tags/{id}")
     description("Get the tag of a provided id")
     produces("application/json")
 
@@ -66,7 +63,6 @@ defmodule TdLmWeb.TagController do
   end
 
   swagger_path :update do
-    post("/tags/{id}")
     description("Updates the parameters of an existing tag")
     produces("application/json")
 
@@ -88,7 +84,6 @@ defmodule TdLmWeb.TagController do
   end
 
   swagger_path :delete do
-    delete("/tags/{id}")
     description("Deletes a tag given an id")
 
     parameters do

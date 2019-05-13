@@ -40,7 +40,6 @@ config :phoenix, :stacktrace_depth, 20
 
 # Configure your database
 config :td_lm, TdLm.Repo,
-  adapter: Ecto.Adapters.Postgres,
   username: "postgres",
   password: "postgres",
   database: "td_lm_dev",
@@ -49,7 +48,8 @@ config :td_lm, TdLm.Repo,
 
 config :td_perms, redis_host: "localhost"
 
-config :td_lm, :audit_service, api_service: TdLmWeb.ApiServices.HttpTdAuditService,
+config :td_lm, :audit_service,
+  api_service: TdLmWeb.ApiServices.HttpTdAuditService,
   audit_host: "localhost",
   audit_port: "4007",
   audit_domain: ""

@@ -60,7 +60,6 @@ defmodule TdLmWeb.RelationController do
   end
 
   swagger_path :search do
-    post("/relations/search")
     description("Search relations")
 
     parameters do
@@ -98,7 +97,6 @@ defmodule TdLmWeb.RelationController do
   end
 
   swagger_path :index do
-    get("/relations")
     description("Get a list of relations")
     produces("application/json")
     response(200, "OK", Schema.ref(:RelationsResponse))
@@ -120,7 +118,6 @@ defmodule TdLmWeb.RelationController do
   end
 
   swagger_path :create do
-    post("/relations")
     description("Adds a new relation between existing entities")
     produces("application/json")
 
@@ -150,23 +147,24 @@ defmodule TdLmWeb.RelationController do
 
       conn
       |> put_status(:created)
-      |> put_resp_header("location", relation_path(conn, :show, relation))
+      |> put_resp_header("location", Routes.relation_path(conn, :show, relation))
       |> render("show.json", relation: relation)
     else
       false ->
         conn
         |> put_status(:forbidden)
-        |> render(ErrorView, "403.json")
+        |> put_view(ErrorView)
+        |> render("403.json")
 
       _error ->
         conn
         |> put_status(:unprocessable_entity)
-        |> render(ErrorView, "422.json")
+        |> put_view(ErrorView)
+        |> render("422.json")
     end
   end
 
   swagger_path :show do
-    get("/relations/{id}")
     description("Get the relation of a provided id")
     produces("application/json")
 
@@ -189,17 +187,18 @@ defmodule TdLmWeb.RelationController do
       false ->
         conn
         |> put_status(:forbidden)
-        |> render(ErrorView, "403.json")
+        |> put_view(ErrorView)
+        |> render("403.json")
 
       _error ->
         conn
         |> put_status(:unprocessable_entity)
-        |> render(ErrorView, "422.json")
+        |> put_view(ErrorView)
+        |> render("422.json")
     end
   end
 
   swagger_path :update do
-    post("/relations/{id}")
     description("Updates the parameters of an existing relation")
     produces("application/json")
 
@@ -224,17 +223,18 @@ defmodule TdLmWeb.RelationController do
       false ->
         conn
         |> put_status(:forbidden)
-        |> render(ErrorView, "403.json")
+        |> put_view(ErrorView)
+        |> render("403.json")
 
       _error ->
         conn
         |> put_status(:unprocessable_entity)
-        |> render(ErrorView, "422.json")
+        |> put_view(ErrorView)
+        |> render("422.json")
     end
   end
 
   swagger_path :delete do
-    delete("/relations/{id}")
     description("Deletes a relation between entities")
 
     parameters do
@@ -260,12 +260,14 @@ defmodule TdLmWeb.RelationController do
       false ->
         conn
         |> put_status(:forbidden)
-        |> render(ErrorView, "403.json")
+        |> put_view(ErrorView)
+        |> render("403.json")
 
       _error ->
         conn
         |> put_status(:unprocessable_entity)
-        |> render(ErrorView, "422.json")
+        |> put_view(ErrorView)
+        |> render("422.json")
     end
   end
 

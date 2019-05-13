@@ -13,7 +13,6 @@ config :td_lm, TdLmWeb.Endpoint,
 
 # Configure your database
 config :td_lm, TdLm.Repo,
-  adapter: Ecto.Adapters.Postgres,
   username: "${DB_USER}",
   password: "${DB_PASSWORD}",
   database: "${DB_NAME}",
