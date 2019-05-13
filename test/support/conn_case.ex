@@ -22,7 +22,7 @@ defmodule TdLmWeb.ConnCase do
     quote do
       # Import conveniences for testing with connections
       use Phoenix.ConnTest
-      import TdLmWeb.Router.Helpers
+      alias TdLmWeb.Router.Helpers, as: Routes
 
       # The default endpoint for testing
       @endpoint TdLmWeb.Endpoint
@@ -33,6 +33,7 @@ defmodule TdLmWeb.ConnCase do
 
   setup tags do
     :ok = Sandbox.checkout(TdLm.Repo)
+
     unless tags[:async] do
       Sandbox.mode(TdLm.Repo, {:shared, self()})
     end
@@ -41,12 +42,13 @@ defmodule TdLmWeb.ConnCase do
       tags[:admin_authenticated] ->
         user = create_user(@admin_user_name, is_admin: true)
         create_user_auth_conn(user)
+
       tags[:authenticated_user] ->
         user = create_user(tags[:authenticated_user], is_admin: false)
         create_user_auth_conn(user)
-       true ->
-         {:ok, conn: ConnTest.build_conn()}
+
+      true ->
+        {:ok, conn: ConnTest.build_conn()}
     end
   end
-
 end

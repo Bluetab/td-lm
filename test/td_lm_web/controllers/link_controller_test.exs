@@ -45,7 +45,7 @@ defmodule TdLmWeb.LinkControllerTest do
       conn =
         post(
           conn,
-          link_path(
+          Routes.link_path(
             conn,
             :add_link,
             fixture_params.resource_type,
@@ -68,7 +68,7 @@ defmodule TdLmWeb.LinkControllerTest do
       conn =
         post(
           conn,
-          link_path(
+          Routes.link_path(
             conn,
             :add_link,
             fixture_params.resource_type,
@@ -92,7 +92,7 @@ defmodule TdLmWeb.LinkControllerTest do
       conn =
         get(
           conn,
-          link_path(
+          Routes.link_path(
             conn,
             :get_links,
             target_resource_type,
@@ -113,7 +113,7 @@ defmodule TdLmWeb.LinkControllerTest do
     test "renders the list", %{conn: conn, swagger_schema: schema} do
       list_fixture()
 
-      conn = get(conn, link_path(conn, :index))
+      conn = get(conn, Routes.link_path(conn, :index))
 
       resp = json_response(conn, 200)
       validate_resp_schema(conn, schema, "ResourceLinksResponse")
@@ -129,7 +129,7 @@ defmodule TdLmWeb.LinkControllerTest do
       conn =
         get(
           conn,
-          link_path(
+          Routes.link_path(
             conn,
             :get_link,
             fixture_params.resource_type,
@@ -154,7 +154,7 @@ defmodule TdLmWeb.LinkControllerTest do
       conn =
         delete(
           conn,
-          link_path(
+          Routes.link_path(
             conn,
             :delete_link,
             fixture_params.resource_type,
@@ -168,7 +168,7 @@ defmodule TdLmWeb.LinkControllerTest do
       conn =
         get(
           conn,
-          link_path(
+          Routes.link_path(
             conn,
             :get_links,
             fixture_params.resource_type,

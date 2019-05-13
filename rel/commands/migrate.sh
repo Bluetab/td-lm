@@ -1,3 +1,3 @@
 #!/bin/sh
 
-bin/td_lm command Elixir.TdLm.ReleaseTasks seed
+$RELEASE_ROOT_DIR/bin/td_lm eval 'Elixir.TdLm.ReleaseTasks.seed()'

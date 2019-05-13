@@ -1,15 +1,11 @@
 defmodule TdLmWeb.Endpoint do
   use Phoenix.Endpoint, otp_app: :td_lm
 
-  socket "/socket", TdLmWeb.UserSocket
-
   # Serve at "/" the static files from "priv/static" directory.
   #
   # You should set gzip to true if you are running phoenix.digest
   # when deploying your static files in production.
-  plug Plug.Static,
-    at: "/", from: :td_lm, gzip: false,
-    only: ~w(swagger.json)
+  plug Plug.Static, at: "/", from: :td_lm, gzip: false, only: ~w(swagger.json)
 
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.

@@ -21,7 +21,6 @@ defmodule TdLmWeb.LinkController do
   end
 
   swagger_path :add_link do
-    post("/{resource_type}/{resource_id}/links")
     description("Adds a new link between an existing entity and a new field")
     produces("application/json")
 
@@ -51,24 +50,28 @@ defmodule TdLmWeb.LinkController do
 
       Audit.create_event(conn, audit, @events.add_resource_link)
       ResourceLinkLoader.refresh(resource_link.id)
-      render(conn, ResourceLinkView, "resource_link.json", resource_link: resource_link)
+
+      conn
+      |> put_view(ResourceLinkView)
+      |> render("resource_link.json", resource_link: resource_link)
     else
       false ->
         conn
         |> put_status(:forbidden)
-        |> render(ErrorView, "403.json")
+        |> put_view(ErrorView)
+        |> render("403.json")
 
       error ->
         Logger.error("While adding resource links... #{inspect(error)}")
 
         conn
         |> put_status(:unprocessable_entity)
-        |> render(ErrorView, "422.json")
+        |> put_view(ErrorView)
+        |> render("422.json")
     end
   end
 
   swagger_path :get_links do
-    get("/{resource_type}/{resource_id}/links")
     description("Get resource data fields")
     produces("application/json")
 
@@ -88,29 +91,31 @@ defmodule TdLmWeb.LinkController do
       resource_links = ResourceLinks.list_resource_links(id, resource_type)
       link_resource = %{resource_type: resource_type, resource_id: id}
 
-      render(conn,
-        ResourceLinkView,
-        "resource_links.json",
-        #hypermedia: collection_hypermedia("link", conn, resource_links, ResourceLink),
+      conn
+      |> put_view(ResourceLinkView)
+      |> render("resource_links.json",
+        # hypermedia: collection_hypermedia("link", conn, resource_links, ResourceLink),
         hypermedia: collection_hypermedia("link", conn, resource_links, link_resource),
-        resource_links: resource_links)
+        resource_links: resource_links
+      )
     else
       false ->
         conn
         |> put_status(:forbidden)
-        |> render(ErrorView, "403.json")
+        |> put_view(ErrorView)
+        |> render("403.json")
 
       error ->
         Logger.error("While getting resource links... #{inspect(error)}")
 
         conn
         |> put_status(:unprocessable_entity)
-        |> render(ErrorView, "422.json")
+        |> put_view(ErrorView)
+        |> render("422.json")
     end
   end
 
   swagger_path :get_link do
-    get("/{resource_type}/{resource_id}/links/{id}")
     description("Get field of a given resource entity")
     produces("application/json")
 
@@ -133,24 +138,28 @@ defmodule TdLmWeb.LinkController do
 
     with true <- can?(user, get_link(%{resource_id: resource_id, resource_type: resource_type})) do
       resource_link = ResourceLinks.get_resource_link!(id)
-      render(conn, ResourceLinkView, "resource_link.json", resource_link: resource_link)
+
+      conn
+      |> put_view(ResourceLinkView)
+      |> render("resource_link.json", resource_link: resource_link)
     else
       false ->
         conn
         |> put_status(:forbidden)
-        |> render(ErrorView, "403.json")
+        |> put_view(ErrorView)
+        |> render("403.json")
 
       error ->
         Logger.error("While getting resource link... #{inspect(error)}")
 
         conn
         |> put_status(:unprocessable_entity)
-        |> render(ErrorView, "422.json")
+        |> put_view(ErrorView)
+        |> render("422.json")
     end
   end
 
   swagger_path :index do
-    get("/links")
     description("Get all links")
     produces("application/json")
 
@@ -168,14 +177,14 @@ defmodule TdLmWeb.LinkController do
           do: acc ++ [link]
       end)
 
-      render(conn,
-        ResourceLinkView,
-        "resource_links.json",
-        resource_links: resource_links)
+    conn
+    |> put_view(ResourceLinkView)
+    |> render("resource_links.json",
+      resource_links: resource_links
+    )
   end
 
   swagger_path :delete_link do
-    delete("/{resource_type}/{resource_id}/links/{id}")
     description("Deletes the link between a resource and a given field")
     produces("application/json")
 
@@ -197,7 +206,8 @@ defmodule TdLmWeb.LinkController do
     user = conn.assigns[:current_resource]
     resource_link = ResourceLinks.get_resource_link!(id)
 
-    with true <- can?(user, delete_link(%{resource_id: resource_id, resource_type: resource_type})) do
+    with true <-
+           can?(user, delete_link(%{resource_id: resource_id, resource_type: resource_type})) do
       ResourceLinks.delete_resource_link(resource_link)
 
       audit_payload =
@@ -225,14 +235,16 @@ defmodule TdLmWeb.LinkController do
       false ->
         conn
         |> put_status(:forbidden)
-        |> render(ErrorView, "403.json")
+        |> put_view(ErrorView)
+        |> render("403.json")
 
       error ->
         Logger.error("While deleting resource link... #{inspect(error)}")
 
         conn
         |> put_status(:unprocessable_entity)
-        |> render(ErrorView, "422.json")
+        |> put_view(ErrorView)
+        |> render("422.json")
     end
   end
 end
