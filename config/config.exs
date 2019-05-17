@@ -13,8 +13,7 @@ config :td_lm,
 config :td_lm, TdLmWeb.Endpoint,
   url: [host: "localhost"],
   secret_key_base: "7oQ+yw+YduBniD7YG5DVzHQi5qfM7gpBT95tB7KL69wLfYFI9FntvymXAyhulV3s",
-  render_errors: [view: TdLmWeb.ErrorView, accepts: ~w(json)],
-  pubsub: [name: TdLm.PubSub, adapter: Phoenix.PubSub.PG2]
+  render_errors: [view: TdLmWeb.ErrorView, accepts: ~w(json)]
 
 # Configures Auth module Guardian
 config :td_lm, TdLm.Auth.Guardian,

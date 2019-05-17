@@ -2,9 +2,13 @@
 
 ## [2.19.0] 2019-05-14
 
-### Changed
+### Fixed
 
 - [TD-1660] Fix link_count to filter by business_concept-data_field relations
+- [TD-1774] Newline is missing in logger format
+
+### Changed
+
 - [TD-1519] Initial loader will check for missing business_concept parents relations and create them
 
 ## [2.17.0] 2019-04-17
