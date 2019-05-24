@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- [TD-1749] Added business concept current version id to search response for relations with business_concept as target
+
 ## [2.19.0] 2019-05-14
 
 ### Fixed

@@ -12,6 +12,7 @@ defmodule TdLmWeb.RelationController do
   alias TdLm.Resources.Relation
   alias TdLmWeb.ErrorView
   alias TdLmWeb.SwaggerDefinitions
+  alias TdPerms.BusinessConceptCache
 
   action_fallback(TdLmWeb.FallbackController)
 
@@ -46,6 +47,7 @@ defmodule TdLmWeb.RelationController do
       ]
       |> Enum.flat_map(&Resources.list_relations/1)
       |> Enum.filter(&can?(user, show(&1)))
+      |> put_target_current_version_id(related_to_type)
 
     render(
       conn,
@@ -312,5 +314,19 @@ defmodule TdLmWeb.RelationController do
     |> Enum.map(&Map.get(&1, :value))
     |> Enum.map(&Map.get(&1, "type"))
     |> Enum.filter(&(not is_nil(&1)))
+  end
+
+  defp put_target_current_version_id( relations, "business_concept") do
+    relations |>
+    Enum.map( fn rel ->
+      %{ "target" => target_map } = rel.context
+      target_map = Map.put(target_map, "version_id", BusinessConceptCache.get_business_concept_version_id(rel.target_id) )
+      context = Map.put(rel.context, "target", target_map)
+      Map.put(rel, :context, context)
+    end
+    )
+  end
+  defp put_target_current_version_id( relations, _) do
+    relations
   end
 end
