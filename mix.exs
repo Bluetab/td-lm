@@ -58,7 +58,7 @@ defmodule TdLm.Mixfile do
       {:ex_json_schema, "~> 0.5"},
       {:json_diff, "~> 0.1.0"},
       {:csv, "~> 2.0.0"},
-      {:td_perms, git: "https://github.com/Bluetab/td-perms.git", tag: "2.19.0"},
+      {:td_perms, git: "https://github.com/Bluetab/td-perms.git", tag: "2.20.1"},
       {:td_hypermedia, git: "https://github.com/Bluetab/td-hypermedia.git", tag: "2.11.0"}
     ]
   end
