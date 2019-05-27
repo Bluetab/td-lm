@@ -6,7 +6,7 @@ defmodule TdLm.Mixfile do
       app: :td_lm,
       version:
         case System.get_env("APP_VERSION") do
-          nil -> "2.19.0-local"
+          nil -> "2.20.0-local"
           v -> v
         end,
       elixir: "~> 1.6",
@@ -58,7 +58,7 @@ defmodule TdLm.Mixfile do
       {:ex_json_schema, "~> 0.5"},
       {:json_diff, "~> 0.1.0"},
       {:csv, "~> 2.0.0"},
-      {:td_perms, git: "https://github.com/Bluetab/td-perms.git", tag: "2.19.0"},
+      {:td_perms, git: "https://github.com/Bluetab/td-perms.git", tag: "2.20.1"},
       {:td_hypermedia, git: "https://github.com/Bluetab/td-hypermedia.git", tag: "2.11.0"}
     ]
   end

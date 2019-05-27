@@ -36,16 +36,31 @@ defmodule TdLmWeb.RelationControllerTest do
     target_type: nil
   }
 
-  def fixture(:relation) do
-    {:ok, relation} = Resources.create_relation(@create_attrs)
-    relation
-  end
+  @ingest_source_attrs %{
+    source_id: "source_id",
+    source_type: "ingest",
+    target_id: "target_id",
+    target_type: "some target_type"
+  }
+
+  @user_name "not admin user"
 
   describe "search" do
     @tag :admin_authenticated
     test "search all relations", %{conn: conn, swagger_schema: schema} do
       conn = post(conn, Routes.relation_path(conn, :search, %{}))
       assert json_response(conn, 200)["data"] == []
+      validate_resp_schema(conn, schema, "RelationsResponse")
+    end
+  end
+
+  describe "search relation when user has not permissions" do
+    setup [:create_no_perms_source_relation]
+
+    @tag authenticated_user: @user_name
+    test "search all relations", %{conn: conn, swagger_schema: schema, relation: relation} do
+      conn = post(conn, Routes.relation_path(conn, :search, %{}))
+      assert Enum.all?(json_response(conn, 200)["data"], &(&1.id != relation.id))
       validate_resp_schema(conn, schema, "RelationsResponse")
     end
   end
@@ -83,6 +98,12 @@ defmodule TdLmWeb.RelationControllerTest do
       validate_resp_schema(conn, schema, "RelationResponse")
     end
 
+    @tag authenticated_user: @user_name
+    test "error when user has not permissions to create a relation", %{conn: conn} do
+      conn = post(conn, Routes.relation_path(conn, :create), relation: @ingest_source_attrs)
+      assert json_response(conn, 403)["errors"]["detail"] == "Invalid authorization"
+    end
+
     @tag :admin_authenticated
     test "renders errors when data is invalid", %{conn: conn} do
       conn = post(conn, Routes.relation_path(conn, :create), relation: @invalid_attrs)
@@ -91,7 +112,7 @@ defmodule TdLmWeb.RelationControllerTest do
   end
 
   describe "update relation" do
-    setup [:create_relation]
+    setup [:create_no_perms_source_relation]
 
     @tag :admin_authenticated
     test "renders relation when data is valid", %{
@@ -120,6 +141,15 @@ defmodule TdLmWeb.RelationControllerTest do
       validate_resp_schema(conn, schema, "RelationResponse")
     end
 
+    @tag authenticated_user: @user_name
+    test "error when user has not permissions to create a relation", %{
+      conn: conn,
+      relation: relation
+    } do
+      conn = put(conn, Routes.relation_path(conn, :update, relation), relation: @update_attrs)
+      assert json_response(conn, 403)["errors"]["detail"] == "Invalid authorization"
+    end
+
     @tag :admin_authenticated
     test "renders errors when data is invalid", %{conn: conn, relation: relation} do
       conn = put(conn, Routes.relation_path(conn, :update, relation), relation: @invalid_attrs)
@@ -128,7 +158,16 @@ defmodule TdLmWeb.RelationControllerTest do
   end
 
   describe "delete relation" do
-    setup [:create_relation]
+    setup [:create_no_perms_source_relation]
+
+    @tag authenticated_user: @user_name
+    test "error when user has not permissions to create a relation", %{
+      conn: conn,
+      relation: relation
+    } do
+      conn = delete(conn, Routes.relation_path(conn, :delete, relation))
+      assert json_response(conn, 403)["errors"]["detail"] == "Invalid authorization"
+    end
 
     @tag :admin_authenticated
     test "deletes chosen relation", %{conn: conn, relation: relation} do
@@ -143,8 +182,8 @@ defmodule TdLmWeb.RelationControllerTest do
     end
   end
 
-  defp create_relation(_) do
-    relation = fixture(:relation)
+  defp create_no_perms_source_relation(_) do
+    {:ok, relation} = Resources.create_relation(@ingest_source_attrs)
     {:ok, relation: relation}
   end
 end
