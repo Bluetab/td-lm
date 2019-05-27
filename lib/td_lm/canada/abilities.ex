@@ -2,6 +2,7 @@ defmodule TdBg.Canada.Abilities do
   @moduledoc false
   alias TdLm.Accounts.User
   alias TdLm.Canada.BusinessConceptAbilities
+  alias TdLm.Canada.IngestAbilities
   alias TdLm.Resources.Relation
 
   defimpl Canada.Can, for: User do
@@ -31,24 +32,44 @@ defmodule TdBg.Canada.Abilities do
       BusinessConceptAbilities.can?(user, :delete_link, params)
     end
 
-    def can?(%User{} = user, :search, params) do
+    def can?(%User{} = user, :search, %{resource_type: "business_concept"} = params) do
       BusinessConceptAbilities.can?(user, :search, params)
     end
 
-    def can?(%User{} = user, :create, params) do
+    def can?(%User{} = user, :create, %{resource_type: "business_concept"} = params) do
       BusinessConceptAbilities.can?(user, :create, params)
     end
 
-    def can?(%User{} = user, :show, params) do
+    def can?(%User{} = user, :show, %{resource_type: "business_concept"} = params) do
       BusinessConceptAbilities.can?(user, :show, params)
     end
 
-    def can?(%User{} = user, :update, params) do
+    def can?(%User{} = user, :update, %{resource_type: "business_concept"} = params) do
       BusinessConceptAbilities.can?(user, :update, params)
     end
 
-    def can?(%User{} = user, :delete, params) do
+    def can?(%User{} = user, :delete, %{resource_type: "business_concept"} = params) do
       BusinessConceptAbilities.can?(user, :delete, params)
+    end
+
+    def can?(%User{} = user, :search, %{resource_type: "ingest"} = params) do
+      IngestAbilities.can?(user, :search, params)
+    end
+
+    def can?(%User{} = user, :create, %{resource_type: "ingest"} = params) do
+      IngestAbilities.can?(user, :create, params)
+    end
+
+    def can?(%User{} = user, :show, %{resource_type: "ingest"} = params) do
+      IngestAbilities.can?(user, :show, params)
+    end
+
+    def can?(%User{} = user, :update, %{resource_type: "ingest"} = params) do
+      IngestAbilities.can?(user, :update, params)
+    end
+
+    def can?(%User{} = user, :delete, %{resource_type: "ingest"} = params) do
+      IngestAbilities.can?(user, :delete, params)
     end
 
     def can?(%User{} = _user, _permission, _params) do
