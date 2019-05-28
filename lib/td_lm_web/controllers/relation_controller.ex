@@ -47,8 +47,8 @@ defmodule TdLmWeb.RelationController do
       ]
       |> Enum.flat_map(&Resources.list_relations/1)
       |> Enum.filter(&can?(user, show(&1)))
-      |> Enum.map(&put_target_current_version_id(&1, related_to_type))
-      |> Enum.map(&put_source_current_version_id(&1, related_to_type))
+      |> Enum.map(&put_current_version_id(&1, "target", :target_id, related_to_type))
+      |> Enum.map(&put_current_version_id(&1, "source", :source_id, related_to_type))
 
     render(
       conn,
@@ -317,23 +317,16 @@ defmodule TdLmWeb.RelationController do
     |> Enum.filter(&(not is_nil(&1)))
   end
 
-  defp put_target_current_version_id( relation, "business_concept") do
-    %{ "target" => target_map } = relation.context
-    target_map = Map.put(target_map, "version_id", BusinessConceptCache.get_business_concept_version_id(relation.target_id) )
-    context = Map.put(relation.context, "target", target_map)
-    Map.put(relation, :context, context)
-  end
-  defp put_target_current_version_id( relation, _) do
-    relation
-  end
+  defp put_current_version_id(relation, relation_side, relation_id_key, "business_concept") do
+    relation_side_map = relation
+    |> Map.get(:context)
+    |> Map.get(relation_side)
+    |> Map.put("version_id", BusinessConceptCache.get_business_concept_version_id(Map.get(relation, relation_id_key)))
 
-  defp put_source_current_version_id( relation, "business_concept") do
-    %{ "source" => source_map } = relation.context
-    source_map = Map.put(source_map, "version_id", BusinessConceptCache.get_business_concept_version_id(relation.source_id) )
-    context = Map.put(relation.context, "source", source_map)
+    context = Map.put(relation.context, relation_side, relation_side_map)
     Map.put(relation, :context, context)
   end
-  defp put_source_current_version_id( relation, _) do
+  defp put_current_version_id(relation, _, _, _) do
     relation
   end
 end
