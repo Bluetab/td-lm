@@ -15,6 +15,8 @@ defmodule TdLmWeb.RelationController do
 
   action_fallback(TdLmWeb.FallbackController)
 
+  @bc_cache Application.get_env(:td_lm, :bc_cache)
+
   @events %{
     add_relation: "add_relation",
     delete_relation: "delete_relation"
@@ -46,6 +48,8 @@ defmodule TdLmWeb.RelationController do
       ]
       |> Enum.flat_map(&Resources.list_relations/1)
       |> Enum.filter(&can?(user, show(&1)))
+      |> Enum.map(&put_current_version_id(&1, "target", :target_id, related_to_type))
+      |> Enum.map(&put_current_version_id(&1, "source", :source_id, related_to_type))
 
     render(
       conn,
@@ -312,5 +316,18 @@ defmodule TdLmWeb.RelationController do
     |> Enum.map(&Map.get(&1, :value))
     |> Enum.map(&Map.get(&1, "type"))
     |> Enum.filter(&(not is_nil(&1)))
+  end
+
+  defp put_current_version_id(relation, relation_side, relation_id_key, "business_concept") do
+    relation_side_map = relation
+    |> Map.get(:context)
+    |> Map.get(relation_side)
+    |> Map.put("version_id", @bc_cache.get_business_concept_version_id(Map.get(relation, relation_id_key)))
+
+    context = Map.put(relation.context, relation_side, relation_side_map)
+    Map.put(relation, :context, context)
+  end
+  defp put_current_version_id(relation, _, _, _) do
+    relation
   end
 end
