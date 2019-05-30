@@ -12,9 +12,10 @@ defmodule TdLmWeb.RelationController do
   alias TdLm.Resources.Relation
   alias TdLmWeb.ErrorView
   alias TdLmWeb.SwaggerDefinitions
-  alias TdPerms.BusinessConceptCache
 
   action_fallback(TdLmWeb.FallbackController)
+
+  @bc_cache Application.get_env(:td_lm, :bc_cache)
 
   @events %{
     add_relation: "add_relation",
@@ -321,7 +322,7 @@ defmodule TdLmWeb.RelationController do
     relation_side_map = relation
     |> Map.get(:context)
     |> Map.get(relation_side)
-    |> Map.put("version_id", BusinessConceptCache.get_business_concept_version_id(Map.get(relation, relation_id_key)))
+    |> Map.put("version_id", @bc_cache.get_business_concept_version_id(Map.get(relation, relation_id_key)))
 
     context = Map.put(relation.context, relation_side, relation_side_map)
     Map.put(relation, :context, context)
