@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## [Unreleased]
+
+### Changed
+
+- [TD-1824] Bump td-perms version to fix relations key
 
 ### Fixed
 
