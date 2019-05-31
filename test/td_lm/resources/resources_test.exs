@@ -181,31 +181,7 @@ defmodule TdLm.ResourcesTest do
       relation_fixture(%{"tag_ids" => [tag_1.id]})
       relation_fixture(%{"tag_ids" => [tag_2.id]})
 
-      result_tags = Resources.list_tags(%{"value" => %{"type" => ["First type", "Second type"]}})
-
-      assert length(result_tags) == 2
-
-      assert Enum.any?(result_tags, fn r_t ->
-               r_t.id == tag_1.id
-             end)
-
-      assert Enum.any?(result_tags, fn r_t ->
-               r_t.id == tag_2.id
-             end)
-
-      result_tags =
-        Resources.list_tags(%{
-          "value" => %{"type" => ["First type", "Second type"]},
-          "id" => tag_1.id
-        })
-
-      assert length(result_tags) == 1
-
-      assert Enum.any?(result_tags, fn r_t ->
-               r_t.id == tag_1.id
-             end)
-
-      result_tags = Resources.list_tags(%{"value" => %{"type" => "First type"}, "id" => tag_1.id})
+      result_tags = Resources.list_tags(%{"value" => %{"type" => "First type"}})
 
       assert length(result_tags) == 1
 
