@@ -14,7 +14,7 @@ config :td_lm, TdLm.Repo,
   username: "postgres",
   password: "postgres",
   database: "td_lm_test",
-  hostname: "localhost",
+  hostname: "postgres",
   pool: Ecto.Adapters.SQL.Sandbox
 
 config :td_lm, :audit_service,
@@ -29,4 +29,4 @@ config :td_lm, bc_cache: TdPerms.MockBusinessConceptCache
 config :td_lm, cache_links_on_startup: false
 config :td_lm, cache_relations_on_startup: false
 
-config :td_perms, redis_host: "localhost"
+config :td_perms, redis_host: "redis"
