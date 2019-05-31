@@ -24,6 +24,12 @@ defmodule TdLmWeb.TagController do
     render(conn, "index.json", tags: tags)
   end
 
+  # TODO: swagger definition
+  def search(conn, params) do
+    tags = Resources.list_tags(params)
+    render(conn, "index.json", tags: tags)
+  end
+
   swagger_path :create do
     description("Creates a new tag")
     produces("application/json")
