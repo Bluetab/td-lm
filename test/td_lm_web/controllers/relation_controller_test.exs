@@ -5,11 +5,13 @@ defmodule TdLmWeb.RelationControllerTest do
   alias TdLm.Resources
   alias TdLm.Resources.Relation
   alias TdLmWeb.ApiServices.MockTdAuditService
+  alias TdPerms.MockBusinessConceptCache
 
   import TdLmWeb.Authentication, only: :functions
 
   setup_all do
     start_supervised(MockTdAuditService)
+    start_supervised(MockBusinessConceptCache)
     :ok
   end
 
@@ -43,6 +45,27 @@ defmodule TdLmWeb.RelationControllerTest do
     target_type: "some target_type"
   }
 
+  @business_concept_attrs %{
+    source_id: "13",
+    source_type: "business_concept",
+    target_id: "9",
+    target_type: "business_concept",
+    context: %{
+      "source" => %{
+        "id" => "14",
+        "name" => "concepto domain 1",
+        "version" => "2",
+        "business_concept_id" => "13"
+      },
+      "target" => %{
+        "id" => "9",
+        "name" => "cuenta",
+        "version" => "1",
+        "business_concept_id" => "9"
+      }
+    }
+  }
+
   @user_name "not admin user"
 
   describe "search" do
@@ -62,6 +85,31 @@ defmodule TdLmWeb.RelationControllerTest do
       conn = post(conn, Routes.relation_path(conn, :search, %{}))
       assert Enum.all?(json_response(conn, 200)["data"], &(&1.id != relation.id))
       validate_resp_schema(conn, schema, "RelationsResponse")
+    end
+  end
+
+  describe "search relations with source/target of type business concept" do
+    setup [:create_business_concepts_relation]
+    @tag :admin_authenticated
+    test "get last version_id of business_concept in a relation between business concepts created with a previous target version", %{conn: conn} do
+
+      MockBusinessConceptCache.put_business_concept(%{
+        id: @business_concept_attrs.source_id,
+        domain_id: 1,
+        name: @business_concept_attrs |> Map.get(:context) |> Map.get("source") |> Map.get("name"),
+        business_concept_version_id: @business_concept_attrs |> Map.get(:context) |> Map.get("source") |> Map.get("id")
+      })
+
+      MockBusinessConceptCache.put_business_concept(%{
+        id: @business_concept_attrs.target_id,
+        domain_id: 1,
+        name: @business_concept_attrs |> Map.get(:context) |> Map.get("target") |> Map.get("name"),
+        business_concept_version_id: "22"
+      })
+
+      conn = post(conn, Routes.relation_path(conn, :search, %{"resource_id" => "9", "resource_type" => "business_concept", "related_to_type" => "business_concept"}))
+      [response_data | _] = json_response(conn, 200)["data"]
+      assert response_data |> Map.get("context") |> Map.get("target") |> Map.get("version_id") == "22"
     end
   end
 
@@ -184,6 +232,11 @@ defmodule TdLmWeb.RelationControllerTest do
 
   defp create_no_perms_source_relation(_) do
     {:ok, relation} = Resources.create_relation(@ingest_source_attrs)
+    {:ok, relation: relation}
+  end
+
+  defp create_business_concepts_relation(_) do
+    {:ok, relation} = Resources.create_relation(@business_concept_attrs)
     {:ok, relation: relation}
   end
 end
