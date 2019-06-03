@@ -16,6 +16,7 @@ defmodule TdLmWeb.RelationController do
   action_fallback(TdLmWeb.FallbackController)
 
   @bc_cache Application.get_env(:td_lm, :bc_cache)
+  @ingest_cache Application.get_env(:td_lm, :ingest_cache)
 
   @events %{
     add_relation: "add_relation",
@@ -318,16 +319,22 @@ defmodule TdLmWeb.RelationController do
     |> Enum.filter(&(not is_nil(&1)))
   end
 
-  defp put_current_version_id(relation, relation_side, relation_id_key, "business_concept") do
+  defp put_current_version_id(relation, relation_side, relation_id_key, target_type) do
     relation_side_map = relation
     |> Map.get(:context)
     |> Map.get(relation_side)
-    |> Map.put("version_id", @bc_cache.get_business_concept_version_id(Map.get(relation, relation_id_key)))
+    |> Map.put("version_id", get_version_id(target_type, Map.get(relation, relation_id_key)))
 
     context = Map.put(relation.context, relation_side, relation_side_map)
     Map.put(relation, :context, context)
   end
-  defp put_current_version_id(relation, _, _, _) do
-    relation
+
+  defp get_version_id("business_concept", entity_id) do
+    @bc_cache.get_business_concept_version_id(entity_id)
+  end
+  defp get_version_id("ingest", entity_id) do
+    @ingest_cache.get_ingest_version_id(entity_id)
+  end
+  defp get_version_id(_, _) do
   end
 end
