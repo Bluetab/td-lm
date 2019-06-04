@@ -19,7 +19,7 @@ defmodule TdLm.Resources do
   """
   def list_relations(params \\ %{}) do
     fields = Relation.__schema__(:fields)
-    dynamic = and_filter(params, fields, true)
+    dynamic = and_filter(params, fields)
 
     Relation
     |> preload([:tags])
@@ -271,60 +271,28 @@ defmodule TdLm.Resources do
   end
 
   defp filter_tags(params, fields) do
-    conditions =
-      case Map.has_key?(params, "value") && Enum.member?(fields, :value) do
-        true ->
-          build_filter_for_value(:value, params)
-
-        false ->
-          true
-      end
-
-    and_params = Map.drop(params, ["value"])
-    and_filter(and_params, fields, conditions)
+    and_filter(params, fields)
   end
 
-  defp and_filter(params, fields, conditions) do
-    Enum.reduce(Map.keys(params), conditions, fn key, acc ->
+  defp and_filter(params, fields) do
+    dynamic = true
+
+    Enum.reduce(Map.keys(params), dynamic, fn key, acc ->
       key_as_atom = if is_binary(key), do: String.to_atom(key), else: key
 
       case Enum.member?(fields, key_as_atom) do
-        true -> filter_by_type(key_as_atom, params[key], acc)
+        true ->
+          filter_by_field(key_as_atom, params[key], acc)
         false -> acc
       end
     end)
   end
 
-  defp build_filter_for_value(value_key_as_atom, params) do
-    value_field = params |> Map.get("value") |> Map.get("type")
-    filter_tag_by_type(:tag, value_key_as_atom, value_field)
-  end
-
-  defp filter_tag_by_type(:tag, :value = atom_key, value_field) when is_list(value_field) do
-    Enum.reduce(value_field, nil, fn value, acc ->
-      param_value = Map.new() |> Map.put("type", value)
-      filter_value_in_tag(atom_key, param_value, acc)
-    end)
-  end
-
-  defp filter_tag_by_type(:tag, :value = atom_key, value_field) do
-    param_value = Map.new() |> Map.put("type", value_field)
-    dynamic([p, _], fragment("(?) @> ?::jsonb", field(p, ^atom_key), ^param_value))
-  end
-
-  def filter_value_in_tag(atom_key, param_value, acc) when is_nil(acc) do
-    dynamic([p, _], fragment("(?) @> ?::jsonb", field(p, ^atom_key), ^param_value))
-  end
-
-  def filter_value_in_tag(atom_key, param_value, acc) do
-    dynamic([p, _], fragment("(?) @> ?::jsonb", field(p, ^atom_key), ^param_value) or ^acc)
-  end
-
-  defp filter_by_type(atom_key, param_value, acc) when is_map(param_value) do
+  defp filter_by_field(atom_key, param_value, acc) when is_map(param_value) do
     dynamic([p, _], fragment("(?) @> ?::jsonb", field(p, ^atom_key), ^param_value) and ^acc)
   end
 
-  defp filter_by_type(atom_key, param_value, acc) do
+  defp filter_by_field(atom_key, param_value, acc) do
     dynamic([p, _], field(p, ^atom_key) == ^param_value and ^acc)
   end
 

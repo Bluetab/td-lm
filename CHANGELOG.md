@@ -5,6 +5,7 @@
 ### Changed
 
 - [TD-1824] Bump td-perms version to fix relations key
+- [TD-1789] New search tags endpoint, return ingest version id in relations
 
 ### Fixed
 

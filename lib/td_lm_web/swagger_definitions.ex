@@ -229,6 +229,25 @@ defmodule TdLmWeb.SwaggerDefinitions do
             )
           end
         end,
+        TagSearch:
+        swagger_schema do
+          properties do
+            value(
+              Schema.new do
+                properties do
+                  type(:string, "Tag type code", required: false)
+                  label(:string, "Tag label", required: false)
+                  target_type(:string, "Target type", required: false)
+                end
+              end
+            )
+          end
+          example(%{
+            value: %{
+              target_type: "ingest"
+            }
+          })
+        end,
       TagResponse:
         swagger_schema do
           properties do

@@ -10,6 +10,7 @@ defmodule TdLmWeb.TagControllerTest do
   @create_attrs %{value: %{type: "test"}}
   @update_attrs %{value: %{type: "updated test"}}
   @invalid_attrs %{value: nil}
+  @ingest_tag_attrs %{value: %{target_type: "ingest", label: "ingest.label", type: "ingest"}}
 
   def fixture(:tag) do
     {:ok, tag} = Resources.create_tag(@create_attrs)
@@ -25,6 +26,23 @@ defmodule TdLmWeb.TagControllerTest do
     test "lists all tags", %{conn: conn, swagger_schema: schema} do
       conn = get(conn, Routes.tag_path(conn, :index))
       assert json_response(conn, 200)["data"] == []
+      validate_resp_schema(conn, schema, "TagsResponse")
+    end
+  end
+
+  describe "search" do
+    @tag :admin_authenticated
+    test "search all tags", %{conn: conn, swagger_schema: schema} do
+      conn = post(conn, Routes.tag_path(conn, :create), tag: @ingest_tag_attrs)
+      %{"id" => id} = json_response(conn, 201)["data"]
+
+      conn = recycle_and_put_headers(conn)
+
+      search_body = %{value: %{target_type: "ingest"}}
+      conn = post(conn, Routes.tag_path(conn, :search), search_body)
+      assert length(json_response(conn, 200)["data"]) == 1
+      %{"id" => search_id} = Enum.at(json_response(conn, 200)["data"], 0)
+      assert id == search_id
       validate_resp_schema(conn, schema, "TagsResponse")
     end
   end

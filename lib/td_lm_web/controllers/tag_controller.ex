@@ -24,6 +24,23 @@ defmodule TdLmWeb.TagController do
     render(conn, "index.json", tags: tags)
   end
 
+  swagger_path :search do
+    description("Search tags")
+    produces("application/json")
+
+    parameters do
+      value(:body, Schema.ref(:TagSearch), "Parameters used to create search tags")
+    end
+
+    response(200, "OK", Schema.ref(:TagsResponse))
+    response(400, "Client Error")
+  end
+
+  def search(conn, params) do
+    tags = Resources.list_tags(params)
+    render(conn, "index.json", tags: tags)
+  end
+
   swagger_path :create do
     description("Creates a new tag")
     produces("application/json")

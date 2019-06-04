@@ -40,6 +40,7 @@ defmodule TdLmWeb.Router do
     resources "/relations", RelationController, except: [:new, :edit]
     post "/relations/search", RelationController, :search
     resources "/tags", TagController, except: [:new, :edit]
+    post "/tags/search", TagController, :search
   end
 
   def swagger_info do
@@ -50,7 +51,6 @@ defmodule TdLmWeb.Router do
         title: "TdLm"
       },
       host: @endpoint_url,
-      basePath: "/api",
       securityDefinitions: %{
         bearer: %{
           type: "apiKey",
