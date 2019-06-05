@@ -321,17 +321,26 @@ defmodule TdLmWeb.RelationController do
 
   defp put_current_version_id(relation, relation_side, relation_id_key, target_type) do
 
-    relation_side_map = relation
+    relation_side_attrs = relation
     |> Map.get(:context)
     |> Map.get(relation_side)
 
-    case relation_side_map do
+    case relation_side_attrs do
       nil -> relation
-      relation_side_map ->
-        side_map = Map.put(relation_side_map, "version_id", get_version_id(target_type, Map.get(relation, relation_id_key)))
-        context = Map.put(relation.context, relation_side, side_map)
-        Map.put(relation, :context, context)
+      relation_side_attrs ->
+        version_id = get_version_id(target_type, Map.get(relation, relation_id_key))
+        put_version_id_in_context(relation, relation_side, relation_side_attrs, version_id)
     end
+  end
+
+  defp put_version_id_in_context(relation, _relation_side, _relation_side_attrs, nil) do
+    relation
+  end
+
+  defp put_version_id_in_context(relation, relation_side, relation_side_attrs, version_id) do
+    side_map = Map.put(relation_side_attrs, "version_id", version_id)
+    context = Map.put(relation.context, relation_side, side_map)
+    Map.put(relation, :context, context)
   end
 
   defp get_version_id("business_concept", entity_id) do
