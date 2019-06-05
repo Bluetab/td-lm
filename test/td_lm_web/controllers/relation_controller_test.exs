@@ -66,6 +66,45 @@ defmodule TdLmWeb.RelationControllerTest do
     }
   }
 
+  @data_field_relation_attrs %{
+    context: %{
+      "target" => %{
+        "field" => "ADDRESS",
+        "group" => "NEW_CONN",
+        "structure" => "PERSONS [DBO]",
+        "structure_id" => 1,
+        "system" => "Microstrategy"
+      }
+    },
+    id: 13,
+    source_id: "18",
+    source_type: "business_concept",
+    tags: [],
+    target_id: "4",
+    target_type: "data_field"
+  }
+
+  @ingest_relation_attrs %{
+    source_id: "13",
+    source_type: "ingest",
+    target_id: "9",
+    target_type: "ingest",
+    context: %{
+      "source" => %{
+        "id" => "14",
+        "name" => "concepto domain 1",
+        "version" => "2",
+        "ingest_id" => "13"
+      },
+      "target" => %{
+        "id" => "9",
+        "name" => "cuenta",
+        "version" => "1",
+        "ingest_id" => "9"
+      }
+    }
+  }
+
   @user_name "not admin user"
 
   describe "search" do
@@ -110,6 +149,28 @@ defmodule TdLmWeb.RelationControllerTest do
       conn = post(conn, Routes.relation_path(conn, :search, %{"resource_id" => "9", "resource_type" => "business_concept", "related_to_type" => "business_concept"}))
       [response_data | _] = json_response(conn, 200)["data"]
       assert response_data |> Map.get("context") |> Map.get("target") |> Map.get("version_id") == "22"
+    end
+  end
+
+  describe "search data_field linked to business concept" do
+    setup [:create_business_concept_to_data_field_relation]
+    @tag :admin_authenticated
+
+    test "get relation without version id when target is data_field", %{conn: conn} do
+      conn = post(conn, Routes.relation_path(conn, :search, %{"resource_id" => "18", "resource_type" => "business_concept", "related_to_type" => "data_field"}))
+      [response_data | _] = json_response(conn, 200)["data"]
+      assert response_data |> Map.get("context") == @data_field_relation_attrs |> Map.get(:context)
+    end
+  end
+
+  describe "search ingest to ingest relations" do
+    setup [:create_ingests_relation]
+    @tag :admin_authenticated
+
+    test "get relation between ingests", %{conn: conn} do
+      conn = post(conn, Routes.relation_path(conn, :search, %{"resource_id" => "13", "resource_type" => "ingest", "related_to_type" => "ingest"}))
+      response = json_response(conn, 200)["data"]
+      assert length(response) == 1
     end
   end
 
@@ -237,6 +298,16 @@ defmodule TdLmWeb.RelationControllerTest do
 
   defp create_business_concepts_relation(_) do
     {:ok, relation} = Resources.create_relation(@business_concept_attrs)
+    {:ok, relation: relation}
+  end
+
+  defp create_business_concept_to_data_field_relation(_) do
+    {:ok, relation} = Resources.create_relation(@data_field_relation_attrs)
+    {:ok, relation: relation}
+  end
+
+  defp create_ingests_relation(_) do
+    {:ok, relation} = Resources.create_relation(@ingest_relation_attrs)
     {:ok, relation: relation}
   end
 end
