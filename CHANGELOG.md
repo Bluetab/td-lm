@@ -6,6 +6,7 @@
 
 - [TD-1824] Bump td-perms version to fix relations key
 - [TD-1789] New search tags endpoint, return ingest version id in relations
+- [TD-1811] Bump td-perms version to fix warnings
 
 ### Fixed
 
@@ -50,7 +51,7 @@
 ## [2.14.0] 2019-03-04
 
 ### Changed
- 
+
 - [TD-754] Changes for creating relation between business concepts
 
 ### Added
