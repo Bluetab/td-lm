@@ -45,8 +45,6 @@ defmodule TdLm.Mixfile do
       {:jason, "~> 1.0"},
       {:postgrex, ">= 0.0.0"},
       {:gettext, "~> 0.11"},
-      {:con_cache, "~> 0.13.0"},
-      {:cabbage, git: "https://github.com/eriosv/cabbage.git"},
       {:httpoison, "~> 1.0"},
       {:distillery, "~> 2.0", runtime: false},
       {:credo, "~> 1.0.0", only: [:dev, :test], runtime: false},
@@ -56,9 +54,7 @@ defmodule TdLm.Mixfile do
       {:corsica, "~> 1.0"},
       {:phoenix_swagger, "~> 0.8.0"},
       {:ex_json_schema, "~> 0.5"},
-      {:json_diff, "~> 0.1.0"},
-      {:csv, "~> 2.0.0"},
-      {:td_perms, git: "https://github.com/Bluetab/td-perms.git", tag: "2.21.2"},
+      {:td_perms, git: "https://github.com/Bluetab/td-perms.git", tag: "2.21.3"},
       {:td_hypermedia, git: "https://github.com/Bluetab/td-hypermedia.git", tag: "2.11.0"}
     ]
   end
