@@ -21,7 +21,6 @@ defmodule TdLm.Application do
       supervisor(TdLmWeb.Endpoint, []),
       # Start your own worker by calling: TdLm.Worker.start_link(arg1, arg2, arg3)
       # worker(TdLm.Worker, [arg1, arg2, arg3]),
-      worker(TdLm.ResourceLinkLoader, [TdLm.ResourceLinkLoader]),
       worker(TdLm.RelationLoader, [TdLm.RelationLoader]),
       %{
         id: TdLm.CustomSupervisor,

@@ -31,12 +31,6 @@ defmodule TdLmWeb.Router do
   scope "/api", TdLmWeb do
     pipe_through([:api, :api_secure, :api_authorized])
 
-    post "/:resource_type/:resource_id/links", LinkController, :add_link
-    get "/:resource_type/:resource_id/links", LinkController, :get_links
-    get "/:resource_type/:resource_id/links/:id", LinkController, :get_link
-    delete "/:resource_type/:resource_id/links/:id", LinkController, :delete_link
-    get "/links", LinkController, :index
-
     resources "/relations", RelationController, except: [:new, :edit]
     post "/relations/search", RelationController, :search
     resources "/tags", TagController, except: [:new, :edit]
