@@ -7,6 +7,7 @@
 - [TD-1824] Bump td-perms version to fix relations key
 - [TD-1789] New search tags endpoint, return ingest version id in relations
 - [TD-1811] Bump td-perms version to fix warnings
+- [TD-1850] Cache related modules
 
 ### Fixed
 

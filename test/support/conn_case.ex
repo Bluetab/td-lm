@@ -36,6 +36,12 @@ defmodule TdLmWeb.ConnCase do
 
     unless tags[:async] do
       Sandbox.mode(TdLm.Repo, {:shared, self()})
+      parent = self()
+
+      case Process.whereis(TdLm.RelationLoader) do
+        nil -> nil
+        pid -> Sandbox.allow(TdLm.Repo, parent, pid)
+      end
     end
 
     cond do

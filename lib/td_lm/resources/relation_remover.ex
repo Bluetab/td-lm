@@ -11,7 +11,7 @@ defmodule TdLm.RelationRemover do
 
   require Logger
 
-  @bc_cache Application.get_env(:td_lm, :bc_cache)
+  @business_concept_cache Application.get_env(:td_lm, :business_concept_cache)
   @relation_removement Application.get_env(:td_lm, :relation_removement)
   @relation_removement_frequency Application.get_env(:td_lm, :relation_removement_frequency)
 
@@ -29,39 +29,41 @@ defmodule TdLm.RelationRemover do
   end
 
   def handle_info(:work, state) do
-    bcs_to_avoid_deletion = @bc_cache.get_existing_business_concept_set()
+    existing_concept_ids = @business_concept_cache.get_existing_business_concept_set()
 
-    relations_from_db = Resources.list_relations()
-    relations_from_db
-    |> Enum.each(fn rel -> if is_business_concept_to_field(rel) &&
-                            !Enum.member?(bcs_to_avoid_deletion, rel.source_id) do
-        delete_relation_from_df(rel.target_id)
-        RelationLoader.delete(rel)
-        Resources.delete_relation(rel)
-      end
-    end)
+    Resources.list_relations()
+    |> Enum.filter(&is_stale_relation?(&1, existing_concept_ids))
+    |> Enum.each(&delete_relation/1)
 
     schedule_work()
     {:noreply, state}
+  end
+
+  defp is_stale_relation?(relation, existing_concept_ids) do
+    relation.source_type === "business_concept" && relation.target_type === "data_field" &&
+      !Enum.member?(existing_concept_ids, relation.source_id)
+  end
+
+  defp delete_relation(rel) do
+    delete_relation_from_df(rel.target_id)
+    RelationLoader.delete(rel)
+    Resources.delete_relation(rel)
   end
 
   defp delete_relation_from_df(df_id) do
     resource_key = RelationCache.get_members(df_id, "data_field")
 
     resource_key
-    |> Enum.each(fn res -> if is_bc_nil(res) do
-                            RelationCache.delete_element_from_set(res, "data_field:#{df_id}:relations")
-                          end end)
-
+    |> Enum.each(fn res ->
+      if is_bc_nil(res) do
+        RelationCache.delete_element_from_set(res, "data_field:#{df_id}:relations")
+      end
+    end)
   end
 
-  defp is_bc_nil(map)do
+  defp is_bc_nil(map) do
     map
-    |> RelationCache.get_resources_from_key
+    |> RelationCache.get_resources_from_key()
     |> Map.get(:business_concept_version_id) === nil
-  end
-
-  defp is_business_concept_to_field(relation) do
-    relation.source_type === "business_concept" && relation.target_type === "data_field"
   end
 end

@@ -11,16 +11,16 @@ defmodule TdLm.RelationLoaderTest do
   end
 
   describe "relations loader" do
-
     test "load_relation_cache writes to cache only the count of relations from business_concept to data_field" do
-
       insert_relation()
+
       insert_relation(%{
         source_id: "888",
         source_type: "business_concept",
         target_id: "8888",
         target_type: "data_field"
       })
+
       insert_relation(%{
         source_id: "1",
         source_type: "invalid_type",
@@ -28,9 +28,12 @@ defmodule TdLm.RelationLoaderTest do
         target_type: "data_field"
       })
 
-      RelationLoader.handle_info(:load_relation_cache, %{})
+      RelationLoader.load()
+      # waits for loader to complete
+      RelationLoader.ping()
 
       cache_content = MockBusinessConceptCache.get_full_cache()
+
       expected_content = %{
         "business_concept:8" => %{link_count: 0},
         "business_concept:888" => %{link_count: 1},
@@ -39,7 +42,6 @@ defmodule TdLm.RelationLoaderTest do
 
       assert cache_content == expected_content
     end
-
   end
 
   defp insert_relation(attrs \\ %{}) do
@@ -50,6 +52,7 @@ defmodule TdLm.RelationLoaderTest do
       target_id: "88",
       target_type: "target_type"
     }
+
     attrs
     |> Enum.into(relation)
     |> Resources.create_relation()
