@@ -15,7 +15,7 @@ defmodule TdLmWeb.RelationController do
 
   action_fallback(TdLmWeb.FallbackController)
 
-  @bc_cache Application.get_env(:td_lm, :bc_cache)
+  @business_concept_cache Application.get_env(:td_lm, :business_concept_cache)
   @ingest_cache Application.get_env(:td_lm, :ingest_cache)
 
   @events %{
@@ -320,13 +320,15 @@ defmodule TdLmWeb.RelationController do
   end
 
   defp put_current_version_id(relation, relation_side, relation_id_key, target_type) do
-
-    relation_side_attrs = relation
-    |> Map.get(:context)
-    |> Map.get(relation_side)
+    relation_side_attrs =
+      relation
+      |> Map.get(:context)
+      |> Map.get(relation_side)
 
     case relation_side_attrs do
-      nil -> relation
+      nil ->
+        relation
+
       relation_side_attrs ->
         version_id = get_version_id(target_type, Map.get(relation, relation_id_key))
         put_version_id_in_context(relation, relation_side, relation_side_attrs, version_id)
@@ -344,11 +346,13 @@ defmodule TdLmWeb.RelationController do
   end
 
   defp get_version_id("business_concept", entity_id) do
-    @bc_cache.get_business_concept_version_id(entity_id)
+    @business_concept_cache.get_business_concept_version_id(entity_id)
   end
+
   defp get_version_id("ingest", entity_id) do
     @ingest_cache.get_ingest_version_id(entity_id)
   end
+
   defp get_version_id(_, _) do
   end
 end

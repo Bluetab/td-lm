@@ -17,7 +17,7 @@ config :td_lm, TdLm.Repo,
   password: "${DB_PASSWORD}",
   database: "${DB_NAME}",
   hostname: "${DB_HOST}",
-  pool_size: 15
+  pool_size: 10
 
 config :td_perms, redis_host: "${REDIS_HOST}"
 

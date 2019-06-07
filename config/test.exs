@@ -15,7 +15,8 @@ config :td_lm, TdLm.Repo,
   password: "postgres",
   database: "td_lm_test",
   hostname: "postgres",
-  pool: Ecto.Adapters.SQL.Sandbox
+  pool: Ecto.Adapters.SQL.Sandbox,
+  pool_size: 1
 
 config :td_lm, :audit_service,
   api_service: TdLmWeb.ApiServices.MockTdAuditService,
@@ -24,9 +25,9 @@ config :td_lm, :audit_service,
   audit_domain: ""
 
 config :td_lm, permission_resolver: TdLm.Permissions.MockPermissionResolver
-config :td_lm, bc_cache: TdPerms.MockBusinessConceptCache
+config :td_lm, business_concept_cache: TdPerms.MockBusinessConceptCache
 
-config :td_lm, cache_links_on_startup: false
-config :td_lm, cache_relations_on_startup: false
+config :td_lm, :relation_loader, load_on_startup: false
 
+config :td_cache, redis_host: "redis"
 config :td_perms, redis_host: "redis"

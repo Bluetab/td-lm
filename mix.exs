@@ -50,11 +50,11 @@ defmodule TdLm.Mixfile do
       {:credo, "~> 1.0.0", only: [:dev, :test], runtime: false},
       {:guardian, "~> 1.0"},
       {:canada, "~> 1.0.1"},
-      {:ex_machina, "~> 2.2.2", only: [:test]},
       {:corsica, "~> 1.0"},
       {:phoenix_swagger, "~> 0.8.0"},
       {:ex_json_schema, "~> 0.5"},
-      {:td_perms, git: "https://github.com/Bluetab/td-perms.git", tag: "2.21.3"},
+      {:td_cache, git: "https://github.com/Bluetab/td-cache.git", tag: "2.21.1"},
+      {:td_perms, git: "https://github.com/Bluetab/td-perms.git", tag: "2.21.5"},
       {:td_hypermedia, git: "https://github.com/Bluetab/td-hypermedia.git", tag: "2.11.0"}
     ]
   end

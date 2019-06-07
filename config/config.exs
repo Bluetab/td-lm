@@ -41,7 +41,7 @@ config :td_lm, :phoenix_swagger,
   }
 
 config :td_lm, permission_resolver: TdPerms.Permissions
-config :td_lm, bc_cache: TdPerms.BusinessConceptCache
+config :td_lm, business_concept_cache: TdPerms.BusinessConceptCache
 config :td_lm, ingest_cache: TdPerms.IngestCache
 
 config :td_lm, :audit_service,
@@ -96,8 +96,13 @@ config :td_perms,
     :manage_ingest_relations
   ]
 
-config :td_lm, cache_links_on_startup: true
-config :td_lm, cache_relations_on_startup: true
+config :td_lm, :relation_loader, load_on_startup: true
+
+config :td_lm, :cache_cleaner,
+  clean_on_startup: true,
+  patterns: [
+    "*:*:links"
+  ]
 
 config :td_lm, relation_removement: true
 config :td_lm, relation_removement_frequency: 36_00_000
