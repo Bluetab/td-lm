@@ -5,6 +5,9 @@
 # is restricted to this project.
 use Mix.Config
 
+# Environment
+config :td_lm, :env, Mix.env()
+
 # General application configuration
 config :td_lm,
   ecto_repos: [TdLm.Repo]
@@ -41,7 +44,6 @@ config :td_lm, :phoenix_swagger,
   }
 
 config :td_lm, permission_resolver: TdPerms.Permissions
-config :td_lm, business_concept_cache: TdPerms.BusinessConceptCache
 config :td_lm, ingest_cache: TdPerms.IngestCache
 
 config :td_lm, :audit_service,
@@ -97,15 +99,6 @@ config :td_perms,
   ]
 
 config :td_lm, :relation_loader, load_on_startup: true
-
-config :td_lm, :cache_cleaner,
-  clean_on_startup: true,
-  patterns: [
-    "*:*:links"
-  ]
-
-config :td_lm, relation_removement: true
-config :td_lm, relation_removement_frequency: 36_00_000
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

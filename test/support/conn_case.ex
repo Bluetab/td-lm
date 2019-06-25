@@ -38,7 +38,7 @@ defmodule TdLmWeb.ConnCase do
       Sandbox.mode(TdLm.Repo, {:shared, self()})
       parent = self()
 
-      case Process.whereis(TdLm.RelationLoader) do
+      case Process.whereis(TdLm.Cache.LinkLoader) do
         nil -> nil
         pid -> Sandbox.allow(TdLm.Repo, parent, pid)
       end
