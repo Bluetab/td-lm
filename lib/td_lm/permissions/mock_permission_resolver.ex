@@ -3,7 +3,7 @@ defmodule TdLm.Permissions.MockPermissionResolver do
   Simple Mock Permission resolver.
   For the purpose of the test, I will assume that the user
   has not permissions if it is not an admin.
-  The test of this functionality is meant to be in the module TdPerms
+  The test of this functionality is meant to be in the module TdCache
   """
   alias Poision
 
