@@ -36,7 +36,7 @@ defmodule TdLm.Cache.LinkLoader do
 
   @impl true
   def init(state) do
-    if Application.get_env(:td_lm, :env) != :test do
+    unless Application.get_env(:td_lm, :env) == :test do
       Process.send_after(self(), :load, 0)
     end
 

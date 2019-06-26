@@ -7,6 +7,7 @@ defmodule TdLmWeb.RelationController do
   import Canada, only: [can?: 2]
 
   alias TdCache.ConceptCache
+  alias TdCache.IngestCache
   alias TdLm.Cache.LinkLoader
   alias TdLm.Audit
   alias TdLm.Resources
@@ -15,8 +16,6 @@ defmodule TdLmWeb.RelationController do
   alias TdLmWeb.SwaggerDefinitions
 
   action_fallback(TdLmWeb.FallbackController)
-
-  @ingest_cache Application.get_env(:td_lm, :ingest_cache)
 
   @events %{
     add_relation: "add_relation",
@@ -351,7 +350,7 @@ defmodule TdLmWeb.RelationController do
   end
 
   defp get_version_id("ingest", entity_id) do
-    @ingest_cache.get_ingest_version_id(entity_id)
+    IngestCache.get_ingest_version_id(entity_id)
   end
 
   defp get_version_id(_, _) do

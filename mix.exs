@@ -57,7 +57,7 @@ defmodule TdLm.Mixfile do
       {:td_hypermedia, git: "https://github.com/Bluetab/td-hypermedia.git", tag: "2.11.0"},
       {:td_cache,
        git: "https://github.com/Bluetab/td-cache.git",
-       ref: "9a92649a3cb2f29f0aa9893927c351bb3c9a0564",
+       ref: "1ba03727857054c682ac0b64016a4282e6c4bbb8",
        override: true}
     ]
   end

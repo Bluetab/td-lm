@@ -44,7 +44,6 @@ config :td_lm, :phoenix_swagger,
   }
 
 config :td_lm, permission_resolver: TdPerms.Permissions
-config :td_lm, ingest_cache: TdPerms.IngestCache
 
 config :td_lm, :audit_service,
   protocol: "http",
