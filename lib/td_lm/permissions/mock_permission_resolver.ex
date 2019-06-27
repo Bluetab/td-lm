@@ -14,5 +14,4 @@ defmodule TdLm.Permissions.MockPermissionResolver do
   def has_any_permission?(_session_id, _permission, _resource_type, _resource_id) do
     false
   end
-
 end
