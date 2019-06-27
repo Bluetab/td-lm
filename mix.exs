@@ -24,7 +24,7 @@ defmodule TdLm.Mixfile do
   def application do
     [
       mod: {TdLm.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: [:logger, :runtime_tools, :td_cache]
     ]
   end
 
@@ -53,9 +53,8 @@ defmodule TdLm.Mixfile do
       {:corsica, "~> 1.0"},
       {:phoenix_swagger, "~> 0.8.0"},
       {:ex_json_schema, "~> 0.5"},
-      {:td_cache, git: "https://github.com/Bluetab/td-cache.git", tag: "2.21.1"},
-      {:td_perms, git: "https://github.com/Bluetab/td-perms.git", tag: "2.21.5"},
-      {:td_hypermedia, git: "https://github.com/Bluetab/td-hypermedia.git", tag: "2.11.0"}
+      {:td_hypermedia, git: "https://github.com/Bluetab/td-hypermedia.git", tag: "2.11.0"},
+      {:td_cache, git: "https://github.com/Bluetab/td-cache.git", tag: "3.0.5"}
     ]
   end
 

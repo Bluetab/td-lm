@@ -6,17 +6,16 @@ defmodule TdLmWeb.RelationController do
 
   import Canada, only: [can?: 2]
 
+  alias TdCache.ConceptCache
+  alias TdCache.IngestCache
   alias TdLm.Audit
-  alias TdLm.RelationLoader
+  alias TdLm.Cache.LinkLoader
   alias TdLm.Resources
   alias TdLm.Resources.Relation
   alias TdLmWeb.ErrorView
   alias TdLmWeb.SwaggerDefinitions
 
   action_fallback(TdLmWeb.FallbackController)
-
-  @business_concept_cache Application.get_env(:td_lm, :business_concept_cache)
-  @ingest_cache Application.get_env(:td_lm, :ingest_cache)
 
   @events %{
     add_relation: "add_relation",
@@ -148,7 +147,7 @@ defmodule TdLmWeb.RelationController do
         @events.add_relation
       )
 
-      RelationLoader.refresh(relation.id)
+      LinkLoader.refresh(relation.id)
 
       conn
       |> put_status(:created)
@@ -258,7 +257,7 @@ defmodule TdLmWeb.RelationController do
     with true <- can?(user, delete(relation)),
          {:ok, %Relation{}} <- Resources.delete_relation(relation) do
       Audit.create_event(conn, audit_delete_attributes(relation), @events.delete_relation)
-      RelationLoader.delete(relation)
+      LinkLoader.delete(relation.id)
 
       send_resp(conn, :no_content, "")
     else
@@ -346,11 +345,12 @@ defmodule TdLmWeb.RelationController do
   end
 
   defp get_version_id("business_concept", entity_id) do
-    @business_concept_cache.get_business_concept_version_id(entity_id)
+    {:ok, id} = ConceptCache.get(entity_id, :business_concept_version_id)
+    id
   end
 
   defp get_version_id("ingest", entity_id) do
-    @ingest_cache.get_ingest_version_id(entity_id)
+    IngestCache.get_ingest_version_id(entity_id)
   end
 
   defp get_version_id(_, _) do

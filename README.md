@@ -46,7 +46,6 @@ Ready to run in production? Please [check deployment guides](http://www.phoenixf
 * [phoenix_swagger](https://github.com/xerions/phoenix_swagger) - Swagger integration to Phoenix framework
 * [ex_json_schema](https://github.com/jonasschmidt/ex_json_schema) - Elixir JSON Schema validator
 * [json_diff](https://github.com/jonasschmidt/ex_json_schema) - Elixir JSON Schema validator
-* [con_cache](https://github.com/sasa1977/con_cache) - ets based key/value cache with row level isolated writes and ttl support
 * [corsica](http://hexdocs.pm/corsica) - Elixir library for dealing with CORS requests.
 * [csv](https://github.com/beatrichartz/csv) - CSV Decoding and Encoding for Elixir
 

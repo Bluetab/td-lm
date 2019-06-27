@@ -25,9 +25,7 @@ config :td_lm, :audit_service,
   audit_domain: ""
 
 config :td_lm, permission_resolver: TdLm.Permissions.MockPermissionResolver
-config :td_lm, business_concept_cache: TdPerms.MockBusinessConceptCache
 
 config :td_lm, :relation_loader, load_on_startup: false
 
 config :td_cache, redis_host: "redis"
-config :td_perms, redis_host: "redis"
