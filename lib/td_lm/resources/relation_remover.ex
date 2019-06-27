@@ -1,6 +1,6 @@
 defmodule TdLm.RelationRemover do
   @moduledoc """
-  This Module will be used to perform a removement of those relations which 
+  This Module will be used to perform a removal of those relations which 
   business concept has been deleted
   """
   use GenServer

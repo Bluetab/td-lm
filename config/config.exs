@@ -94,7 +94,8 @@ config :td_cache,
     :view_rejected_ingests,
     :view_deprecated_ingests,
     :manage_confidential_structures,
-    :manage_ingest_relations
+    :manage_ingest_relations,
+    :view_data_structures_profile
   ]
 
 config :td_lm, :relation_loader, load_on_startup: true
