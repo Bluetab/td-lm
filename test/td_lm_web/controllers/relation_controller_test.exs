@@ -2,16 +2,15 @@ defmodule TdLmWeb.RelationControllerTest do
   use TdLmWeb.ConnCase
   use PhoenixSwagger.SchemaTest, "priv/static/swagger.json"
 
+  alias TdCache.ConceptCache
   alias TdLm.Resources
   alias TdLm.Resources.Relation
   alias TdLmWeb.ApiServices.MockTdAuditService
-  alias TdPerms.MockBusinessConceptCache
 
   import TdLmWeb.Authentication, only: :functions
 
   setup_all do
     start_supervised(MockTdAuditService)
-    start_supervised(MockBusinessConceptCache)
     :ok
   end
 
@@ -130,25 +129,39 @@ defmodule TdLmWeb.RelationControllerTest do
   describe "search relations with source/target of type business concept" do
     setup [:create_business_concepts_relation]
     @tag :admin_authenticated
-    test "get last version_id of business_concept in a relation between business concepts created with a previous target version", %{conn: conn} do
-
-      MockBusinessConceptCache.put_business_concept(%{
+    test "get last version_id of business_concept in a relation between business concepts created with a previous target version",
+         %{conn: conn} do
+      ConceptCache.put(%{
         id: @business_concept_attrs.source_id,
         domain_id: 1,
-        name: @business_concept_attrs |> Map.get(:context) |> Map.get("source") |> Map.get("name"),
-        business_concept_version_id: @business_concept_attrs |> Map.get(:context) |> Map.get("source") |> Map.get("id")
+        name:
+          @business_concept_attrs |> Map.get(:context) |> Map.get("source") |> Map.get("name"),
+        business_concept_version_id:
+          @business_concept_attrs |> Map.get(:context) |> Map.get("source") |> Map.get("id")
       })
 
-      MockBusinessConceptCache.put_business_concept(%{
+      ConceptCache.put(%{
         id: @business_concept_attrs.target_id,
         domain_id: 1,
-        name: @business_concept_attrs |> Map.get(:context) |> Map.get("target") |> Map.get("name"),
+        name:
+          @business_concept_attrs |> Map.get(:context) |> Map.get("target") |> Map.get("name"),
         business_concept_version_id: "22"
       })
 
-      conn = post(conn, Routes.relation_path(conn, :search, %{"resource_id" => "9", "resource_type" => "business_concept", "related_to_type" => "business_concept"}))
+      conn =
+        post(
+          conn,
+          Routes.relation_path(conn, :search, %{
+            "resource_id" => "9",
+            "resource_type" => "business_concept",
+            "related_to_type" => "business_concept"
+          })
+        )
+
       [response_data | _] = json_response(conn, 200)["data"]
-      assert response_data |> Map.get("context") |> Map.get("target") |> Map.get("version_id") == "22"
+
+      assert response_data |> Map.get("context") |> Map.get("target") |> Map.get("version_id") ==
+               "22"
     end
   end
 
@@ -157,9 +170,20 @@ defmodule TdLmWeb.RelationControllerTest do
     @tag :admin_authenticated
 
     test "get relation without version id when target is data_field", %{conn: conn} do
-      conn = post(conn, Routes.relation_path(conn, :search, %{"resource_id" => "18", "resource_type" => "business_concept", "related_to_type" => "data_field"}))
+      conn =
+        post(
+          conn,
+          Routes.relation_path(conn, :search, %{
+            "resource_id" => "18",
+            "resource_type" => "business_concept",
+            "related_to_type" => "data_field"
+          })
+        )
+
       [response_data | _] = json_response(conn, 200)["data"]
-      assert response_data |> Map.get("context") == @data_field_relation_attrs |> Map.get(:context)
+
+      assert response_data |> Map.get("context") ==
+               @data_field_relation_attrs |> Map.get(:context)
     end
   end
 
@@ -168,7 +192,16 @@ defmodule TdLmWeb.RelationControllerTest do
     @tag :admin_authenticated
 
     test "get relation between ingests", %{conn: conn} do
-      conn = post(conn, Routes.relation_path(conn, :search, %{"resource_id" => "13", "resource_type" => "ingest", "related_to_type" => "ingest"}))
+      conn =
+        post(
+          conn,
+          Routes.relation_path(conn, :search, %{
+            "resource_id" => "13",
+            "resource_type" => "ingest",
+            "related_to_type" => "ingest"
+          })
+        )
+
       response = json_response(conn, 200)["data"]
       assert length(response) == 1
     end

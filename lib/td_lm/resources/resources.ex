@@ -32,10 +32,10 @@ defmodule TdLm.Resources do
   def count_relations_by_source(source_type, target_type) do
     Relation
     |> Repo.all()
-    |> Enum.group_by(&(&1.source_id))
+    |> Enum.group_by(& &1.source_id)
     |> Enum.map(fn {key, value} ->
-          {key, count_valid_relations(value, source_type, target_type)}
-        end)
+      {key, count_valid_relations(value, source_type, target_type)}
+    end)
     |> Map.new()
   end
 
@@ -283,7 +283,9 @@ defmodule TdLm.Resources do
       case Enum.member?(fields, key_as_atom) do
         true ->
           filter_by_field(key_as_atom, params[key], acc)
-        false -> acc
+
+        false ->
+          acc
       end
     end)
   end
@@ -317,4 +319,11 @@ defmodule TdLm.Resources do
   end
 
   defp include_where_for_external_params(query, _), do: query
+
+  def list_stale_relations(resource_type, active_ids) do
+    Relation
+    |> where([r], r.source_type == ^resource_type and r.source_id not in ^active_ids)
+    |> or_where([r], r.target_type == ^resource_type and r.target_id not in ^active_ids)
+    |> Repo.all()
+  end
 end
