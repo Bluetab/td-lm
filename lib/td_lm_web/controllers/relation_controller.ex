@@ -8,8 +8,8 @@ defmodule TdLmWeb.RelationController do
 
   alias TdCache.ConceptCache
   alias TdCache.IngestCache
-  alias TdLm.Cache.LinkLoader
   alias TdLm.Audit
+  alias TdLm.Cache.LinkLoader
   alias TdLm.Resources
   alias TdLm.Resources.Relation
   alias TdLmWeb.ErrorView
