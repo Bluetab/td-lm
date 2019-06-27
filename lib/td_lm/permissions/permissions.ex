@@ -34,5 +34,4 @@ defmodule TdLm.Permissions do
   def authorized_any?(%User{jti: jti}, permissions, resource_type, id) do
     @permission_resolver.has_any_permission?(jti, permissions, resource_type, id)
   end
-
 end

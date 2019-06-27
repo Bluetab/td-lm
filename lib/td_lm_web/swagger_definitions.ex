@@ -10,10 +10,22 @@ defmodule TdLmWeb.SwaggerDefinitions do
             relation(
               Schema.new do
                 properties do
-                  source_id(:string, "Id of the source of the relation to be created", required: true)
-                  source_type(:string, "Type of the source of the relation to be created", required: true)
-                  target_id(:string, "Id of the source of the relation to be created", required: true)
-                  target_type(:string, "Type of the source of the relation to be created", required: true)
+                  source_id(:string, "Id of the source of the relation to be created",
+                    required: true
+                  )
+
+                  source_type(:string, "Type of the source of the relation to be created",
+                    required: true
+                  )
+
+                  target_id(:string, "Id of the source of the relation to be created",
+                    required: true
+                  )
+
+                  target_type(:string, "Type of the source of the relation to be created",
+                    required: true
+                  )
+
                   context(:object, "Context informtation of the source and the target")
                 end
               end
@@ -51,23 +63,35 @@ defmodule TdLmWeb.SwaggerDefinitions do
             relation(
               Schema.new do
                 properties do
-                  source_id(:string, "Id of the source of the relation to be updated", required: true)
-                  source_type(:string, "Type of the source of the relation to be updated", required: true)
-                  target_id(:string, "Id of the source of the relation to be updated", required: true)
-                  target_type(:string, "Type of the source of the relation to be updated", required: true)
+                  source_id(:string, "Id of the source of the relation to be updated",
+                    required: true
+                  )
+
+                  source_type(:string, "Type of the source of the relation to be updated",
+                    required: true
+                  )
+
+                  target_id(:string, "Id of the source of the relation to be updated",
+                    required: true
+                  )
+
+                  target_type(:string, "Type of the source of the relation to be updated",
+                    required: true
+                  )
+
                   context(:object, "Context informtation of the source and the updated")
                 end
               end
             )
           end
-      end,
+        end,
       Relations:
         swagger_schema do
-        title("Relations")
-        description("A collection of relations")
-        type(:array)
-        items(Schema.ref(:Relation))
-      end,
+          title("Relations")
+          description("A collection of relations")
+          type(:array)
+          items(Schema.ref(:Relation))
+        end,
       RelationsResponse:
         swagger_schema do
           properties do
@@ -95,17 +119,17 @@ defmodule TdLmWeb.SwaggerDefinitions do
             data(Schema.ref(:Relation))
           end
         end,
-        RelationFilterRequest:
-          swagger_schema do
-            properties do
-              id(:integer, "Relation Id", required: true)
-              source_id(:string, "Id of the source of the relation", required: false)
-              source_type(:string, "Type of the source of the relation", required: false)
-              target_id(:string, "Id of the source of the relation", required: false)
-              target_type(:string, "Type of the source of the relation", required: false)
-              context(:object, "Context informtation of the source and the target", required: false)
-              value(:object, "Value of the relation type", required: false)
-            end
+      RelationFilterRequest:
+        swagger_schema do
+          properties do
+            id(:integer, "Relation Id", required: true)
+            source_id(:string, "Id of the source of the relation", required: false)
+            source_type(:string, "Type of the source of the relation", required: false)
+            target_id(:string, "Id of the source of the relation", required: false)
+            target_type(:string, "Type of the source of the relation", required: false)
+            context(:object, "Context informtation of the source and the target", required: false)
+            value(:object, "Value of the relation type", required: false)
+          end
 
           example(%{
             id: "1",
@@ -114,8 +138,9 @@ defmodule TdLmWeb.SwaggerDefinitions do
             target_id: "2",
             target_type: "data_filed",
             context: %{},
-            value: %{type: "business_concept_to_field"}})
-        end,
+            value: %{type: "business_concept_to_field"}
+          })
+        end
     }
   end
 
@@ -132,14 +157,14 @@ defmodule TdLmWeb.SwaggerDefinitions do
           properties do
             tag(Schema.ref(:TagEdit))
           end
-      end,
+        end,
       Tags:
         swagger_schema do
-        title("Tags")
-        description("A collection of tags")
-        type(:array)
-        items(Schema.ref(:Tag))
-      end,
+          title("Tags")
+          description("A collection of tags")
+          type(:array)
+          items(Schema.ref(:Tag))
+        end,
       TagsResponse:
         swagger_schema do
           properties do
@@ -153,6 +178,7 @@ defmodule TdLmWeb.SwaggerDefinitions do
 
           properties do
             id(:integer, "Tag Id", required: true)
+
             value(
               Schema.new do
                 properties do
@@ -181,7 +207,7 @@ defmodule TdLmWeb.SwaggerDefinitions do
             )
           end
         end,
-        TagSearch:
+      TagSearch:
         swagger_schema do
           properties do
             value(
@@ -194,6 +220,7 @@ defmodule TdLmWeb.SwaggerDefinitions do
               end
             )
           end
+
           example(%{
             value: %{
               target_type: "ingest"
