@@ -30,6 +30,7 @@ defmodule TdLm.RelationRemover do
   @impl true
   def handle_info(:work, state) do
     case ConceptCache.active_ids() do
+      {:ok, []} -> :ok
       {:ok, active_ids} -> hard_deletion("business_concept", active_ids)
       _ -> :ok
     end
