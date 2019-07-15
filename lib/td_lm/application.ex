@@ -15,6 +15,7 @@ defmodule TdLm.Application do
       # Start the endpoint when the application starts
       supervisor(TdLmWeb.Endpoint, []),
       worker(TdLm.Cache.LinkLoader, []),
+      worker(TdLm.Cache.LinkMigrater, []),
       worker(TdLm.RelationRemover, [])
     ]
 

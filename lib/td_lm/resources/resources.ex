@@ -326,4 +326,12 @@ defmodule TdLm.Resources do
     |> or_where([r], r.target_type == ^resource_type and r.target_id not in ^active_ids)
     |> Repo.all()
   end
+
+  def list_relations_by_resource(resource_type, resource_id) do
+    Relation
+    |> where([r], r.source_type == ^resource_type and r.source_id == ^resource_id)
+    |> or_where([r], r.target_type == ^resource_type and r.target_id == ^resource_id)
+    |> Repo.all()
+    |> Repo.preload(:tags)
+  end
 end

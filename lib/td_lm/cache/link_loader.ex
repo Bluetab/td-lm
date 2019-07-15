@@ -4,7 +4,7 @@ defmodule TdLm.Cache.LinkLoader do
   """
 
   use GenServer
-  require Logger
+
   alias TdCache.LinkCache
   alias TdLm.Resources
 

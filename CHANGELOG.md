@@ -5,6 +5,7 @@
 ### Changed
 
 - [TD-1618] Cache improvements (use td-cache instead of td-perms)
+- [TD-1782] Migration of field links to corresponding structure
 - [TD-1924] Use Jason instead of Poison for JSON encoding/decoding
 
 ## [2.21.0] 2019-06-10

@@ -26,7 +26,7 @@ defmodule TdLmWeb.SwaggerDefinitions do
                     required: true
                   )
 
-                  context(:object, "Context informtation of the source and the target")
+                  context(:object, "Context information of the source and the target")
                 end
               end
             )
@@ -79,7 +79,7 @@ defmodule TdLmWeb.SwaggerDefinitions do
                     required: true
                   )
 
-                  context(:object, "Context informtation of the source and the updated")
+                  context(:object, "Context information of the source and the updated")
                 end
               end
             )
@@ -110,7 +110,7 @@ defmodule TdLmWeb.SwaggerDefinitions do
             source_type(:string, "Type of the source of the relation", required: true)
             target_id(:string, "Id of the source of the relation", required: true)
             target_type(:string, "Type of the source of the relation", required: true)
-            context(:object, "Context informtation of the source and the target", required: true)
+            context(:object, "Context information of the source and the target", required: true)
           end
         end,
       RelationResponse:
@@ -127,7 +127,7 @@ defmodule TdLmWeb.SwaggerDefinitions do
             source_type(:string, "Type of the source of the relation", required: false)
             target_id(:string, "Id of the source of the relation", required: false)
             target_type(:string, "Type of the source of the relation", required: false)
-            context(:object, "Context informtation of the source and the target", required: false)
+            context(:object, "Context information of the source and the target", required: false)
             value(:object, "Value of the relation type", required: false)
           end
 

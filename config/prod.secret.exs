@@ -32,3 +32,10 @@ config :td_lm, TdLm.Auth.Guardian,
   issuer: "tdauth",
   ttl: {1, :hours},
   secret_key: "${GUARDIAN_SECRET_KEY}"
+
+config :td_cache, :event_stream,
+  consumer_id: "${HOSTNAME}",
+  consumer_group: "lm",
+  streams: [
+    [key: "data_field:events", consumer: TdLm.Cache.LinkMigrater]
+  ]

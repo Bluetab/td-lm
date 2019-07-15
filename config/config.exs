@@ -100,6 +100,13 @@ config :td_cache,
 
 config :td_lm, :relation_loader, load_on_startup: true
 
+config :td_cache, :event_stream,
+  consumer_id: "default",
+  consumer_group: "lm",
+  streams: [
+    [key: "data_field:events", consumer: TdLm.Cache.LinkMigrater]
+  ]
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{Mix.env()}.exs"
