@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Added
+
+- [TD-1532] Delete links on receiving a `delete_link` command
+- Clean deprecated entries from cache
+
 ### Changed
 
 - [TD-2002] Update td-cache and delete permissions list from config

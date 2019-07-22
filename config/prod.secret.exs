@@ -37,5 +37,6 @@ config :td_cache, :event_stream,
   consumer_id: "${HOSTNAME}",
   consumer_group: "lm",
   streams: [
-    [key: "data_field:events", consumer: TdLm.Cache.LinkMigrater]
+    [key: "data_field:events", consumer: TdLm.Cache.LinkMigrater],
+    [key: "link:commands", consumer: TdLm.Cache.LinkRemover]
   ]

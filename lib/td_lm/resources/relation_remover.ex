@@ -23,7 +23,7 @@ defmodule TdLm.RelationRemover do
 
   @impl true
   def init(state) do
-    schedule_work()
+    schedule_work(0)
     {:ok, state}
   end
 
@@ -41,8 +41,8 @@ defmodule TdLm.RelationRemover do
 
   ## Private functions
 
-  defp schedule_work do
-    Process.send_after(self(), :work, @hourly)
+  defp schedule_work(ms \\ @hourly) do
+    Process.send_after(self(), :work, ms)
   end
 
   defp hard_deletion(_, []), do: :ok

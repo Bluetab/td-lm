@@ -16,7 +16,9 @@ defmodule TdLm.Application do
       supervisor(TdLmWeb.Endpoint, []),
       worker(TdLm.Cache.LinkLoader, []),
       worker(TdLm.Cache.LinkMigrater, []),
-      worker(TdLm.RelationRemover, [])
+      worker(TdLm.Cache.LinkRemover, []),
+      worker(TdLm.RelationRemover, []),
+      worker(TdCache.CacheCleaner, [Application.get_env(:td_lm, :cache_cleaner, [])])
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

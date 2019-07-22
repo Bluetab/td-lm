@@ -1,5 +1,4 @@
 defmodule TdLmWeb.RelationController do
-  require Logger
   use TdHypermedia, :controller
   use TdLmWeb, :controller
   use PhoenixSwagger
@@ -14,6 +13,8 @@ defmodule TdLmWeb.RelationController do
   alias TdLm.Resources.Relation
   alias TdLmWeb.ErrorView
   alias TdLmWeb.SwaggerDefinitions
+
+  require Logger
 
   action_fallback(TdLmWeb.FallbackController)
 
@@ -160,7 +161,8 @@ defmodule TdLmWeb.RelationController do
         |> put_view(ErrorView)
         |> render("403.json")
 
-      _error ->
+      error ->
+        Logger.warn("Creating relation... #{inspect(error)}")
         conn
         |> put_status(:unprocessable_entity)
         |> put_view(ErrorView)

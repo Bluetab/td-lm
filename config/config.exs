@@ -55,7 +55,21 @@ config :td_cache, :event_stream,
   consumer_id: "default",
   consumer_group: "lm",
   streams: [
-    [key: "data_field:events", consumer: TdLm.Cache.LinkMigrater]
+    [key: "data_field:events", consumer: TdLm.Cache.LinkMigrater],
+    [key: "link:commands", consumer: TdLm.Cache.LinkRemover]
+  ]
+
+config :td_lm, :cache_cleaner,
+  clean_on_startup: true,
+  patterns: [
+    "relation_type:*",
+    "business_concept*:",
+    "data_field*:",
+    "data_structure*:",
+    "ingest*:",
+    "*:bc_padre",
+    "*:bc_caculo",
+    "*:relations"
   ]
 
 # Import environment specific config. This must remain at the bottom
