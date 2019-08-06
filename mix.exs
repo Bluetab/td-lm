@@ -54,7 +54,7 @@ defmodule TdLm.Mixfile do
       {:phoenix_swagger, "~> 0.8.0"},
       {:ex_json_schema, "~> 0.5"},
       {:td_hypermedia, git: "https://github.com/Bluetab/td-hypermedia.git", tag: "2.11.0"},
-      {:td_cache, git: "https://github.com/Bluetab/td-cache.git", tag: "3.2.3"}
+      {:td_cache, git: "https://github.com/Bluetab/td-cache.git", tag: "3.3.3"}
     ]
   end
 

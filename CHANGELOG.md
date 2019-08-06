@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.3.0] 2019-08-06
+
+### Changed
+
+- [TD-2037] Update td-cache due to lack of performance
+
 ## [3.2.0] 2019-07-24
 
 ### Added
