@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.5.0] 2019-09-03
+
+### Fixed
+
+- [TD-2081] Event stream consumer did not respect redis_host and port config options
+
 ## [3.3.0] 2019-08-06
 
 ### Changed
