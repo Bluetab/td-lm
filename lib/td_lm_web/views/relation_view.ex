@@ -4,8 +4,8 @@ defmodule TdLmWeb.RelationView do
 
   alias TdLmWeb.RelationView
 
-  def render("index.json", %{relations: relations, hypermedia: hypermedia}) do
-    render_many_hypermedia(relations, hypermedia, RelationView, "relation.json")
+  def render("index.json", %{hypermedia: hypermedia}) do
+    render_many_hypermedia(hypermedia, RelationView, "relation.json")
   end
 
   def render("index.json", %{relations: relations}) do
