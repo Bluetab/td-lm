@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- [TD-1964] Remove label from tags and use type instead. Update link in cache after deleting tag
+
 ## [3.6.0] 2019-09-16
 
 ### Changed
