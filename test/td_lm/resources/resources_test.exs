@@ -221,7 +221,7 @@ defmodule TdLm.ResourcesTest do
 
     test "delete_tag/1 deletes the tag" do
       tag = tag_fixture()
-      assert {:ok, %Tag{}} = Resources.delete_tag(tag)
+      assert {:ok, {:ok, %Tag{}}} = Resources.delete_tag(tag)
       assert_raise Ecto.NoResultsError, fn -> Resources.get_tag!(tag.id) end
     end
 

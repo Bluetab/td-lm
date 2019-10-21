@@ -183,7 +183,6 @@ defmodule TdLmWeb.SwaggerDefinitions do
               Schema.new do
                 properties do
                   type(:string, "Tag type code", required: true)
-                  label(:string, "Tag label", required: false)
                   target_type(:string, "Target type", required: false)
                 end
               end
@@ -200,7 +199,6 @@ defmodule TdLmWeb.SwaggerDefinitions do
               Schema.new do
                 properties do
                   type(:string, "Tag type code", required: true)
-                  label(:string, "Tag label", required: false)
                   target_type(:string, "Target type", required: false)
                 end
               end
@@ -214,7 +212,6 @@ defmodule TdLmWeb.SwaggerDefinitions do
               Schema.new do
                 properties do
                   type(:string, "Tag type code", required: false)
-                  label(:string, "Tag label", required: false)
                   target_type(:string, "Target type", required: false)
                 end
               end

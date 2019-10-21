@@ -2,8 +2,11 @@ defmodule TdLmWeb.TagController do
   use TdLmWeb, :controller
   use PhoenixSwagger
 
+  import Canada, only: [can?: 2]
+
   alias TdLm.Resources
   alias TdLm.Resources.Tag
+  alias TdLmWeb.ErrorView
   alias TdLmWeb.SwaggerDefinitions
 
   action_fallback(TdLmWeb.FallbackController)
@@ -51,14 +54,35 @@ defmodule TdLmWeb.TagController do
 
     response(200, "OK", Schema.ref(:TagResponse))
     response(422, "Client Error")
+    response(403, "Unauthorized")
   end
 
-  def create(conn, %{"tag" => tag_params}) do
+  def create(conn, %{"tag" => _tag_params} = params) do
+    user = conn.assigns[:current_resource]
+
+    with true <- can?(user, create_tag(%Tag{})) do
+      do_create(conn, params)
+    else
+      false ->
+        conn
+        |> put_status(:forbidden)
+        |> put_view(ErrorView)
+        |> render("403.json")
+    end
+  end
+
+  defp do_create(conn, %{"tag" => tag_params}) do
     with {:ok, %Tag{} = tag} <- Resources.create_tag(tag_params) do
       conn
       |> put_status(:created)
       |> put_resp_header("location", Routes.tag_path(conn, :show, tag))
       |> render("show.json", tag: tag)
+    else
+      _error ->
+        conn
+        |> put_status(:unprocessable_entity)
+        |> put_view(ErrorView)
+        |> render("422.json")
     end
   end
 
@@ -109,13 +133,33 @@ defmodule TdLmWeb.TagController do
 
     response(204, "No Content")
     response(422, "Client Error")
+    response(403, "Unauthorized")
   end
 
   def delete(conn, %{"id" => id}) do
+    user = conn.assigns[:current_resource]
     tag = Resources.get_tag!(id)
 
-    with {:ok, %Tag{}} <- Resources.delete_tag(tag) do
+    with true <- can?(user, delete_tag(tag)) do
+      do_delete(conn, tag)
+    else
+      false ->
+        conn
+        |> put_status(:forbidden)
+        |> put_view(ErrorView)
+        |> render("403.json")
+    end
+  end
+
+  defp do_delete(conn, %Tag{} = tag) do
+    with {:ok, {:ok, %Tag{}}} <- Resources.delete_tag(tag) do
       send_resp(conn, :no_content, "")
+    else
+      _error ->
+        conn
+        |> put_status(:unprocessable_entity)
+        |> put_view(ErrorView)
+        |> render("422.json")
     end
   end
 end

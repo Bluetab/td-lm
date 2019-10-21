@@ -4,8 +4,8 @@ defmodule TdLm.Resources do
   """
 
   import Ecto.Query, warn: false
+  alias TdLm.Cache.LinkLoader
   alias TdLm.Repo
-
   alias TdLm.Resources.Relation
 
   @doc """
@@ -253,8 +253,29 @@ defmodule TdLm.Resources do
       {:error, %Ecto.Changeset{}}
 
   """
-  def delete_tag(%Tag{} = tag) do
-    Repo.delete(tag)
+  def delete_tag(%Tag{id: id} = tag) do
+    query =
+      from(r in Relation,
+        join: tag in assoc(r, :tags),
+        where: tag.id == ^id
+      )
+
+    relations =
+      query
+      |> Repo.all()
+
+    transaction_result =
+      Repo.transaction(fn ->
+        query |> Repo.update_all(set: [updated_at: DateTime.utc_now()])
+        Repo.delete(tag)
+      end)
+
+    relations
+    |> Enum.each(fn relation ->
+      LinkLoader.refresh(relation.id)
+    end)
+
+    transaction_result
   end
 
   @doc """
