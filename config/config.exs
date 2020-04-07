@@ -16,7 +16,6 @@ config :td_lm,
 config :td_lm, TdLmWeb.Endpoint,
   http: [port: 4012],
   url: [host: "localhost"],
-  secret_key_base: "7oQ+yw+YduBniD7YG5DVzHQi5qfM7gpBT95tB7KL69wLfYFI9FntvymXAyhulV3s",
   render_errors: [view: TdLmWeb.ErrorView, accepts: ~w(json)]
 
 # Configures Auth module Guardian
