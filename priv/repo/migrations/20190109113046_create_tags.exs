@@ -3,10 +3,9 @@ defmodule TdLm.Repo.Migrations.CreateTags do
 
   def change do
     create table(:tags) do
-      add :value, :map
+      add(:value, :map)
 
       timestamps()
     end
-
   end
 end

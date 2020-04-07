@@ -13,13 +13,12 @@ defmodule TdLm.Repo.Migrations.LoadDataFromResourceLinkIntoRelations do
     resource_links =
       from(
         r_l in "resource_links",
-        select:
-          %{
-            source_id: r_l.resource_id,
-            source_type: r_l.resource_type,
-            target: r_l.field
-          }
-        )
+        select: %{
+          source_id: r_l.resource_id,
+          source_type: r_l.resource_type,
+          target: r_l.field
+        }
+      )
       |> Repo.all()
 
     parse_resource_link_format(resource_links)
@@ -33,7 +32,11 @@ defmodule TdLm.Repo.Migrations.LoadDataFromResourceLinkIntoRelations do
     |> Enum.map(&resource_link_format(&1, inserted_at, updated_at))
   end
 
-  defp resource_link_format(%{source_id: source_id, source_type: source_type, target: target}, inserted_at, updated_at) do
+  defp resource_link_format(
+         %{source_id: source_id, source_type: source_type, target: target},
+         inserted_at,
+         updated_at
+       ) do
     Map.new()
     |> Map.put(:source_id, source_id)
     |> Map.put(:source_type, source_type)

@@ -60,14 +60,8 @@ defmodule TdLmWeb.TagController do
   def create(conn, %{"tag" => _tag_params} = params) do
     user = conn.assigns[:current_resource]
 
-    with true <- can?(user, create_tag(%Tag{})) do
+    with {:can, true} <- {:can, can?(user, create_tag(%Tag{}))} do
       do_create(conn, params)
-    else
-      false ->
-        conn
-        |> put_status(:forbidden)
-        |> put_view(ErrorView)
-        |> render("403.json")
     end
   end
 
@@ -77,12 +71,6 @@ defmodule TdLmWeb.TagController do
       |> put_status(:created)
       |> put_resp_header("location", Routes.tag_path(conn, :show, tag))
       |> render("show.json", tag: tag)
-    else
-      _error ->
-        conn
-        |> put_status(:unprocessable_entity)
-        |> put_view(ErrorView)
-        |> render("422.json")
     end
   end
 
@@ -140,26 +128,15 @@ defmodule TdLmWeb.TagController do
     user = conn.assigns[:current_resource]
     tag = Resources.get_tag!(id)
 
-    with true <- can?(user, delete_tag(tag)) do
+    with {:can, true} <- {:can, can?(user, delete_tag(tag))} do
       do_delete(conn, tag)
-    else
-      false ->
-        conn
-        |> put_status(:forbidden)
-        |> put_view(ErrorView)
-        |> render("403.json")
     end
   end
 
   defp do_delete(conn, %Tag{} = tag) do
-    with {:ok, {:ok, %Tag{}}} <- Resources.delete_tag(tag) do
+    with {:ok, res} <- Resources.delete_tag(tag),
+         {:ok, %Tag{}} <- res do
       send_resp(conn, :no_content, "")
-    else
-      _error ->
-        conn
-        |> put_status(:unprocessable_entity)
-        |> put_view(ErrorView)
-        |> render("422.json")
     end
   end
 end

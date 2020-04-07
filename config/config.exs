@@ -14,6 +14,7 @@ config :td_lm,
 
 # Configures the endpoint
 config :td_lm, TdLmWeb.Endpoint,
+  http: [port: 4012],
   url: [host: "localhost"],
   secret_key_base: "7oQ+yw+YduBniD7YG5DVzHQi5qfM7gpBT95tB7KL69wLfYFI9FntvymXAyhulV3s",
   render_errors: [view: TdLmWeb.ErrorView, accepts: ~w(json)]
@@ -33,10 +34,15 @@ config :td_lm, hashing_module: Comeonin.Bcrypt
 # (without the 'end of line' character)
 # EX_LOGGER_FORMAT='$date $time [$level] $message'
 config :logger, :console,
-  format: (System.get_env("EX_LOGGER_FORMAT") || "$time $metadata[$level] $message") <> "\n",
-  metadata: [:request_id]
+  format:
+    (System.get_env("EX_LOGGER_FORMAT") || "$date\T$time\Z [$level]$levelpad $metadata$message") <>
+      "\n",
+  level: :info,
+  metadata: [:pid, :module],
+  utc_log: true
 
 config :phoenix, :json_library, Jason
+config :phoenix_swagger, :json_library, Jason
 
 config :td_lm, :phoenix_swagger,
   swagger_files: %{
@@ -46,6 +52,10 @@ config :td_lm, :phoenix_swagger,
 config :td_lm, permission_resolver: TdCache.Permissions
 
 config :td_lm, :audit_service,
+  api_service: TdLmWeb.ApiServices.HttpTdAuditService,
+  audit_host: "localhost",
+  audit_port: "4007",
+  audit_domain: "",
   protocol: "http",
   audits_path: "/api/audits/"
 

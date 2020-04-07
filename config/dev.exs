@@ -7,8 +7,6 @@ use Mix.Config
 # watchers to your application. For example, we use it
 # with brunch.io to recompile .js and .css sources.
 config :td_lm, TdLmWeb.Endpoint,
-  http: [port: 4012],
-  url: [host: "localhost", port: 4012],
   debug_errors: true,
   code_reloader: true,
   check_origin: false,
@@ -30,10 +28,6 @@ config :td_lm, TdLmWeb.Endpoint,
 # configured to run both http and https servers on
 # different ports.
 
-# Do not include metadata nor timestamps in development logs
-config :logger, :console,
-  format: (System.get_env("EX_LOGGER_FORMAT") || "[$level] $message") <> "\n"
-
 # Set a higher stacktrace during development. Avoid configuring such
 # in production as building large stacktraces may be expensive.
 config :phoenix, :stacktrace_depth, 20
@@ -44,12 +38,6 @@ config :td_lm, TdLm.Repo,
   password: "postgres",
   database: "td_lm_dev",
   hostname: "localhost",
-  pool_size: 10
+  pool_size: 4
 
 config :td_cache, redis_host: "localhost"
-
-config :td_lm, :audit_service,
-  api_service: TdLmWeb.ApiServices.HttpTdAuditService,
-  audit_host: "localhost",
-  audit_port: "4007",
-  audit_domain: ""

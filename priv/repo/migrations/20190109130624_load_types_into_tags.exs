@@ -15,19 +15,20 @@ defmodule TdLm.Repo.Migrations.LoadTypesIntoTags do
     updated_at = DateTime.utc_now()
 
     from(
-      r in "relations", 
+      r in "relations",
       select: %{
-          relation_type: r.relation_type
-        }
+        relation_type: r.relation_type
+      }
     )
     |> distinct(true)
     |> Repo.all()
-    |> Enum.map(fn %{relation_type: relation_type} -> 
+    |> Enum.map(fn %{relation_type: relation_type} ->
       value = Map.new() |> Map.put("type", relation_type)
+
       Map.new()
-       |> Map.put(:value, value)
-       |> Map.put(:inserted_at, inserted_at)
-       |> Map.put(:updated_at, updated_at)
+      |> Map.put(:value, value)
+      |> Map.put(:inserted_at, inserted_at)
+      |> Map.put(:updated_at, updated_at)
     end)
   end
 end
