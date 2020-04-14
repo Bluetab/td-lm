@@ -11,8 +11,6 @@ defmodule TdLmWeb.TagView do
   end
 
   def render("tag.json", %{tag: tag}) do
-    %{id: tag.id,
-      value: tag.value
-    }
+    %{id: tag.id, value: tag.value}
   end
 end

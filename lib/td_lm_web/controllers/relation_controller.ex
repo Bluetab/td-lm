@@ -11,7 +11,6 @@ defmodule TdLmWeb.RelationController do
   alias TdLm.Cache.LinkLoader
   alias TdLm.Resources
   alias TdLm.Resources.Relation
-  alias TdLmWeb.ErrorView
   alias TdLmWeb.SwaggerDefinitions
 
   require Logger
@@ -115,11 +114,7 @@ defmodule TdLmWeb.RelationController do
       Resources.list_relations()
       |> Enum.filter(&can?(user, show(&1)))
 
-    render(
-      conn,
-      "index.json",
-      relations: relations
-    )
+    render(conn, "index.json", relations: relations)
   end
 
   swagger_path :create do
@@ -140,7 +135,8 @@ defmodule TdLmWeb.RelationController do
       }) do
     user = conn.assigns[:current_resource]
 
-    with true <- can?(user, create(%{resource_id: source_id, resource_type: source_type})),
+    with {:can, true} <-
+           {:can, can?(user, create(%{resource_id: source_id, resource_type: source_type}))},
          {:ok, %Relation{} = relation} <- Resources.create_relation(relation_params) do
       Audit.create_event(
         conn,
@@ -154,19 +150,6 @@ defmodule TdLmWeb.RelationController do
       |> put_status(:created)
       |> put_resp_header("location", Routes.relation_path(conn, :show, relation))
       |> render("show.json", relation: relation)
-    else
-      false ->
-        conn
-        |> put_status(:forbidden)
-        |> put_view(ErrorView)
-        |> render("403.json")
-
-      error ->
-        Logger.warn("Creating relation... #{inspect(error)}")
-        conn
-        |> put_status(:unprocessable_entity)
-        |> put_view(ErrorView)
-        |> render("422.json")
     end
   end
 
@@ -187,20 +170,8 @@ defmodule TdLmWeb.RelationController do
     user = conn.assigns[:current_resource]
     relation = Resources.get_relation!(id)
 
-    with true <- can?(user, show(relation)) do
+    with {:can, true} <- {:can, can?(user, show(relation))} do
       render(conn, "show.json", relation: relation)
-    else
-      false ->
-        conn
-        |> put_status(:forbidden)
-        |> put_view(ErrorView)
-        |> render("403.json")
-
-      _error ->
-        conn
-        |> put_status(:unprocessable_entity)
-        |> put_view(ErrorView)
-        |> render("422.json")
     end
   end
 
@@ -222,21 +193,9 @@ defmodule TdLmWeb.RelationController do
     user = conn.assigns[:current_resource]
     relation = Resources.get_relation!(id)
 
-    with true <- can?(user, update(relation)),
+    with {:can, true} <- {:can, can?(user, update(relation))},
          {:ok, %Relation{} = relation} <- Resources.update_relation(relation, relation_params) do
       render(conn, "show.json", relation: relation)
-    else
-      false ->
-        conn
-        |> put_status(:forbidden)
-        |> put_view(ErrorView)
-        |> render("403.json")
-
-      _error ->
-        conn
-        |> put_status(:unprocessable_entity)
-        |> put_view(ErrorView)
-        |> render("422.json")
     end
   end
 
@@ -256,40 +215,26 @@ defmodule TdLmWeb.RelationController do
     user = conn.assigns[:current_resource]
     relation = Resources.get_relation!(id)
 
-    with true <- can?(user, delete(relation)),
+    with {:can, true} <- {:can, can?(user, delete(relation))},
          {:ok, %Relation{}} <- Resources.delete_relation(relation) do
       Audit.create_event(conn, audit_delete_attributes(relation), @events.delete_relation)
       LinkLoader.delete(relation.id)
 
       send_resp(conn, :no_content, "")
-    else
-      false ->
-        conn
-        |> put_status(:forbidden)
-        |> put_view(ErrorView)
-        |> render("403.json")
-
-      _error ->
-        conn
-        |> put_status(:unprocessable_entity)
-        |> put_view(ErrorView)
-        |> render("422.json")
     end
   end
 
   defp audit_create_attributes(create_attributes, relation) do
-    resource_id = create_attributes |> Map.get("source_id")
-    resource_type = create_attributes |> Map.get("source_type")
+    resource_id = Map.get(create_attributes, "source_id")
+    resource_type = Map.get(create_attributes, "source_type")
     relation_types = fetch_relation_types(relation)
-
-    payload = create_attributes |> Map.put("relation_types", relation_types)
-
+    payload = Map.put(create_attributes, "relation_types", relation_types)
     build_audit_map(resource_id, resource_type, payload)
   end
 
   defp audit_delete_attributes(relation) do
-    resource_id = relation |> Map.get(:source_id)
-    resource_type = relation |> Map.get(:source_type)
+    resource_id = Map.get(relation, :source_id)
+    resource_type = Map.get(relation, :source_type)
     relation_types = fetch_relation_types(relation)
 
     payload =
@@ -303,13 +248,13 @@ defmodule TdLmWeb.RelationController do
   end
 
   defp build_audit_map(resource_id, resource_type, payload) do
-    audit_map =
-      Map.new()
-      |> Map.put("resource_id", resource_id)
-      |> Map.put("resource_type", resource_type)
-      |> Map.put("payload", payload)
-
-    Map.new() |> Map.put("audit", audit_map)
+    %{
+      "audit" => %{
+        "resource_id" => resource_id,
+        "resource_type" => resource_type,
+        "payload" => payload
+      }
+    }
   end
 
   defp fetch_relation_types(relation) do

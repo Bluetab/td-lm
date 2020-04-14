@@ -1,10 +1,6 @@
 defmodule TdLmWeb.Router do
   use TdLmWeb, :router
 
-  @endpoint_url "#{Application.get_env(:td_lm, TdLmWeb.Endpoint)[:url][:host]}:#{
-                  Application.get_env(:td_lm, TdLmWeb.Endpoint)[:url][:port]
-                }"
-
   pipeline :api do
     plug(TdLm.Auth.Pipeline.Unsecure)
     plug(:accepts, ["json"])
@@ -39,12 +35,11 @@ defmodule TdLmWeb.Router do
 
   def swagger_info do
     %{
-      schemes: ["http"],
+      schemes: ["http", "https"],
       info: %{
-        version: "1.0",
-        title: "TdLm"
+        version: "3.10",
+        title: "Truedat Link Manager Service"
       },
-      host: @endpoint_url,
       securityDefinitions: %{
         bearer: %{
           type: "apiKey",

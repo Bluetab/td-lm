@@ -1,4 +1,4 @@
-# /truedat Link Manager
+# Truedat Link Manager
 
 TdLM is a back-end service developed as part of truedat project that supports the management of objects linkage between services
 
@@ -17,7 +17,7 @@ To start your Phoenix server:
   * Create and migrate your database with `mix ecto.create && mix ecto.migrate`
   * Start Phoenix endpoint with `mix phx.server`
 
-  * Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
+  * Now you can visit [`localhost:4012`](http://localhost:4012) from your browser.
 
 ## Running the tests
 
@@ -35,10 +35,7 @@ Ready to run in production? Please [check deployment guides](http://www.phoenixf
 * [Postgrex](http://hexdocs.pm/postgrex/) - PostgreSQL driver for Elixir
 * [Gettext](https://hexdocs.pm/gettext) - Internationalization and localization support for Elixir
 * [Cowboy](https://ninenines.eu) - HTTP server for Erlang/OTP
-* [Cabbage](https://github.com/cabbage-ex/cabbage) - Story BDD tool
 * [httpoison](https://hex.pm/packages/httpoison) - HTTP client for Elixir
-* [edeliver](https://github.com/edeliver/edeliver) - Deployment for Elixir and Erlang
-* [distillery](https://github.com/bitwalker/distillery) - Release packaging for the Erlang VM
 * [credo](http://credo-ci.org/) - Static code analysis tool for the Elixir language
 * [guardian](https://github.com/ueberauth/guardian) - Authentication library
 * [canada](https://github.com/jarednorman/canada) - Permission definitions in Elixir apps
@@ -47,7 +44,6 @@ Ready to run in production? Please [check deployment guides](http://www.phoenixf
 * [ex_json_schema](https://github.com/jonasschmidt/ex_json_schema) - Elixir JSON Schema validator
 * [json_diff](https://github.com/jonasschmidt/ex_json_schema) - Elixir JSON Schema validator
 * [corsica](http://hexdocs.pm/corsica) - Elixir library for dealing with CORS requests.
-* [csv](https://github.com/beatrichartz/csv) - CSV Decoding and Encoding for Elixir
 
 
 ## Authors

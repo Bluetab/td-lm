@@ -46,6 +46,7 @@ defmodule TdLm.Cache.LinkRemover do
 
   defp process(%{event: "delete_link", link_id: id} = e) do
     Logger.info("#{inspect(e)}")
+
     case Resources.get_relation(String.to_integer(id)) do
       nil -> :ok
       resource -> Resources.delete_relation(resource)
@@ -53,5 +54,4 @@ defmodule TdLm.Cache.LinkRemover do
   end
 
   defp process(e), do: Logger.info("#{inspect(e)}")
-
 end

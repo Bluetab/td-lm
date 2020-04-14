@@ -5,7 +5,7 @@ defmodule TdLmWeb.ErrorViewTest do
 
   test "renders 404.json" do
     assert render(TdLmWeb.ErrorView, "404.json", []) ==
-           %{errors: %{detail: "Not found"}}
+             %{errors: %{detail: "Not found"}}
   end
 
   test "renders 422.json" do
@@ -15,12 +15,11 @@ defmodule TdLmWeb.ErrorViewTest do
 
   test "render 500.json" do
     assert render(TdLmWeb.ErrorView, "500.json", []) ==
-           %{errors: %{detail: "Internal server error"}}
+             %{errors: %{detail: "Internal server error"}}
   end
 
   test "render any other" do
     assert render(TdLmWeb.ErrorView, "505.json", []) ==
-           %{errors: %{detail: "Internal server error"}}
+             %{errors: %{detail: "Internal server error"}}
   end
-
 end

@@ -260,20 +260,15 @@ defmodule TdLm.Resources do
         where: tag.id == ^id
       )
 
-    relations =
-      query
-      |> Repo.all()
+    relations = Repo.all(query)
 
     transaction_result =
       Repo.transaction(fn ->
-        query |> Repo.update_all(set: [updated_at: DateTime.utc_now()])
+        Repo.update_all(query, set: [updated_at: DateTime.utc_now()])
         Repo.delete(tag)
       end)
 
-    relations
-    |> Enum.each(fn relation ->
-      LinkLoader.refresh(relation.id)
-    end)
+    Enum.each(relations, fn relation -> LinkLoader.refresh(relation.id) end)
 
     transaction_result
   end

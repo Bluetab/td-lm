@@ -17,10 +17,11 @@ defmodule TdLmWeb.Authentication do
 
   def recycle_and_put_headers(conn) do
     authorization_header = List.first(get_req_header(conn, "authorization"))
+
     conn
     |> ConnTest.recycle()
     |> put_req_header("authorization", authorization_header)
-    end
+  end
 
   def create_user_auth_conn(user) do
     {:ok, jwt, full_claims} = Guardian.encode_and_sign(user)
@@ -40,10 +41,10 @@ defmodule TdLmWeb.Authentication do
   end
 
   def build_user_token(%User{} = user) do
-      case Guardian.encode_and_sign(user) do
-        {:ok, jwt, _full_claims} -> jwt
-        _ -> raise "Problems encoding and signing a user"
-      end
+    case Guardian.encode_and_sign(user) do
+      {:ok, jwt, _full_claims} -> jwt
+      _ -> raise "Problems encoding and signing a user"
+    end
   end
 
   def build_user_token(user_name, opts \\ []) when is_binary(user_name) do

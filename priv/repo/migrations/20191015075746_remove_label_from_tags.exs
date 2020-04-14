@@ -12,16 +12,19 @@ defmodule TdLm.Repo.Migrations.RemoveLabelFromTags do
     Tag
     |> Repo.all()
     |> Enum.each(fn tag ->
-      query = from(r in Relation,
+      query =
+        from(r in Relation,
           join: tag in assoc(r, :tags),
-          where: tag.id==^tag.id
+          where: tag.id == ^tag.id
         )
+
       query |> Repo.update_all(set: [updated_at: DateTime.utc_now()])
 
       new_value =
         tag
         |> Map.get(:value, %{})
         |> Map.drop(["label"])
+
       Resources.update_tag(tag, %{value: new_value})
     end)
   end
