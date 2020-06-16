@@ -2,122 +2,95 @@ defmodule TdLmWeb.TagControllerTest do
   use TdLmWeb.ConnCase
   use PhoenixSwagger.SchemaTest, "priv/static/swagger.json"
 
-  alias TdLm.Resources
-  alias TdLm.Resources.Tag
-
-  import TdLmWeb.Authentication, only: :functions
-
-  @create_attrs %{value: %{type: "test"}}
-  @update_attrs %{value: %{type: "updated test"}}
-  @invalid_attrs %{value: nil}
-  @ingest_tag_attrs %{value: %{target_type: "ingest", label: "ingest.label", type: "ingest"}}
-
-  def fixture(:tag) do
-    {:ok, tag} = Resources.create_tag(@create_attrs)
-    tag
-  end
-
   setup %{conn: conn} do
-    {:ok, conn: put_req_header(conn, "accept", "application/json")}
+    [conn: put_req_header(conn, "accept", "application/json")]
   end
 
-  describe "index" do
+  describe "GET /api/tags" do
     @tag :admin_authenticated
-    test "lists all tags", %{conn: conn, swagger_schema: schema} do
-      conn = get(conn, Routes.tag_path(conn, :index))
-      assert json_response(conn, 200)["data"] == []
-      validate_resp_schema(conn, schema, "TagsResponse")
+    test "lists tags", %{conn: conn, swagger_schema: schema} do
+      %{id: id} = insert(:tag)
+
+      assert %{"data" => data} =
+               conn
+               |> get(Routes.tag_path(conn, :index))
+               |> validate_resp_schema(schema, "TagsResponse")
+               |> json_response(:ok)
+
+      assert [%{"id" => ^id}] = data
     end
   end
 
-  describe "search" do
-    @tag :admin_authenticated
-    test "search all tags", %{conn: conn, swagger_schema: schema} do
-      conn = post(conn, Routes.tag_path(conn, :create), tag: @ingest_tag_attrs)
-      %{"id" => id} = json_response(conn, 201)["data"]
-
-      conn = recycle_and_put_headers(conn)
-
-      search_body = %{value: %{target_type: "ingest"}}
-      conn = post(conn, Routes.tag_path(conn, :search), search_body)
-      assert length(json_response(conn, 200)["data"]) == 1
-      %{"id" => search_id} = Enum.at(json_response(conn, 200)["data"], 0)
-      assert id == search_id
-      validate_resp_schema(conn, schema, "TagsResponse")
-    end
-  end
-
-  describe "create tag" do
+  describe "GET /api/tags/:id" do
     @tag :admin_authenticated
     test "renders tag when data is valid", %{conn: conn, swagger_schema: schema} do
-      conn = post(conn, Routes.tag_path(conn, :create), tag: @create_attrs)
-      assert %{"id" => id} = json_response(conn, 201)["data"]
-      validate_resp_schema(conn, schema, "TagResponse")
+      %{id: id, value: value} = insert(:tag)
 
-      conn = recycle_and_put_headers(conn)
+      assert %{"data" => data} =
+               conn
+               |> get(Routes.tag_path(conn, :show, id))
+               |> validate_resp_schema(schema, "TagResponse")
+               |> json_response(:ok)
 
-      conn = get(conn, Routes.tag_path(conn, :show, id))
-      assert json_response(conn, 200)["data"] == %{"id" => id, "value" => %{"type" => "test"}}
-      validate_resp_schema(conn, schema, "TagResponse")
+      assert %{"id" => ^id, "value" => ^value} = data
+    end
+
+    @tag :admin_authenticated
+    test "returns not found if tag does not exist", %{conn: conn} do
+      assert_error_sent(:not_found, fn -> get(conn, Routes.tag_path(conn, :show, 123)) end)
+    end
+  end
+
+  describe "POST /api/tags/search" do
+    @tag :admin_authenticated
+    test "search tags", %{conn: conn, swagger_schema: schema} do
+      %{id: id} = insert(:tag, value: %{"target_type" => "ingest", "type" => "ingest"})
+
+      params = %{"value" => %{target_type: "ingest"}}
+
+      assert %{"data" => data} =
+               conn
+               |> post(Routes.tag_path(conn, :search), params)
+               |> validate_resp_schema(schema, "TagsResponse")
+               |> json_response(:ok)
+
+      assert [%{"id" => ^id}] = data
+    end
+  end
+
+  describe "POST /api/tags" do
+    @tag :admin_authenticated
+    test "renders tag when data is valid", %{conn: conn, swagger_schema: schema} do
+      params = string_params_for(:tag)
+
+      assert %{"data" => data} =
+               conn
+               |> post(Routes.tag_path(conn, :create), %{"tag" => params})
+               |> validate_resp_schema(schema, "TagResponse")
+               |> json_response(:created)
+
+      assert Map.delete(data, "id") == params
     end
 
     @tag :admin_authenticated
     test "renders errors when data is invalid", %{conn: conn} do
-      conn = post(conn, Routes.tag_path(conn, :create), tag: @invalid_attrs)
-      assert json_response(conn, 422)["errors"] != %{}
+      params = string_params_for(:tag) |> Map.put("value", "string")
+
+      assert %{"errors" => errors} =
+               conn
+               |> post(Routes.tag_path(conn, :create), %{"tag" => params})
+               |> json_response(:unprocessable_entity)
     end
   end
 
-  describe "update tag" do
-    setup [:create_tag]
-
+  describe "DELETE /api/tags/:id" do
     @tag :admin_authenticated
-    test "renders tag when data is valid", %{
-      conn: conn,
-      swagger_schema: schema,
-      tag: %Tag{id: id} = tag
-    } do
-      conn = put(conn, Routes.tag_path(conn, :update, tag), tag: @update_attrs)
-      assert %{"id" => ^id} = json_response(conn, 200)["data"]
-      validate_resp_schema(conn, schema, "TagResponse")
+    test "deletes chosen tag", %{conn: conn} do
+      %{id: id} = insert(:tag)
 
-      conn = recycle_and_put_headers(conn)
-
-      conn = get(conn, Routes.tag_path(conn, :show, id))
-
-      assert json_response(conn, 200)["data"] == %{
-               "id" => id,
-               "value" => %{"type" => "updated test"}
-             }
-
-      validate_resp_schema(conn, schema, "TagResponse")
+      assert conn
+             |> delete(Routes.tag_path(conn, :delete, id))
+             |> response(:no_content)
     end
-
-    @tag :admin_authenticated
-    test "renders errors when data is invalid", %{conn: conn, tag: tag} do
-      conn = put(conn, Routes.tag_path(conn, :update, tag), tag: @invalid_attrs)
-      assert json_response(conn, 422)["errors"] != %{}
-    end
-  end
-
-  describe "delete tag" do
-    setup [:create_tag]
-
-    @tag :admin_authenticated
-    test "deletes chosen tag", %{conn: conn, tag: tag} do
-      conn = delete(conn, Routes.tag_path(conn, :delete, tag))
-      assert response(conn, 204)
-
-      conn = recycle_and_put_headers(conn)
-
-      assert_error_sent(404, fn ->
-        get(conn, Routes.tag_path(conn, :show, tag))
-      end)
-    end
-  end
-
-  defp create_tag(_) do
-    tag = fixture(:tag)
-    {:ok, tag: tag}
   end
 end

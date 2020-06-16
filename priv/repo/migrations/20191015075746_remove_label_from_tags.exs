@@ -1,31 +1,24 @@
 defmodule TdLm.Repo.Migrations.RemoveLabelFromTags do
   use Ecto.Migration
 
-  import Ecto.Query, only: [from: 2]
+  import Ecto.Query
 
   alias TdLm.Repo
-  alias TdLm.Resources
-  alias TdLm.Resources.Tag
-  alias TdLm.Resources.Relation
 
-  def change do
-    Tag
+  def up do
+    "tags"
+    |> where([t], not is_nil(t.value["label"]))
+    |> select([t], {t.id, t.value})
     |> Repo.all()
-    |> Enum.each(fn tag ->
-      query =
-        from(r in Relation,
-          join: tag in assoc(r, :tags),
-          where: tag.id == ^tag.id
-        )
-
-      query |> Repo.update_all(set: [updated_at: DateTime.utc_now()])
-
-      new_value =
-        tag
-        |> Map.get(:value, %{})
-        |> Map.drop(["label"])
-
-      Resources.update_tag(tag, %{value: new_value})
+    |> Enum.map(fn {id, value} -> {id, Map.delete(value, "label")} end)
+    |> Enum.map(fn {id, new_value} ->
+      "tags"
+      |> where([t], t.id == ^id)
+      |> Repo.update_all(set: [value: new_value])
     end)
+  end
+
+  def down do
+    :ok
   end
 end

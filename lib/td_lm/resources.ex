@@ -3,10 +3,14 @@ defmodule TdLm.Resources do
   The Resources context.
   """
 
-  import Ecto.Query, warn: false
+  import Ecto.Query
+
+  alias Ecto.Multi
+  alias TdLm.Audit
   alias TdLm.Cache.LinkLoader
   alias TdLm.Repo
   alias TdLm.Resources.Relation
+  alias TdLm.Resources.Tag
 
   @doc """
   Returns the list of relations.
@@ -82,71 +86,60 @@ defmodule TdLm.Resources do
   def get_relation(id), do: Repo.get(Relation, id)
 
   @doc """
-  Creates a relation.
+  Creates a relation and publishes an audit event.
 
   ## Examples
 
-      iex> create_relation(%{field: value})
-      {:ok, %Relation{}}
+      iex> create_relation(%{field: value}, user)
+      {:ok, %{audit: "event_id", relation: %Relation{}}}
 
-      iex> create_relation(%{field: bad_value})
-      {:error, %Ecto.Changeset{}}
+      iex> create_relation(%{field: bad_value}, user)
+      {:error, :relation, %Ecto.Changeset{}, %{}}
 
   """
-  def create_relation(attrs \\ %{}) do
-    %Relation{}
-    |> Relation.create_changeset(attrs)
-    |> Repo.insert()
+  def create_relation(%{} = params, %{id: user_id}) do
+    changeset = Relation.changeset(params)
+
+    Multi.new()
+    |> Multi.insert(:relation, changeset)
+    |> Multi.run(:audit, Audit, :relation_created, [changeset, user_id])
+    |> Repo.transaction()
+    |> on_create()
+  end
+
+  defp on_create(res) do
+    with {:ok, %{relation: %{id: id}}} <- res do
+      LinkLoader.refresh(id)
+      res
+    end
   end
 
   @doc """
-  Updates a relation.
+  Deletes a relation and publishes an audit event.
 
   ## Examples
 
-      iex> update_relation(relation, %{field: new_value})
-      {:ok, %Relation{}}
+      iex> delete_relation(relation, user)
+      {:ok, %{audit: "event_id", relation: %Relation{}}}
 
-      iex> update_relation(relation, %{field: bad_value})
-      {:error, %Ecto.Changeset{}}
-
-  """
-  def update_relation(%Relation{} = relation, attrs) do
-    relation
-    |> Relation.update_changeset(attrs)
-    |> Repo.update()
-  end
-
-  @doc """
-  Deletes a Relation.
-
-  ## Examples
-
-      iex> delete_relation(relation)
-      {:ok, %Relation{}}
-
-      iex> delete_relation(relation)
-      {:error, %Ecto.Changeset{}}
+      iex> delete_relation(relation, user)
+      {:error, :relation, %Ecto.Changeset{}, %{}}
 
   """
-  def delete_relation(%Relation{} = relation) do
-    Repo.delete(relation)
+  def delete_relation(%Relation{} = relation, %{id: user_id}) do
+    Multi.new()
+    |> Multi.delete(:relation, relation)
+    |> Multi.run(:audit, Audit, :relation_deleted, [user_id])
+    |> Repo.transaction()
+    |> on_delete_relation()
   end
 
-  @doc """
-  Returns an `%Ecto.Changeset{}` for tracking relation changes.
-
-  ## Examples
-
-      iex> change_relation(relation)
-      %Ecto.Changeset{source: %Relation{}}
-
-  """
-  def change_relation(%Relation{} = relation) do
-    Relation.create_changeset(relation, %{})
+  defp on_delete_relation(res) do
+    with {:ok, %{relation: %{id: id}}} <- res do
+      LinkLoader.delete(id)
+      res
+    end
   end
-
-  alias TdLm.Resources.Tag
 
   @doc """
   Returns the list of tags.
@@ -206,84 +199,58 @@ defmodule TdLm.Resources do
   def get_tag(id), do: Repo.get(Tag, id)
 
   @doc """
-  Creates a tag.
+  Creates a tag and publishes and audit event.
 
   ## Examples
 
-      iex> create_tag(%{field: value})
-      {:ok, %Tag{}}
+      iex> create_tag(%{field: value}, user)
+      {:ok, %{audit: "event_id", tag: %Tag{}}}
 
-      iex> create_tag(%{field: bad_value})
-      {:error, %Ecto.Changeset{}}
+      iex> create_tag(%{field: bad_value}, user)
+      {:error, :tag, %Ecto.Changeset{}, %{}}
 
   """
-  def create_tag(attrs \\ %{}) do
-    %Tag{}
-    |> Tag.changeset(attrs)
-    |> Repo.insert()
+  def create_tag(%{} = params, %{id: user_id}) do
+    changeset = Tag.changeset(params)
+
+    Multi.new()
+    |> Multi.insert(:tag, changeset)
+    |> Multi.run(:audit, Audit, :tag_created, [user_id])
+    |> Repo.transaction()
   end
 
   @doc """
-  Updates a tag.
+  Deletes a tag and publishes an audit event.
 
   ## Examples
 
-      iex> update_tag(tag, %{field: new_value})
-      {:ok, %Tag{}}
+      iex> delete_tag(tag, user)
+      {:ok, %{relations: {0, []}, tag: %Tag{}, audit: "event_id"}
 
-      iex> update_tag(tag, %{field: bad_value})
-      {:error, %Ecto.Changeset{}}
+      iex> delete_tag(tag, user)
+      {:error, :tag, %Ecto.Changeset{}, %{}}
 
   """
-  def update_tag(%Tag{} = tag, attrs) do
-    tag
-    |> Tag.changeset(attrs)
-    |> Repo.update()
+  def delete_tag(%Tag{id: id} = tag, %{id: user_id}) do
+    relation_id_query =
+      Relation
+      |> join(:inner, [r], t in assoc(r, :tags))
+      |> where([_r, t], t.id == ^id)
+      |> select([r], r.id)
+
+    Multi.new()
+    |> Multi.update_all(:relations, relation_id_query, set: [updated_at: DateTime.utc_now()])
+    |> Multi.delete(:tag, tag)
+    |> Multi.run(:audit, Audit, :tag_deleted, [user_id])
+    |> Repo.transaction()
+    |> on_delete_tag()
   end
 
-  @doc """
-  Deletes a Tag.
-
-  ## Examples
-
-      iex> delete_tag(tag)
-      {:ok, %Tag{}}
-
-      iex> delete_tag(tag)
-      {:error, %Ecto.Changeset{}}
-
-  """
-  def delete_tag(%Tag{id: id} = tag) do
-    query =
-      from(r in Relation,
-        join: tag in assoc(r, :tags),
-        where: tag.id == ^id
-      )
-
-    relations = Repo.all(query)
-
-    transaction_result =
-      Repo.transaction(fn ->
-        Repo.update_all(query, set: [updated_at: DateTime.utc_now()])
-        Repo.delete(tag)
-      end)
-
-    Enum.each(relations, fn relation -> LinkLoader.refresh(relation.id) end)
-
-    transaction_result
-  end
-
-  @doc """
-  Returns an `%Ecto.Changeset{}` for tracking tag changes.
-
-  ## Examples
-
-      iex> change_tag(tag)
-      %Ecto.Changeset{source: %Tag{}}
-
-  """
-  def change_tag(%Tag{} = tag) do
-    Tag.changeset(tag, %{})
+  defp on_delete_tag(res) do
+    with {:ok, %{relations: {count, ids}}} = res when count > 0 <- res do
+      LinkLoader.refresh(ids)
+      res
+    end
   end
 
   defp filter_tags(params, fields) do
@@ -349,5 +316,13 @@ defmodule TdLm.Resources do
     |> or_where([r], r.target_type == ^resource_type and r.target_id == ^resource_id)
     |> Repo.all()
     |> Repo.preload(:tags)
+  end
+
+  def find_tags(clauses) do
+    clauses
+    |> Enum.reduce(Tag, fn
+      {:id, {:in, ids}}, q -> where(q, [t], t.id in ^ids)
+    end)
+    |> Repo.all()
   end
 end

@@ -9,8 +9,8 @@ use Mix.Config
 config :td_lm, :env, Mix.env()
 
 # General application configuration
-config :td_lm,
-  ecto_repos: [TdLm.Repo]
+config :td_lm, ecto_repos: [TdLm.Repo]
+config :td_lm, TdLm.Repo, pool_size: 5
 
 # Configures the endpoint
 config :td_lm, TdLmWeb.Endpoint,
@@ -50,21 +50,16 @@ config :td_lm, :phoenix_swagger,
 
 config :td_lm, permission_resolver: TdCache.Permissions
 
-config :td_lm, :audit_service,
-  api_service: TdLmWeb.ApiServices.HttpTdAuditService,
-  audit_host: "localhost",
-  audit_port: "4007",
-  audit_domain: "",
-  protocol: "http",
-  audits_path: "/api/audits/"
-
 config :td_lm, :relation_loader, load_on_startup: true
+
+config :td_cache, :audit,
+  service: "td_lm",
+  stream: "audit:events"
 
 config :td_cache, :event_stream,
   consumer_id: "default",
   consumer_group: "lm",
   streams: [
-    [key: "data_field:events", consumer: TdLm.Cache.LinkMigrater],
     [key: "link:commands", consumer: TdLm.Cache.LinkRemover]
   ]
 

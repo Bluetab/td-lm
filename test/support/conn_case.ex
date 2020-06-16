@@ -14,14 +14,18 @@ defmodule TdLmWeb.ConnCase do
   """
 
   use ExUnit.CaseTemplate
+
+  import TdLmWeb.Authentication, only: :functions
+
   alias Ecto.Adapters.SQL.Sandbox
   alias Phoenix.ConnTest
-  import TdLmWeb.Authentication, only: :functions
 
   using do
     quote do
-      # Import conveniences for testing with connections
       use Phoenix.ConnTest
+
+      import TdLm.Factory
+
       alias TdLmWeb.Router.Helpers, as: Routes
 
       # The default endpoint for testing

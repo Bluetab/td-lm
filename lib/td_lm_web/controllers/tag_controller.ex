@@ -6,7 +6,6 @@ defmodule TdLmWeb.TagController do
 
   alias TdLm.Resources
   alias TdLm.Resources.Tag
-  alias TdLmWeb.ErrorView
   alias TdLmWeb.SwaggerDefinitions
 
   action_fallback(TdLmWeb.FallbackController)
@@ -54,19 +53,14 @@ defmodule TdLmWeb.TagController do
 
     response(200, "OK", Schema.ref(:TagResponse))
     response(422, "Client Error")
-    response(403, "Unauthorized")
+    response(403, "Forbidden")
   end
 
-  def create(conn, %{"tag" => _tag_params} = params) do
+  def create(conn, %{"tag" => tag_params}) do
     user = conn.assigns[:current_resource]
 
-    with {:can, true} <- {:can, can?(user, create_tag(%Tag{}))} do
-      do_create(conn, params)
-    end
-  end
-
-  defp do_create(conn, %{"tag" => tag_params}) do
-    with {:ok, %Tag{} = tag} <- Resources.create_tag(tag_params) do
+    with {:can, true} <- {:can, can?(user, create_tag(%Tag{}))},
+         {:ok, %{tag: tag}} <- Resources.create_tag(tag_params, user) do
       conn
       |> put_status(:created)
       |> put_resp_header("location", Routes.tag_path(conn, :show, tag))
@@ -91,27 +85,6 @@ defmodule TdLmWeb.TagController do
     render(conn, "show.json", tag: tag)
   end
 
-  swagger_path :update do
-    description("Updates the parameters of an existing tag")
-    produces("application/json")
-
-    parameters do
-      id(:path, :integer, "Tag ID", required: true)
-      tag(:body, Schema.ref(:UpdateTag), "Parameters used to create a tag")
-    end
-
-    response(200, "OK", Schema.ref(:TagResponse))
-    response(422, "Client Error")
-  end
-
-  def update(conn, %{"id" => id, "tag" => tag_params}) do
-    tag = Resources.get_tag!(id)
-
-    with {:ok, %Tag{} = tag} <- Resources.update_tag(tag, tag_params) do
-      render(conn, "show.json", tag: tag)
-    end
-  end
-
   swagger_path :delete do
     description("Deletes a tag given an id")
 
@@ -121,21 +94,15 @@ defmodule TdLmWeb.TagController do
 
     response(204, "No Content")
     response(422, "Client Error")
-    response(403, "Unauthorized")
+    response(403, "Forbidden")
   end
 
   def delete(conn, %{"id" => id}) do
     user = conn.assigns[:current_resource]
     tag = Resources.get_tag!(id)
 
-    with {:can, true} <- {:can, can?(user, delete_tag(tag))} do
-      do_delete(conn, tag)
-    end
-  end
-
-  defp do_delete(conn, %Tag{} = tag) do
-    with {:ok, res} <- Resources.delete_tag(tag),
-         {:ok, %Tag{}} <- res do
+    with {:can, true} <- {:can, can?(user, delete_tag(tag))},
+         {:ok, %{tag: _tag}} <- Resources.delete_tag(tag, user) do
       send_resp(conn, :no_content, "")
     end
   end

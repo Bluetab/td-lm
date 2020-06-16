@@ -25,22 +25,26 @@ defmodule TdLm.DataCase do
       import Ecto.Changeset
       import Ecto.Query
       import TdLm.DataCase
+      import TdLm.Factory
     end
   end
 
   setup tags do
-    :ok = Sandbox.checkout(TdLm.Repo)
+    case Sandbox.checkout(TdLm.Repo) do
+      :ok ->
+        unless tags[:async] do
+          Sandbox.mode(TdLm.Repo, {:shared, self()})
+          parent = self()
 
-    unless tags[:async] do
-      Sandbox.mode(TdLm.Repo, {:shared, self()})
-      parent = self()
+          case Process.whereis(TdLm.Cache.LinkLoader) do
+            nil -> nil
+            pid -> Sandbox.allow(TdLm.Repo, parent, pid)
+          end
+            end
 
-      case Process.whereis(TdLm.Cache.LinkLoader) do
-        nil -> nil
-        pid -> Sandbox.allow(TdLm.Repo, parent, pid)
-      end
+      {:already, :owner} ->
+        :ok
     end
-
     :ok
   end
 

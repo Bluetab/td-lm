@@ -57,34 +57,6 @@ defmodule TdLmWeb.SwaggerDefinitions do
             }
           })
         end,
-      UpdateRelation:
-        swagger_schema do
-          properties do
-            relation(
-              Schema.new do
-                properties do
-                  source_id(:string, "Id of the source of the relation to be updated",
-                    required: true
-                  )
-
-                  source_type(:string, "Type of the source of the relation to be updated",
-                    required: true
-                  )
-
-                  target_id(:string, "Id of the source of the relation to be updated",
-                    required: true
-                  )
-
-                  target_type(:string, "Type of the source of the relation to be updated",
-                    required: true
-                  )
-
-                  context(:object, "Context information of the source and the updated")
-                end
-              end
-            )
-          end
-        end,
       Relations:
         swagger_schema do
           title("Relations")
@@ -147,12 +119,6 @@ defmodule TdLmWeb.SwaggerDefinitions do
   def tag_definitions do
     %{
       CreateTag:
-        swagger_schema do
-          properties do
-            tag(Schema.ref(:TagEdit))
-          end
-        end,
-      UpdateTag:
         swagger_schema do
           properties do
             tag(Schema.ref(:TagEdit))

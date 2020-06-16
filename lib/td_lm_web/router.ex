@@ -27,9 +27,9 @@ defmodule TdLmWeb.Router do
   scope "/api", TdLmWeb do
     pipe_through([:api, :api_secure, :api_authorized])
 
-    resources "/relations", RelationController, except: [:new, :edit]
+    resources "/relations", RelationController, except: [:new, :edit, :update]
     post "/relations/search", RelationController, :search
-    resources "/tags", TagController, except: [:new, :edit]
+    resources "/tags", TagController, except: [:new, :edit, :update]
     post "/tags/search", TagController, :search
   end
 

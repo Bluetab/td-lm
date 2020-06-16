@@ -1,5 +1,22 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- [TD-2637] New audit events `tag_created` and `tag_deleted`
+
+### Changed
+
+- [TD-2637] Publish audit events to Redis stream. Renamed event type
+  `add_relation` to `relation_created` and `delete_relation` to
+  `relation_deleted`.
+
+### Removed
+
+- Unused routes `PATCH /api/tags/:id` and `PATCH /api/relations/:id` (and
+  related code)
+
 ## [3.20.0] 2020-04-20
 
 ### Changed
@@ -10,7 +27,8 @@
 
 ### Changed
 
-- [TD-1964] Remove label from tags and use type instead. Update link in cache after deleting tag
+- [TD-1964] Remove label from tags and use type instead. Update link in cache
+  after deleting tag
 
 ## [3.6.0] 2019-09-16
 
@@ -22,7 +40,8 @@
 
 ### Fixed
 
-- [TD-2081] Event stream consumer did not respect redis_host and port config options
+- [TD-2081] Event stream consumer did not respect redis_host and port config
+  options
 
 ## [3.3.0] 2019-08-06
 
@@ -60,7 +79,8 @@
 
 ### Fixed
 
-- [TD-1749] Added business concept current version id to search response for relations with business_concept as source/target
+- [TD-1749] Added business concept current version id to search response for
+  relations with business_concept as source/target
 
 ## [2.20.0] 2019-05-27
 
@@ -77,7 +97,8 @@
 
 ### Changed
 
-- [TD-1519] Initial loader will check for missing business_concept parents relations and create them
+- [TD-1519] Initial loader will check for missing business_concept parents
+  relations and create them
 
 ## [2.17.0] 2019-04-17
 
@@ -89,14 +110,17 @@
 
 ### Added
 
-- [TD-1571] Elixir's Logger config will check for EX_LOGGER_FORMAT variable to override format
-- [TD-1606] Remove default tag and update relations with default tag to have no tags
+- [TD-1571] Elixir's Logger config will check for EX_LOGGER_FORMAT variable to
+  override format
+- [TD-1606] Remove default tag and update relations with default tag to have no
+  tags
 
 ## [2.15.0] 2019-03-18
 
 ### Changed
 
-- [TD-1541] Fix relation_remover to remove the relations between bc and df properly
+- [TD-1541] Fix relation_remover to remove the relations between bc and df
+  properly
 
 ## [2.14.0] 2019-03-04
 
@@ -106,13 +130,15 @@
 
 ### Added
 
-- [TD-1422] Included a worker that checks if a BC has been deleted and updates the DF relations
+- [TD-1422] Included a worker that checks if a BC has been deleted and updates
+  the DF relations
 
 ## [2.11.2] 2019-02-01
 
 ### Changed
 
-- [TD-967] Include the contextual information of the resources on relation load into cache
+- [TD-967] Include the contextual information of the resources on relation load
+  into cache
 
 ## [2.11.1] 2019-01-23
 
@@ -136,7 +162,8 @@
 
 ### Changed
 
-- [TD-933] New relations and tags model to consume links having a relationship on both directions
+- [TD-933] New relations and tags model to consume links having a relationship
+  on both directions
 
 ## [2.8.0] 2018-11-22
 

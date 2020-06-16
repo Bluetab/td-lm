@@ -104,17 +104,14 @@ defmodule TdLm.Cache.LinkLoader do
   end
 
   defp with_tags(%{tags: tags} = link) do
-    types =
-      tags
-      |> Enum.map(&tag_type/1)
-
+    types = Enum.flat_map(tags, &tag_types/1)
     Map.put(link, :tags, types)
   end
 
   defp with_tags(link) do
-    link
-    |> Map.put(:tags, [])
+    Map.put(link, :tags, [])
   end
 
-  defp tag_type(%{value: %{"type" => type}}), do: type
+  defp tag_types(%{value: %{"type" => type}}), do: [type]
+  defp tag_types(_), do: []
 end
