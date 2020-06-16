@@ -1,8 +1,10 @@
 defmodule TdLm.Resources.Relation do
   @moduledoc """
-  Module representing and entity relation in our database
+  Ecto Schema module for relations.
   """
+
   use Ecto.Schema
+
   import Ecto.Changeset
 
   alias TdLm.Resources
@@ -24,58 +26,21 @@ defmodule TdLm.Resources.Relation do
     timestamps()
   end
 
-  @doc false
-  def create_changeset(relation, attrs) do
-    attrs = attrs |> stringify_map()
+  def changeset(%{} = params) do
+    changeset(%__MODULE__{}, params)
+  end
 
+  def changeset(%__MODULE__{} = relation, %{} = params) do
     relation
-    |> cast(attrs, [:source_id, :source_type, :target_id, :target_type, :context])
+    |> cast(params, [:source_id, :source_type, :target_id, :target_type, :context])
     |> validate_required([:source_id, :source_type, :target_id, :target_type, :context])
-    |> put_assoc(:tags, parse_tag_ids(attrs))
+    |> put_tags()
   end
 
-  @doc false
-  def update_changeset(relation, attrs) do
-    attrs = attrs |> stringify_map()
-
-    relation
-    |> cast(attrs, [:source_id, :source_type, :target_id, :target_type, :context])
-    |> validate_required([:source_id, :source_type, :target_id, :target_type, :context])
-    |> update_tags_assoc(attrs)
+  defp put_tags(%{valid?: true, params: %{"tag_ids" => tag_ids}} = changeset) when length(tag_ids) > 0 do
+    tags = Resources.find_tags(id: {:in, tag_ids})
+    put_assoc(changeset, :tags, tags)
   end
 
-  defp update_tags_assoc(changeset, attrs) do
-    is_empty_tag_ids? = Map.get(attrs, "tag_ids", []) === []
-
-    case changeset.valid? && not is_empty_tag_ids? do
-      true ->
-        changeset |> put_assoc(:tags, parse_tag_ids(attrs))
-
-      false ->
-        changeset
-    end
-  end
-
-  defp parse_tag_ids(%{"tag_ids" => []}), do: []
-
-  defp parse_tag_ids(%{"tag_ids" => tag_ids}) do
-    tag_ids
-    |> Enum.map(&Resources.get_tag(&1))
-    |> Enum.filter(&(not is_nil(&1)))
-  end
-
-  defp parse_tag_ids(%{tag_ids: tag_ids}), do: parse_tag_ids(%{"tag_ids" => tag_ids})
-
-  defp parse_tag_ids(_), do: []
-
-  defp stringify_map(map) do
-    Map.new(map, fn {key, value} -> {stringify_key(key), value} end)
-  end
-
-  defp stringify_key(key) do
-    case is_atom(key) do
-      true -> Atom.to_string(key)
-      false -> key
-    end
-  end
+  defp put_tags(changeset), do: changeset
 end

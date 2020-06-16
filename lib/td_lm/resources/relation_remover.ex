@@ -1,6 +1,6 @@
 defmodule TdLm.RelationRemover do
   @moduledoc """
-  This Module will be used to perform a removal of those relations which 
+  This Module will be used to perform a removal of those relations which
   business concept has been deleted
   """
   use GenServer
@@ -12,6 +12,7 @@ defmodule TdLm.RelationRemover do
   require Logger
 
   @hourly 60 * 60 * 1000
+  @system_user %{id: 0, user_name: "system"}
 
   ## Client API
 
@@ -50,6 +51,6 @@ defmodule TdLm.RelationRemover do
   defp hard_deletion(resource_type, active_ids) do
     stale_relations = Resources.list_stale_relations(resource_type, active_ids)
     stale_relations |> Enum.map(& &1.id) |> LinkLoader.delete()
-    stale_relations |> Enum.each(&Resources.delete_relation/1)
+    stale_relations |> Enum.each(&Resources.delete_relation(&1, @system_user))
   end
 end

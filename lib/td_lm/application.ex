@@ -6,20 +6,13 @@ defmodule TdLm.Application do
   # See https://hexdocs.pm/elixir/Application.html
   # for more information on OTP Applications
   def start(_type, _args) do
-    import Supervisor.Spec
+    env = Application.get_env(:td_lm, :env)
 
     # Define workers and child supervisors to be supervised
     children = [
-      # Start the Ecto repository
-      supervisor(TdLm.Repo, []),
-      # Start the endpoint when the application starts
-      supervisor(TdLmWeb.Endpoint, []),
-      worker(TdLm.Cache.LinkLoader, []),
-      worker(TdLm.Cache.LinkMigrater, []),
-      worker(TdLm.Cache.LinkRemover, []),
-      worker(TdLm.RelationRemover, []),
-      worker(TdCache.CacheCleaner, [Application.get_env(:td_lm, :cache_cleaner, [])])
-    ]
+      TdLm.Repo,
+      TdLmWeb.Endpoint
+    ] ++ children(env)
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
@@ -32,5 +25,16 @@ defmodule TdLm.Application do
   def config_change(changed, _new, removed) do
     Endpoint.config_change(changed, removed)
     :ok
+  end
+
+  defp children(:test), do: []
+
+  defp children(_env) do
+    [
+      TdLm.Cache.LinkLoader,
+      TdLm.Cache.LinkRemover,
+      TdLm.RelationRemover,
+      {TdCache.CacheCleaner, Application.get_env(:td_lm, :cache_cleaner, [])}
+    ]
   end
 end

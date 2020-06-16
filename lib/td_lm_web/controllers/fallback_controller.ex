@@ -6,6 +6,13 @@ defmodule TdLmWeb.FallbackController do
   """
   use TdLmWeb, :controller
 
+  def call(conn, {:params, _params}) do
+    conn
+    |> put_status(:bad_request)
+    |> put_view(TdLmWeb.ErrorView)
+    |> render("400.json")
+  end
+
   def call(conn, {:can, false}) do
     conn
     |> put_status(:forbidden)
@@ -18,6 +25,10 @@ defmodule TdLmWeb.FallbackController do
     |> put_status(:unprocessable_entity)
     |> put_view(TdLmWeb.ChangesetView)
     |> render("error.json", changeset: changeset)
+  end
+
+  def call(conn, {:error, _field, %Ecto.Changeset{} = changeset, _changes_so_far}) do
+    call(conn, {:error, changeset})
   end
 
   def call(conn, {:error, :not_found}) do

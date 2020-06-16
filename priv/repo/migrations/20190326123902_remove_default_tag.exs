@@ -1,67 +1,30 @@
 defmodule TdLm.Repo.Migrations.RemoveDefaultTag do
   use Ecto.Migration
 
-  alias TdLm.Repo
-  alias TdLm.Resources
-  alias TdLm.Resources.Relation
-  alias TdLm.Resources.Tag
+  import Ecto.Query
 
-  import Ecto.Query, only: [from: 2]
+  alias TdLm.Repo
 
   @default_type "business_concept_to_field"
 
-  def change do
-    Tag
+  def up do
+    "tags"
+    |> where([t], t.value["type"] == ^@default_type)
+    |> Repo.delete_all()
+
+    "tags"
+    |> where([t], is_nil(t.value["target_type"]))
+    |> select([t], {t.id, t.value})
     |> Repo.all()
-    |> Enum.filter(fn t ->
-      @default_type ==
-        t
-        |> Map.get(:value, %{})
-        |> Map.get("type")
-    end)
-    |> remove_relations_of_tags
-    |> Enum.each(fn tag ->
-      Resources.delete_tag(tag)
-    end)
-
-    Tag
-    |> Repo.all()
-    |> Enum.filter(fn t ->
-      target_type =
-        t
-        |> Map.get(:value, %{})
-        |> Map.get("target_type")
-
-      is_nil(target_type)
-    end)
-    |> Enum.each(fn t ->
-      new_value =
-        t
-        |> Map.get(:value, %{})
-        |> Map.put("target_type", "data_field")
-
-      Resources.update_tag(t, %{value: new_value})
+    |> Enum.map(fn {id, value} -> {id, Map.put(value, "target_type", "data_field")} end)
+    |> Enum.map(fn {id, new_value} ->
+      "tags"
+      |> where([t], t.id == ^id)
+      |> Repo.update_all(set: [value: new_value])
     end)
   end
 
-  defp remove_relations_of_tags(tags) do
-    tag_ids = Enum.map(tags, fn t -> t.id end)
-
-    Repo.all(
-      from(r in Relation,
-        preload: [:tags],
-        join: tag in assoc(r, :tags),
-        where: tag.id in ^tag_ids
-      )
-    )
-    |> Enum.each(fn r ->
-      new_tags =
-        r.tags
-        |> Enum.filter(fn t -> t.id not in tag_ids end)
-
-      Resources.update_relation(r, %{tags: new_tags})
-    end)
-
-    tags
+  def down do
+    :ok
   end
 end

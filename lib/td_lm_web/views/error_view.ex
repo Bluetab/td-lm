@@ -1,16 +1,20 @@
 defmodule TdLmWeb.ErrorView do
   use TdLmWeb, :view
 
+  def render("400.json", _assigns) do
+    %{errors: %{detail: "Bad Request"}}
+  end
+
   def render("401.json", _assigns) do
-    %{errors: %{detail: "Invalid credentials"}}
+    %{errors: %{detail: "Unauthorized"}}
   end
 
   def render("403.json", _assigns) do
-    %{errors: %{detail: "Invalid authorization"}}
+    %{errors: %{detail: "Forbidden"}}
   end
 
   def render("404.json", _assigns) do
-    %{errors: %{detail: "Not found"}}
+    %{errors: %{detail: "Not Found"}}
   end
 
   def render("422.json", _assigns) do
@@ -18,7 +22,7 @@ defmodule TdLmWeb.ErrorView do
   end
 
   def render("500.json", _assigns) do
-    %{errors: %{detail: "Internal server error"}}
+    %{errors: %{detail: "Internal Server Error"}}
   end
 
   # In case no render clause matches or no

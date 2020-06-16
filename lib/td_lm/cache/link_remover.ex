@@ -11,6 +11,8 @@ defmodule TdLm.Cache.LinkRemover do
 
   require Logger
 
+  @system_user %{id: 0, user_name: "system"}
+
   ## Client API
 
   def start_link(config \\ []) do
@@ -49,7 +51,7 @@ defmodule TdLm.Cache.LinkRemover do
 
     case Resources.get_relation(String.to_integer(id)) do
       nil -> :ok
-      resource -> Resources.delete_relation(resource)
+      resource -> Resources.delete_relation(resource, @system_user)
     end
   end
 

@@ -1,8 +1,10 @@
 defmodule TdLm.Resources.Tag do
   @moduledoc """
-  Entity to support the tag model
+  Ecto Schema module for tags
   """
+
   use Ecto.Schema
+
   import Ecto.Changeset
 
   alias TdLm.Resources.Relation
@@ -18,10 +20,13 @@ defmodule TdLm.Resources.Tag do
     timestamps()
   end
 
-  @doc false
-  def changeset(tag, attrs) do
+  def changeset(%{} = params) do
+    changeset(%__MODULE__{}, params)
+  end
+
+  def changeset(%__MODULE__{} = tag, %{} = params) do
     tag
-    |> cast(attrs, [:value])
+    |> cast(params, [:value])
     |> validate_required([:value])
   end
 end

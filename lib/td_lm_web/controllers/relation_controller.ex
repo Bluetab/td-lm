@@ -7,20 +7,12 @@ defmodule TdLmWeb.RelationController do
 
   alias TdCache.ConceptCache
   alias TdCache.IngestCache
-  alias TdLm.Audit
-  alias TdLm.Cache.LinkLoader
   alias TdLm.Resources
-  alias TdLm.Resources.Relation
   alias TdLmWeb.SwaggerDefinitions
 
   require Logger
 
   action_fallback(TdLmWeb.FallbackController)
-
-  @events %{
-    add_relation: "add_relation",
-    delete_relation: "delete_relation"
-  }
 
   def swagger_definitions do
     SwaggerDefinitions.relation_definitions()
@@ -130,22 +122,14 @@ defmodule TdLmWeb.RelationController do
     response(422, "Client Error")
   end
 
-  def create(conn, %{
-        "relation" => %{"source_id" => source_id, "source_type" => source_type} = relation_params
-      }) do
+  def create(conn, %{"relation" => relation_params}) do
     user = conn.assigns[:current_resource]
 
-    with {:can, true} <-
+    with {:params, %{"source_id" => source_id, "source_type" => source_type}} <-
+           {:params, relation_params},
+         {:can, true} <-
            {:can, can?(user, create(%{resource_id: source_id, resource_type: source_type}))},
-         {:ok, %Relation{} = relation} <- Resources.create_relation(relation_params) do
-      Audit.create_event(
-        conn,
-        audit_create_attributes(relation_params, relation),
-        @events.add_relation
-      )
-
-      LinkLoader.refresh(relation.id)
-
+         {:ok, %{relation: relation}} <- Resources.create_relation(relation_params, user) do
       conn
       |> put_status(:created)
       |> put_resp_header("location", Routes.relation_path(conn, :show, relation))
@@ -175,30 +159,6 @@ defmodule TdLmWeb.RelationController do
     end
   end
 
-  swagger_path :update do
-    description("Updates the parameters of an existing relation")
-    produces("application/json")
-
-    parameters do
-      id(:path, :integer, "ID of the relation", required: true)
-      relation(:body, Schema.ref(:UpdateRelation), "Parameters used to create a relation")
-    end
-
-    response(200, "OK", Schema.ref(:RelationResponse))
-    response(403, "Forbidden")
-    response(422, "Client Error")
-  end
-
-  def update(conn, %{"id" => id, "relation" => relation_params}) do
-    user = conn.assigns[:current_resource]
-    relation = Resources.get_relation!(id)
-
-    with {:can, true} <- {:can, can?(user, update(relation))},
-         {:ok, %Relation{} = relation} <- Resources.update_relation(relation, relation_params) do
-      render(conn, "show.json", relation: relation)
-    end
-  end
-
   swagger_path :delete do
     description("Deletes a relation between entities")
 
@@ -216,53 +176,9 @@ defmodule TdLmWeb.RelationController do
     relation = Resources.get_relation!(id)
 
     with {:can, true} <- {:can, can?(user, delete(relation))},
-         {:ok, %Relation{}} <- Resources.delete_relation(relation) do
-      Audit.create_event(conn, audit_delete_attributes(relation), @events.delete_relation)
-      LinkLoader.delete(relation.id)
-
+         {:ok, _} <- Resources.delete_relation(relation, user) do
       send_resp(conn, :no_content, "")
     end
-  end
-
-  defp audit_create_attributes(create_attributes, relation) do
-    resource_id = Map.get(create_attributes, "source_id")
-    resource_type = Map.get(create_attributes, "source_type")
-    relation_types = fetch_relation_types(relation)
-    payload = Map.put(create_attributes, "relation_types", relation_types)
-    build_audit_map(resource_id, resource_type, payload)
-  end
-
-  defp audit_delete_attributes(relation) do
-    resource_id = Map.get(relation, :source_id)
-    resource_type = Map.get(relation, :source_type)
-    relation_types = fetch_relation_types(relation)
-
-    payload =
-      relation
-      |> Map.drop([:__meta__])
-      |> Map.drop([:tags])
-      |> Map.from_struct()
-      |> Map.put("relation_types", relation_types)
-
-    build_audit_map(resource_id, resource_type, payload)
-  end
-
-  defp build_audit_map(resource_id, resource_type, payload) do
-    %{
-      "audit" => %{
-        "resource_id" => resource_id,
-        "resource_type" => resource_type,
-        "payload" => payload
-      }
-    }
-  end
-
-  defp fetch_relation_types(relation) do
-    relation
-    |> Map.get(:tags)
-    |> Enum.map(&Map.get(&1, :value))
-    |> Enum.map(&Map.get(&1, "type"))
-    |> Enum.filter(&(not is_nil(&1)))
   end
 
   defp put_current_version_id(relation, relation_side, relation_id_key, target_type) do
