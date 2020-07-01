@@ -22,8 +22,8 @@ defmodule TdLmWeb.ConnCase do
 
   using do
     quote do
-      use Phoenix.ConnTest
-
+      import Plug.Conn
+      import Phoenix.ConnTest
       import TdLm.Factory
 
       alias TdLmWeb.Router.Helpers, as: Routes
