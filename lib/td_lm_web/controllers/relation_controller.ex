@@ -40,8 +40,8 @@ defmodule TdLmWeb.RelationController do
       ]
       |> Enum.flat_map(&Resources.list_relations/1)
       |> Enum.filter(&can?(user, show(&1)))
-      |> Enum.map(&put_current_version_id(&1, "target", :target_id, related_to_type))
-      |> Enum.map(&put_current_version_id(&1, "source", :source_id, related_to_type))
+      |> Enum.map(&refresh_attributes(&1, "target", :target_id, related_to_type))
+      |> Enum.map(&refresh_attributes(&1, "source", :source_id, related_to_type))
 
     render(
       conn,
@@ -181,7 +181,7 @@ defmodule TdLmWeb.RelationController do
     end
   end
 
-  defp put_current_version_id(relation, relation_side, relation_id_key, target_type) do
+  defp refresh_attributes(relation, relation_side, relation_id_key, target_type) do
     relation_side_attrs =
       relation
       |> Map.get(:context)
@@ -193,17 +193,23 @@ defmodule TdLmWeb.RelationController do
 
       relation_side_attrs ->
         version_id = get_version_id(target_type, Map.get(relation, relation_id_key))
-        put_version_id_in_context(relation, relation_side, relation_side_attrs, version_id)
+        name = get_name(target_type, Map.get(relation, relation_id_key))
+
+        relation_side_attrs =
+          relation_side_attrs
+          |> Map.put("version_id", version_id)
+          |> Map.put("name", name)
+
+        put_attrs_in_context(relation, relation_side, relation_side_attrs, version_id)
     end
   end
 
-  defp put_version_id_in_context(relation, _relation_side, _relation_side_attrs, nil) do
+  defp put_attrs_in_context(relation, _relation_side, _relation_side_attrs, nil) do
     relation
   end
 
-  defp put_version_id_in_context(relation, relation_side, relation_side_attrs, version_id) do
-    side_map = Map.put(relation_side_attrs, "version_id", version_id)
-    context = Map.put(relation.context, relation_side, side_map)
+  defp put_attrs_in_context(relation, relation_side, relation_side_attrs, _version_id) do
+    context = Map.put(relation.context, relation_side, relation_side_attrs)
     Map.put(relation, :context, context)
   end
 
@@ -217,5 +223,13 @@ defmodule TdLmWeb.RelationController do
   end
 
   defp get_version_id(_, _) do
+  end
+
+  defp get_name("business_concept", entity_id) do
+    {:ok, name} = ConceptCache.get(entity_id, :name)
+    name
+  end
+
+  defp get_name(_, _) do
   end
 end

@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- [TD-2509] Retrieve concept name from cache when returning concept relations
+
 ## [4.0.0] 2020-07-01
 
 ### Added
