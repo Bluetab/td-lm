@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- [TD-638] Relations graph for a given resource
+
 ## [4.3.0] 2020-09-07
 
 ### Fixed

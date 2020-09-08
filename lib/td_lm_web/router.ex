@@ -28,6 +28,7 @@ defmodule TdLmWeb.Router do
     pipe_through([:api, :api_secure, :api_authorized])
 
     resources "/relations", RelationController, except: [:new, :edit, :update]
+    get "/relations/:resource_id/graph", GraphController, :graph
     post "/relations/search", RelationController, :search
     resources "/tags", TagController, except: [:new, :edit, :update]
     post "/tags/search", TagController, :search
