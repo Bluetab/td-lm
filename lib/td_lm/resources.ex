@@ -8,6 +8,7 @@ defmodule TdLm.Resources do
   alias Ecto.Multi
   alias TdLm.Audit
   alias TdLm.Cache.LinkLoader
+  alias TdLm.Graph.Data
   alias TdLm.Repo
   alias TdLm.Resources.Relation
   alias TdLm.Resources.Tag
@@ -324,5 +325,64 @@ defmodule TdLm.Resources do
       {:id, {:in, ids}}, q -> where(q, [t], t.id in ^ids)
     end)
     |> Repo.all()
+  end
+
+  def graph(user, id, resource_type, opts \\ []) do
+    id = Data.id(resource_type, id)
+
+    g = Data.graph()
+
+    case Graph.has_vertex?(g, id) do
+      true ->
+        all =
+          g
+          |> Data.all([id])
+          |> Enum.map(&Graph.vertex(g, &1))
+          |> Enum.reject(&reject_by_type(&1, opts[:types]))
+          |> Enum.reject(&reject_by_permissions(&1, user))
+          |> Enum.uniq_by(&Map.get(&1, :id))
+
+        ids = Enum.map(all, &Map.get(&1, :id))
+        subgraph = Graph.subgraph(g, ids)
+        %{nodes: nodes(all), edges: edges(subgraph)}
+
+      _ ->
+        %{nodes: [], edges: []}
+    end
+  end
+
+  defp reject_by_type(%{label: %{resource_type: type}}, [_ | _] = types) do
+    type not in types
+  end
+
+  defp reject_by_type(_vertex, _types), do: false
+
+  defp reject_by_permissions(%{label: label}, user) do
+    import Canada, only: [can?: 2]
+    not can?(user, show(Map.take(label, [:resource_id, :resource_type])))
+  end
+
+  defp nodes(nodes) do
+    nodes
+    |> Enum.map(&Map.take(&1, [:id, :label]))
+    |> Enum.map(fn %{id: id, label: label} ->
+      Map.new()
+      |> Map.put(:id, id)
+      |> Map.merge(Map.take(label, [:resource_id, :resource_type]))
+    end)
+  end
+
+  defp edges(graph) do
+    graph
+    |> Graph.get_edges()
+    |> Enum.map(fn %{id: id, label: label, v1: v1, v2: v2} ->
+      tags = Map.get(label, :tags)
+
+      Map.new()
+      |> Map.put(:id, id)
+      |> Map.put(:source_id, v1)
+      |> Map.put(:target_id, v2)
+      |> Map.put(:tags, tags)
+    end)
   end
 end

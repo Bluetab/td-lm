@@ -1,6 +1,7 @@
 defmodule TdLm.Canada.BusinessConceptAbilities do
   @moduledoc false
 
+  alias TdCache.ConceptCache
   alias TdLm.Accounts.User
   alias TdLm.Permissions
 
@@ -14,27 +15,33 @@ defmodule TdLm.Canada.BusinessConceptAbilities do
   ]
 
   def can?(%User{} = user, :add_link, %{resource_id: id, resource_type: "business_concept"}) do
-    Permissions.authorized?(user, :manage_business_concept_links, "business_concept", id)
+    Permissions.authorized?(user, :manage_business_concept_links, "business_concept", id) and
+      can_manage_confidential?(user, id)
   end
 
   def can?(%User{} = user, :get_links, %{resource_id: id, resource_type: "business_concept"}) do
-    Permissions.authorized_any?(user, @view_business_concept, "business_concept", id)
+    Permissions.authorized_any?(user, @view_business_concept, "business_concept", id) and
+      can_manage_confidential?(user, id)
   end
 
   def can?(%User{} = user, :get_link, %{resource_id: id, resource_type: "business_concept"}) do
-    Permissions.authorized_any?(user, @view_business_concept, "business_concept", id)
+    Permissions.authorized_any?(user, @view_business_concept, "business_concept", id) and
+      can_manage_confidential?(user, id)
   end
 
   def can?(%User{} = user, :delete_link, %{resource_id: id, resource_type: "business_concept"}) do
-    Permissions.authorized?(user, :manage_business_concept_links, "business_concept", id)
+    Permissions.authorized?(user, :manage_business_concept_links, "business_concept", id) and
+      can_manage_confidential?(user, id)
   end
 
   def can?(%User{} = user, :search, %{resource_id: id, resource_type: "business_concept"}) do
-    Permissions.authorized_any?(user, @view_business_concept, "business_concept", id)
+    Permissions.authorized_any?(user, @view_business_concept, "business_concept", id) and
+      can_manage_confidential?(user, id)
   end
 
   def can?(%User{} = user, :show, %{resource_id: id, resource_type: "business_concept"}) do
-    Permissions.authorized_any?(user, @view_business_concept, "business_concept", id)
+    Permissions.authorized_any?(user, @view_business_concept, "business_concept", id) and
+      can_manage_confidential?(user, id)
   end
 
   def can?(%User{} = user, :update, %{resource_id: id, resource_type: "business_concept"}) do
@@ -51,5 +58,21 @@ defmodule TdLm.Canada.BusinessConceptAbilities do
 
   def can?(%User{} = _user, _permission, _params) do
     false
+  end
+
+  defp can_manage_confidential?(user, id) do
+    case Permissions.authorized?(
+           user,
+           :manage_confidential_business_concepts,
+           "business_concept",
+           id
+         ) do
+      false ->
+        {:ok, confidentials} = ConceptCache.confidential_ids()
+        not Enum.member?(confidentials, id)
+
+      _ ->
+        true
+    end
   end
 end

@@ -3,6 +3,7 @@ defmodule TdLm.ResourcesTest do
 
   alias TdCache.Redix
   alias TdCache.Redix.Stream
+  alias TdLm.Accounts.User
   alias TdLm.Resources
 
   @stream TdCache.Audit.stream()
@@ -180,5 +181,54 @@ defmodule TdLm.ResourcesTest do
   test "get_tag!/1 returns the tag with given id" do
     tag = insert(:tag, relations: [])
     assert Resources.get_tag!(tag.id) == tag
+  end
+
+  test "graph/3 gets edges and nodes" do
+    tags = Enum.map(1..5, fn _ -> insert(:tag) end)
+    user = %User{id: 1, is_admin: true}
+
+    relations =
+      Enum.map(1..10, fn id ->
+        insert(:relation,
+          source_type: "business_concept",
+          target_type: "business_concept",
+          source_id: "#{id}",
+          target_id: "#{id + 1}",
+          tags: tags
+        )
+      end)
+
+    assert %{nodes: nodes, edges: edges} = Resources.graph(user, 5, "business_concept")
+    assert Enum.all?(1..11, fn id -> Enum.find(nodes, &(&1.id == "business_concept:#{id}")) end)
+
+    assert Enum.all?(relations, fn %{
+                                     source_id: source_id,
+                                     source_type: source_type,
+                                     target_id: target_id,
+                                     target_type: target_type
+                                   } ->
+             Enum.find(
+               edges,
+               &(&1.source_id == "#{source_type}:#{source_id}" and
+                   &1.target_id == "#{target_type}:#{target_id}")
+             )
+           end)
+  end
+
+  test "graph/3 gets empty edges and nodes when we query an non existing node" do
+    tags = Enum.map(1..5, fn _ -> insert(:tag) end)
+    user = %User{id: 1, is_admin: true}
+
+    Enum.map(1..10, fn id ->
+        insert(:relation,
+          source_type: "business_concept",
+          target_type: "business_concept",
+          source_id: "#{id}",
+          target_id: "#{id + 1}",
+          tags: tags
+        )
+      end)
+
+    assert %{nodes: [], edges: []} = Resources.graph(user, 12, "business_concept")
   end
 end
