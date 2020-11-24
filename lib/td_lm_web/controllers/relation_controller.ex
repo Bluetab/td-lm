@@ -7,6 +7,7 @@ defmodule TdLmWeb.RelationController do
 
   alias TdCache.ConceptCache
   alias TdCache.IngestCache
+  alias TdLm.Map.Helpers
   alias TdLm.Resources
   alias TdLmWeb.SwaggerDefinitions
 
@@ -192,44 +193,55 @@ defmodule TdLmWeb.RelationController do
         relation
 
       relation_side_attrs ->
-        version_id = get_version_id(target_type, Map.get(relation, relation_id_key))
-        name = get_name(target_type, Map.get(relation, relation_id_key))
+        target_type
+        |> fetch_attributes(Map.get(relation, relation_id_key))
+        |> case do
+          %{version_id: nil} ->
+            relation
 
-        relation_side_attrs =
-          relation_side_attrs
-          |> Map.put("version_id", version_id)
-          |> Map.put("name", name)
+          cached ->
+            relation_side_attrs =
+              relation_side_attrs
+              |> Helpers.atomize_keys()
+              |> Map.merge(cached)
 
-        put_attrs_in_context(relation, relation_side, relation_side_attrs, version_id)
+            context = Map.put(relation.context, relation_side, relation_side_attrs)
+            Map.put(relation, :context, context)
+        end
     end
   end
 
-  defp put_attrs_in_context(relation, _relation_side, _relation_side_attrs, nil) do
-    relation
+  defp fetch_attributes("business_concept", entity_id) do
+    case ConceptCache.get(entity_id) do
+      {:ok, concept = %{}} ->
+        concept
+        |> Map.take([:name, :business_concept_version_id])
+        |> Enum.map(fn
+          {:business_concept_version_id, version} -> {:version_id, version}
+          other -> other
+        end)
+        |> Enum.into(%{})
+
+      _ ->
+        %{}
+    end
   end
 
-  defp put_attrs_in_context(relation, relation_side, relation_side_attrs, _version_id) do
-    context = Map.put(relation.context, relation_side, relation_side_attrs)
-    Map.put(relation, :context, context)
+  defp fetch_attributes("ingest", entity_id) do
+    case IngestCache.get(entity_id) do
+      {:ok, ingest = %{}} ->
+        ingest
+        |> Map.take([:name, :ingest_version_id])
+        |> Enum.map(fn
+          {:ingest_version_id, version} -> {:version_id, version}
+          other -> other
+        end)
+        |> Enum.into(%{})
+
+      _ ->
+        %{}
+    end
   end
 
-  defp get_version_id("business_concept", entity_id) do
-    {:ok, id} = ConceptCache.get(entity_id, :business_concept_version_id)
-    id
-  end
-
-  defp get_version_id("ingest", entity_id) do
-    IngestCache.get_ingest_version_id(entity_id)
-  end
-
-  defp get_version_id(_, _) do
-  end
-
-  defp get_name("business_concept", entity_id) do
-    {:ok, name} = ConceptCache.get(entity_id, :name)
-    name
-  end
-
-  defp get_name(_, _) do
-  end
+  defp fetch_attributes(_, _entity_id), do: %{}
 end
