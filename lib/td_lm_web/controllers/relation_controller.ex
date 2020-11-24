@@ -7,7 +7,6 @@ defmodule TdLmWeb.RelationController do
 
   alias TdCache.ConceptCache
   alias TdCache.IngestCache
-  alias TdLm.Map.Helpers
   alias TdLm.Resources
   alias TdLmWeb.SwaggerDefinitions
 
@@ -202,7 +201,7 @@ defmodule TdLmWeb.RelationController do
           cached ->
             relation_side_attrs =
               relation_side_attrs
-              |> Helpers.atomize_keys()
+              |> atomize_keys()
               |> Map.merge(cached)
 
             context = Map.put(relation.context, relation_side, relation_side_attrs)
@@ -244,4 +243,16 @@ defmodule TdLmWeb.RelationController do
   end
 
   defp fetch_attributes(_, _entity_id), do: %{}
+
+  defp atomize_keys(%{} = map) do
+    Enum.into(map, %{}, fn {k, v} -> {String.to_atom(k), atomize_keys(v)} end)
+  end
+
+  defp atomize_keys([head | rest]) do
+    [atomize_keys(head) | atomize_keys(rest)]
+  end
+
+  defp atomize_keys(not_a_map) do
+    not_a_map
+  end
 end
