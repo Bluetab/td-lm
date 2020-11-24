@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- [TD-3083] Enrich cached ingest attributes
+
 ## [4.4.0] 2020-09-22
 
 ### Added
