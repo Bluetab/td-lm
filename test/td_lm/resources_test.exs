@@ -220,15 +220,39 @@ defmodule TdLm.ResourcesTest do
     user = %User{id: 1, is_admin: true}
 
     Enum.map(1..10, fn id ->
-        insert(:relation,
-          source_type: "business_concept",
-          target_type: "business_concept",
-          source_id: "#{id}",
-          target_id: "#{id + 1}",
-          tags: tags
-        )
-      end)
+      insert(:relation,
+        source_type: "business_concept",
+        target_type: "business_concept",
+        source_id: "#{id}",
+        target_id: "#{id + 1}",
+        tags: tags
+      )
+    end)
 
     assert %{nodes: [], edges: []} = Resources.graph(user, 12, "business_concept")
+  end
+
+  describe "deprecate/1" do
+    test "logically deletes implementations" do
+      %{id: id1, target_id: tid1} = insert(:relation, target_type: "data_structure")
+      %{id: id2, target_id: tid2} = insert(:relation, target_type: "data_structure")
+
+      %{target_id: tid3} =
+        insert(:relation, target_type: "data_structure", deleted_at: DateTime.utc_now())
+
+      assert {:ok, %{deprecated: deprecated}} = Resources.deprecate("data_structure", [tid1, tid2, tid3])
+      assert {2, [%{id: ^id1}, %{id: ^id2}]} = deprecated
+    end
+
+    test "publishes audit events" do
+      %{target_id: tid1} = insert(:relation, target_type: "data_structure")
+      %{target_id: tid2} = insert(:relation, target_type: "data_structure")
+
+      %{target_id: tid3} =
+        insert(:relation, target_type: "data_structure", deleted_at: DateTime.utc_now())
+
+      assert {:ok, %{audit: audit}} = Resources.deprecate("data_structure", [tid1, tid2, tid3])
+      assert length(audit) == 2
+    end
   end
 end

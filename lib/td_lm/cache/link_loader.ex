@@ -6,6 +6,7 @@ defmodule TdLm.Cache.LinkLoader do
   use GenServer
 
   alias TdCache.LinkCache
+  alias TdCache.StructureCache
   alias TdLm.Resources
 
   require Logger
@@ -14,6 +15,10 @@ defmodule TdLm.Cache.LinkLoader do
 
   def start_link(config \\ []) do
     GenServer.start_link(__MODULE__, config, name: __MODULE__)
+  end
+
+  def refresh do
+    GenServer.cast(__MODULE__, :refresh)
   end
 
   def refresh(ids) when is_list(ids) do
@@ -66,6 +71,27 @@ defmodule TdLm.Cache.LinkLoader do
   def handle_call({:delete, ids}, _from, state) do
     reply = delete_ids(ids)
     {:reply, reply, state}
+  end
+
+  @impl GenServer
+  def handle_cast(:refresh, state) do
+    do_deprecate()
+    {:noreply, state}
+  end
+
+  @spec do_deprecate :: :ok
+  defp do_deprecate do
+    soft_deletion("data_structure")
+    :ok
+  rescue
+    e -> Logger.error("Unexpected error while deprecated cached structures... #{inspect(e)}")
+  end
+
+  defp soft_deletion(resource_type) do
+    # TODO: list stale relations resource type and ids
+    deleted_ids = StructureCache.deleted_ids()
+    Resources.deprecate(resource_type, deleted_ids)
+    {:ok, []}
   end
 
   ## Private functions

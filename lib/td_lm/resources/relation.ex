@@ -16,6 +16,7 @@ defmodule TdLm.Resources.Relation do
     field(:target_id, :string)
     field(:target_type, :string)
     field(:context, :map, default: %{})
+    field(:deleted_at, :utc_datetime_usec)
 
     many_to_many(:tags, Tag,
       join_through: "relations_tags",
@@ -32,7 +33,7 @@ defmodule TdLm.Resources.Relation do
 
   def changeset(%__MODULE__{} = relation, %{} = params) do
     relation
-    |> cast(params, [:source_id, :source_type, :target_id, :target_type, :context])
+    |> cast(params, [:source_id, :source_type, :target_id, :target_type, :context, :deleted_at])
     |> validate_required([:source_id, :source_type, :target_id, :target_type, :context])
     |> put_tags()
   end

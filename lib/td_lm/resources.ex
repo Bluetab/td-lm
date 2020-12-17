@@ -311,12 +311,22 @@ defmodule TdLm.Resources do
     |> Repo.all()
   end
 
-  def list_relations_by_resource(resource_type, resource_id) do
-    Relation
-    |> where([r], r.source_type == ^resource_type and r.source_id == ^resource_id)
-    |> or_where([r], r.target_type == ^resource_type and r.target_id == ^resource_id)
-    |> Repo.all()
-    |> Repo.preload(:tags)
+  @spec deprecate(String.t(), list(String.t())) ::
+          :ok | {:ok, map} | {:error, Multi.name(), any, %{required(Multi.name()) => any}}
+  def deprecate(resource_type, resource_ids) do
+    ts = DateTime.utc_now()
+
+    query =
+      Relation
+      |> where([r], r.source_type == ^resource_type and r.source_id in ^resource_ids)
+      |> or_where([r], r.target_type == ^resource_type and r.target_id in ^resource_ids)
+      |> where([r], is_nil(r.deleted_at))
+      |> select([r], r)
+
+    Multi.new()
+    |> Multi.update_all(:deprecated, query, set: [deleted_at: ts])
+    |> Multi.run(:audit, Audit, :relations_deprecated, [])
+    |> Repo.transaction()
   end
 
   def find_tags(clauses) do

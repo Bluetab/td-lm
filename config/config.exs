@@ -76,6 +76,15 @@ config :td_lm, :cache_cleaner,
     "*:relations"
   ]
 
+config :td_lm, TdLm.Scheduler,
+  jobs: [
+    link_refresher: [
+      schedule: "@hourly",
+      task: {TdLm.Cache.LinkLoader, :refresh, []},
+      run_strategy: Quantum.RunStrategy.Local
+    ]
+  ]
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{Mix.env()}.exs"
