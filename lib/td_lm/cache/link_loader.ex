@@ -76,6 +76,7 @@ defmodule TdLm.Cache.LinkLoader do
   @impl GenServer
   def handle_cast(:refresh, state) do
     do_deprecate()
+    do_activate()
     {:noreply, state}
   end
 
@@ -84,17 +85,51 @@ defmodule TdLm.Cache.LinkLoader do
     soft_deletion("data_structure")
     :ok
   rescue
-    e -> Logger.error("Unexpected error while deprecated cached structures... #{inspect(e)}")
+    e -> Logger.error("Unexpected error while deprecateding cached structures... #{inspect(e)}")
   end
 
-  defp soft_deletion(resource_type) do
-    # TODO: list stale relations resource type and ids
-    deleted_ids = StructureCache.deleted_ids()
-    Resources.deprecate(resource_type, deleted_ids)
-    {:ok, []}
+  @spec do_activate :: :ok
+  defp do_activate do
+    undo_deletion("data_structure")
+    :ok
+  rescue
+    e -> Logger.error("Unexpected error while deprecateding cached structures... #{inspect(e)}")
   end
 
   ## Private functions
+
+  defp undo_deletion(resource_type) do
+    referenced_ids = TdCache.StructureCache.referenced_ids() |> MapSet.new()
+    deleted_ids = StructureCache.deleted_ids() |> MapSet.new()
+
+    active_ids =
+      referenced_ids
+      |> MapSet.difference(deleted_ids)
+      |> MapSet.to_list()
+      |> Enum.map(&to_string/1)
+
+    with res <- Resources.activate(resource_type, active_ids),
+         {:ok, %{activated: {n, _}}} when n > 0 <- res do
+      Logger.info("Activated #{n} relations")
+    else
+      :ok -> :ok
+      {:ok, %{activated: {0, _}}} -> :ok
+      {:error, _} -> Logger.warn("Failed to activate relations")
+    end
+  end
+
+  defp soft_deletion(resource_type) do
+    deleted_ids = Enum.map(StructureCache.deleted_ids(), &to_string/1)
+
+    with res <- Resources.deprecate(resource_type, deleted_ids),
+         {:ok, %{deprecated: {n, _}}} when n > 0 <- res do
+      Logger.info("Deprecated #{n} relations")
+    else
+      :ok -> :ok
+      {:ok, %{deprecated: {0, _}}} -> :ok
+      {:error, op, _, _} -> Logger.warn("Failed to deprecate implementations #{op}")
+    end
+  end
 
   defp load_links(links) do
     count =

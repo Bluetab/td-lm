@@ -313,7 +313,7 @@ defmodule TdLm.Resources do
 
   @spec deprecate(String.t(), list(String.t())) ::
           :ok | {:ok, map} | {:error, Multi.name(), any, %{required(Multi.name()) => any}}
-  def deprecate(resource_type, resource_ids) do
+  def deprecate(resource_type, [_ | _] = resource_ids) do
     ts = DateTime.utc_now()
 
     query =
@@ -328,6 +328,24 @@ defmodule TdLm.Resources do
     |> Multi.run(:audit, Audit, :relations_deprecated, [])
     |> Repo.transaction()
   end
+
+  def deprecate(_resource_type, []), do: {:ok, %{deprecated: {0, []}}}
+
+  @spec activate(String.t(), list(String.t())) ::
+          :ok | {:ok, map}
+  def activate(resource_type, [_ | _] = resource_ids) do
+    reply =
+      Relation
+      |> where([r], r.source_type == ^resource_type and r.source_id in ^resource_ids)
+      |> or_where([r], r.target_type == ^resource_type and r.target_id in ^resource_ids)
+      |> where([r], not is_nil(r.deleted_at))
+      |> select([r], r)
+      |> Repo.update_all(set: [deleted_at: nil])
+
+    {:ok, %{activated: reply}}
+  end
+
+  def activate(_resource_type, []), do: {:ok, %{activated: {0, []}}}
 
   def find_tags(clauses) do
     clauses

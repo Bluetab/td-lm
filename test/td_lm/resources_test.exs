@@ -233,7 +233,7 @@ defmodule TdLm.ResourcesTest do
   end
 
   describe "deprecate/1" do
-    test "logically deletes implementations" do
+    test "logically deletes relations" do
       %{id: id1, target_id: tid1} = insert(:relation, target_type: "data_structure")
       %{id: id2, target_id: tid2} = insert(:relation, target_type: "data_structure")
 
@@ -253,6 +253,19 @@ defmodule TdLm.ResourcesTest do
 
       assert {:ok, %{audit: audit}} = Resources.deprecate("data_structure", [tid1, tid2, tid3])
       assert length(audit) == 2
+    end
+  end
+
+  describe "activate/1" do
+    test "logically deletes relations" do
+      %{target_id: tid1} = insert(:relation, target_type: "data_structure")
+      %{target_id: tid2} = insert(:relation, target_type: "data_structure")
+
+      %{id: id3, target_id: tid3} =
+        insert(:relation, target_type: "data_structure", deleted_at: DateTime.utc_now())
+
+      assert {:ok, %{activated: activated}} = Resources.activate("data_structure", [tid1, tid2, tid3])
+      assert {1, [%{id: ^id3}]} = activated
     end
   end
 end

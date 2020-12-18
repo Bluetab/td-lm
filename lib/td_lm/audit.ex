@@ -55,7 +55,7 @@ defmodule TdLm.Audit do
 
   defp do_relation_deprecated(%{source_type: source_type, source_id: source_id} = relation) do
     payload = Map.take(relation, [:id, :target_id, :target_type, :context])
-    publish("relation_deprecated", source_type, source_id, nil, payload)
+    publish("relation_deprecated", source_type, source_id, 0, payload)
   end
 
   defp do_relation_created(

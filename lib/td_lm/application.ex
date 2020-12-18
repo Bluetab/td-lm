@@ -34,7 +34,8 @@ defmodule TdLm.Application do
       TdLm.Cache.LinkLoader,
       TdLm.Cache.LinkRemover,
       TdLm.RelationRemover,
-      {TdCache.CacheCleaner, Application.get_env(:td_lm, :cache_cleaner, [])}
+      {TdCache.CacheCleaner, Application.get_env(:td_lm, :cache_cleaner, [])},
+      TdLm.Scheduler
     ]
   end
 end
