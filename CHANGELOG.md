@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- [TD-2301] Activate/Deprecate relations on deleted structures
+
 ### Changed
 
 - [TD-3170] Build docker image which runs with non-root user
