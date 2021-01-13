@@ -6,6 +6,16 @@
 
 - [TD-3083] Enrich cached ingest attributes
 
+## [4.11.0] 2021-01-11
+
+### Added
+
+- [TD-2301] Activate/Deprecate relations on deleted structures
+
+### Changed
+
+- [TD-3170] Build docker image which runs with non-root user
+
 ## [4.4.0] 2020-09-22
 
 ### Added
