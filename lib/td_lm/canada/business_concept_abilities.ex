@@ -2,7 +2,7 @@ defmodule TdLm.Canada.BusinessConceptAbilities do
   @moduledoc false
 
   alias TdCache.ConceptCache
-  alias TdLm.Accounts.User
+  alias TdLm.Auth.Claims
   alias TdLm.Permissions
 
   @view_business_concept [
@@ -14,55 +14,58 @@ defmodule TdLm.Canada.BusinessConceptAbilities do
     :view_versioned_business_concepts
   ]
 
-  def can?(%User{} = user, :add_link, %{resource_id: id, resource_type: "business_concept"}) do
-    Permissions.authorized?(user, :manage_business_concept_links, "business_concept", id) and
-      can_manage_confidential?(user, id)
+  def can?(%Claims{} = claims, :add_link, %{resource_id: id, resource_type: "business_concept"}) do
+    Permissions.authorized?(claims, :manage_business_concept_links, "business_concept", id) and
+      can_manage_confidential?(claims, id)
   end
 
-  def can?(%User{} = user, :get_links, %{resource_id: id, resource_type: "business_concept"}) do
-    Permissions.authorized_any?(user, @view_business_concept, "business_concept", id) and
-      can_manage_confidential?(user, id)
+  def can?(%Claims{} = claims, :get_links, %{resource_id: id, resource_type: "business_concept"}) do
+    Permissions.authorized_any?(claims, @view_business_concept, "business_concept", id) and
+      can_manage_confidential?(claims, id)
   end
 
-  def can?(%User{} = user, :get_link, %{resource_id: id, resource_type: "business_concept"}) do
-    Permissions.authorized_any?(user, @view_business_concept, "business_concept", id) and
-      can_manage_confidential?(user, id)
+  def can?(%Claims{} = claims, :get_link, %{resource_id: id, resource_type: "business_concept"}) do
+    Permissions.authorized_any?(claims, @view_business_concept, "business_concept", id) and
+      can_manage_confidential?(claims, id)
   end
 
-  def can?(%User{} = user, :delete_link, %{resource_id: id, resource_type: "business_concept"}) do
-    Permissions.authorized?(user, :manage_business_concept_links, "business_concept", id) and
-      can_manage_confidential?(user, id)
+  def can?(%Claims{} = claims, :delete_link, %{
+        resource_id: id,
+        resource_type: "business_concept"
+      }) do
+    Permissions.authorized?(claims, :manage_business_concept_links, "business_concept", id) and
+      can_manage_confidential?(claims, id)
   end
 
-  def can?(%User{} = user, :search, %{resource_id: id, resource_type: "business_concept"}) do
-    Permissions.authorized_any?(user, @view_business_concept, "business_concept", id) and
-      can_manage_confidential?(user, id)
+  def can?(%Claims{} = claims, :search, %{resource_id: id, resource_type: "business_concept"}) do
+    Permissions.authorized_any?(claims, @view_business_concept, "business_concept", id) and
+      can_manage_confidential?(claims, id)
   end
 
-  def can?(%User{} = user, :show, %{resource_id: id, resource_type: "business_concept"}) do
-    Permissions.authorized_any?(user, @view_business_concept, "business_concept", id) and
-      can_manage_confidential?(user, id)
+  def can?(%Claims{} = claims, :show, %{resource_id: id, resource_type: "business_concept"}) do
+    Permissions.authorized_any?(claims, @view_business_concept, "business_concept", id) and
+      can_manage_confidential?(claims, id)
   end
 
-  def can?(%User{} = user, :update, %{resource_id: id, resource_type: "business_concept"}) do
-    Permissions.authorized?(user, :manage_business_concept_links, "business_concept", id)
+  def can?(%Claims{} = claims, :update, %{resource_id: id, resource_type: "business_concept"}) do
+    Permissions.authorized?(claims, :manage_business_concept_links, "business_concept", id)
   end
 
-  def can?(%User{} = user, :create, %{resource_id: id, resource_type: "business_concept"}) do
-    Permissions.authorized?(user, :manage_business_concept_links, "business_concept", id)
+  def can?(%Claims{} = claims, :create, %{resource_id: id, resource_type: "business_concept"}) do
+    Permissions.authorized?(claims, :manage_business_concept_links, "business_concept", id)
   end
 
-  def can?(%User{} = user, :delete, %{resource_id: id, resource_type: "business_concept"}) do
-    Permissions.authorized?(user, :manage_business_concept_links, "business_concept", id)
+  def can?(%Claims{} = claims, :delete, %{resource_id: id, resource_type: "business_concept"}) do
+    Permissions.authorized?(claims, :manage_business_concept_links, "business_concept", id)
   end
 
-  def can?(%User{} = _user, _permission, _params) do
+  def can?(%Claims{}, _permission, _params) do
     false
   end
 
-  defp can_manage_confidential?(user, id) do
+  defp can_manage_confidential?(claims, id) do
     case Permissions.authorized?(
-           user,
+           claims,
            :manage_confidential_business_concepts,
            "business_concept",
            id

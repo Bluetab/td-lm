@@ -1,6 +1,6 @@
 defmodule TdLm.Canada.IngestAbilities do
   @moduledoc false
-  alias TdLm.Accounts.User
+  alias TdLm.Auth.Claims
   alias TdLm.Permissions
 
   @view_ingest [
@@ -12,27 +12,27 @@ defmodule TdLm.Canada.IngestAbilities do
     :view_versioned_ingests
   ]
 
-  def can?(%User{} = user, :search, %{resource_id: id, resource_type: "ingest"}) do
-    Permissions.authorized_any?(user, @view_ingest, "ingest", id)
+  def can?(%Claims{} = claims, :search, %{resource_id: id, resource_type: "ingest"}) do
+    Permissions.authorized_any?(claims, @view_ingest, "ingest", id)
   end
 
-  def can?(%User{} = user, :show, %{resource_id: id, resource_type: "ingest"}) do
-    Permissions.authorized_any?(user, @view_ingest, "ingest", id)
+  def can?(%Claims{} = claims, :show, %{resource_id: id, resource_type: "ingest"}) do
+    Permissions.authorized_any?(claims, @view_ingest, "ingest", id)
   end
 
-  def can?(%User{} = user, :update, %{resource_id: id, resource_type: "ingest"}) do
-    Permissions.authorized?(user, :manage_ingest_relations, "ingest", id)
+  def can?(%Claims{} = claims, :update, %{resource_id: id, resource_type: "ingest"}) do
+    Permissions.authorized?(claims, :manage_ingest_relations, "ingest", id)
   end
 
-  def can?(%User{} = user, :create, %{resource_id: id, resource_type: "ingest"}) do
-    Permissions.authorized?(user, :manage_ingest_relations, "ingest", id)
+  def can?(%Claims{} = claims, :create, %{resource_id: id, resource_type: "ingest"}) do
+    Permissions.authorized?(claims, :manage_ingest_relations, "ingest", id)
   end
 
-  def can?(%User{} = user, :delete, %{resource_id: id, resource_type: "ingest"}) do
-    Permissions.authorized?(user, :manage_ingest_relations, "ingest", id)
+  def can?(%Claims{} = claims, :delete, %{resource_id: id, resource_type: "ingest"}) do
+    Permissions.authorized?(claims, :manage_ingest_relations, "ingest", id)
   end
 
-  def can?(%User{} = _user, _permission, _params) do
+  def can?(%Claims{}, _permission, _params) do
     false
   end
 end
