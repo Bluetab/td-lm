@@ -5,14 +5,15 @@ defmodule TdLm.RelationRemover do
   """
   use GenServer
 
+  require Logger
+
   alias TdCache.ConceptCache
+  alias TdLm.Auth.Claims
   alias TdLm.Cache.LinkLoader
   alias TdLm.Resources
 
-  require Logger
-
   @hourly 60 * 60 * 1000
-  @system_user %{id: 0, user_name: "system"}
+  @system_claims %Claims{user_id: 0, user_name: "system"}
 
   ## Client API
 
@@ -51,6 +52,6 @@ defmodule TdLm.RelationRemover do
   defp hard_deletion(resource_type, active_ids) do
     stale_relations = Resources.list_stale_relations(resource_type, active_ids)
     stale_relations |> Enum.map(& &1.id) |> LinkLoader.delete()
-    stale_relations |> Enum.each(&Resources.delete_relation(&1, @system_user))
+    stale_relations |> Enum.each(&Resources.delete_relation(&1, @system_claims))
   end
 end

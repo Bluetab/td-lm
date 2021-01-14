@@ -15,11 +15,11 @@ defmodule TdLmWeb.GraphController do
   action_fallback(TdLmWeb.FallbackController)
 
   def graph(conn, %{"resource_id" => id, "type" => type}) do
-    user = conn.assigns[:current_resource]
+    claims = conn.assigns[:current_resource]
 
-    with {:can, true} <- {:can, can?(user, show(%{resource_type: type, resource_id: id}))},
+    with {:can, true} <- {:can, can?(claims, show(%{resource_type: type, resource_id: id}))},
          %{nodes: nodes, edges: edges} <-
-           Resources.graph(user, id, type, types: ["business_concept"]) do
+           Resources.graph(claims, id, type, types: ["business_concept"]) do
       nodes = enrich_nodes(nodes)
       render(conn, "show.json", graph: %{nodes: nodes, edges: edges})
     end

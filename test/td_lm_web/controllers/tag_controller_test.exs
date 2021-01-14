@@ -76,7 +76,7 @@ defmodule TdLmWeb.TagControllerTest do
     test "renders errors when data is invalid", %{conn: conn} do
       params = string_params_for(:tag) |> Map.put("value", "string")
 
-      assert %{"errors" => errors} =
+      assert %{"errors" => _} =
                conn
                |> post(Routes.tag_path(conn, :create), %{"tag" => params})
                |> json_response(:unprocessable_entity)

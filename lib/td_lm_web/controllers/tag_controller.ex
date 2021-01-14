@@ -57,10 +57,10 @@ defmodule TdLmWeb.TagController do
   end
 
   def create(conn, %{"tag" => tag_params}) do
-    user = conn.assigns[:current_resource]
+    claims = conn.assigns[:current_resource]
 
-    with {:can, true} <- {:can, can?(user, create_tag(%Tag{}))},
-         {:ok, %{tag: tag}} <- Resources.create_tag(tag_params, user) do
+    with {:can, true} <- {:can, can?(claims, create_tag(%Tag{}))},
+         {:ok, %{tag: tag}} <- Resources.create_tag(tag_params, claims) do
       conn
       |> put_status(:created)
       |> put_resp_header("location", Routes.tag_path(conn, :show, tag))
@@ -98,11 +98,11 @@ defmodule TdLmWeb.TagController do
   end
 
   def delete(conn, %{"id" => id}) do
-    user = conn.assigns[:current_resource]
+    claims = conn.assigns[:current_resource]
     tag = Resources.get_tag!(id)
 
-    with {:can, true} <- {:can, can?(user, delete_tag(tag))},
-         {:ok, %{tag: _tag}} <- Resources.delete_tag(tag, user) do
+    with {:can, true} <- {:can, can?(claims, delete_tag(tag))},
+         {:ok, %{tag: _tag}} <- Resources.delete_tag(tag, claims) do
       send_resp(conn, :no_content, "")
     end
   end

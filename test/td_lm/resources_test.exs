@@ -3,7 +3,7 @@ defmodule TdLm.ResourcesTest do
 
   alias TdCache.Redix
   alias TdCache.Redix.Stream
-  alias TdLm.Accounts.User
+  alias TdLm.Auth.Claims
   alias TdLm.Resources
 
   @stream TdCache.Audit.stream()
@@ -11,7 +11,7 @@ defmodule TdLm.ResourcesTest do
   setup_all do
     Redix.del!(@stream)
     start_supervised(TdLm.Cache.LinkLoader)
-    [user: build(:user)]
+    [claims: build(:claims)]
   end
 
   setup do
@@ -20,7 +20,7 @@ defmodule TdLm.ResourcesTest do
   end
 
   describe "create_relation/2" do
-    test "creates a relation without tags", %{user: user} do
+    test "creates a relation without tags", %{claims: claims} do
       %{
         "source_id" => source_id,
         "source_type" => source_type,
@@ -28,7 +28,7 @@ defmodule TdLm.ResourcesTest do
         "target_type" => target_type
       } = params = string_params_for(:relation)
 
-      assert {:ok, %{relation: relation}} = Resources.create_relation(params, user)
+      assert {:ok, %{relation: relation}} = Resources.create_relation(params, claims)
 
       assert %{
                source_id: ^source_id,
@@ -41,41 +41,42 @@ defmodule TdLm.ResourcesTest do
       assert context == %{}
     end
 
-    test "creates a relation with the specified tags", %{user: user} do
+    test "creates a relation with the specified tags", %{claims: claims} do
       tag_ids =
         1..3
         |> Enum.map(fn _ -> insert(:tag) end)
         |> Enum.map(& &1.id)
 
       params = string_params_for(:relation) |> Map.put("tag_ids", tag_ids)
-      assert {:ok, %{relation: relation}} = Resources.create_relation(params, user)
+      assert {:ok, %{relation: relation}} = Resources.create_relation(params, claims)
       assert %{tags: tags} = relation
       assert length(tags) == 3
       assert Enum.all?(tags, &(&1.id in tag_ids))
     end
 
-    test "publishes an audit event", %{user: user} do
+    test "publishes an audit event", %{claims: claims} do
       params = string_params_for(:relation)
-      assert {:ok, %{audit: event_id}} = Resources.create_relation(params, user)
+      assert {:ok, %{audit: event_id}} = Resources.create_relation(params, claims)
       assert {:ok, [%{id: ^event_id}]} = Stream.read(:redix, @stream, transform: true)
     end
 
-    test "returns error and changeset if validations fail", %{user: user} do
+    test "returns error and changeset if validations fail", %{claims: claims} do
       params = %{"source_id" => nil}
-      assert {:error, :relation, %Ecto.Changeset{}, _} = Resources.create_relation(params, user)
+
+      assert {:error, :relation, %Ecto.Changeset{}, _} = Resources.create_relation(params, claims)
     end
   end
 
   describe "delete_relation/2" do
-    test "delete_relation/2 deletes", %{user: user} do
+    test "delete_relation/2 deletes", %{claims: claims} do
       relation = insert(:relation)
-      assert {:ok, %{relation: relation}} = Resources.delete_relation(relation, user)
+      assert {:ok, %{relation: relation}} = Resources.delete_relation(relation, claims)
       assert %{__meta__: %{state: :deleted}} = relation
     end
 
-    test "publishes an audit event", %{user: user} do
+    test "publishes an audit event", %{claims: claims} do
       relation = insert(:relation)
-      assert {:ok, %{audit: event_id}} = Resources.delete_relation(relation, user)
+      assert {:ok, %{audit: event_id}} = Resources.delete_relation(relation, claims)
       assert {:ok, [%{id: ^event_id}]} = Stream.read(:redix, @stream, transform: true)
     end
   end
@@ -123,38 +124,38 @@ defmodule TdLm.ResourcesTest do
   end
 
   describe "create_tag/2" do
-    test "creates a tag", %{user: user} do
+    test "creates a tag", %{claims: claims} do
       %{"value" => value} = params = string_params_for(:tag)
-      assert {:ok, %{tag: tag}} = Resources.create_tag(params, user)
+      assert {:ok, %{tag: tag}} = Resources.create_tag(params, claims)
       assert %{value: ^value} = tag
     end
 
-    test "publishes an audit event", %{user: user} do
+    test "publishes an audit event", %{claims: claims} do
       params = string_params_for(:tag)
-      assert {:ok, %{audit: event_id}} = Resources.create_tag(params, user)
+      assert {:ok, %{audit: event_id}} = Resources.create_tag(params, claims)
       assert {:ok, [%{id: ^event_id}]} = Stream.read(:redix, @stream, transform: true)
     end
 
-    test "returns error and changeset if validations fail", %{user: user} do
+    test "returns error and changeset if validations fail", %{claims: claims} do
       params = %{"value" => nil}
-      assert {:error, :tag, %Ecto.Changeset{}, _} = Resources.create_tag(params, user)
+      assert {:error, :tag, %Ecto.Changeset{}, _} = Resources.create_tag(params, claims)
     end
   end
 
   describe "delete_tag/2" do
-    test "deletes the tag and updates it's relations", %{user: user} do
+    test "deletes the tag and updates it's relations", %{claims: claims} do
       relations = Enum.map(1..5, fn _ -> insert(:relation) end)
       tag = insert(:tag, relations: relations)
 
-      assert {:ok, %{tag: tag, relations: rels}} = Resources.delete_tag(tag, user)
+      assert {:ok, %{tag: tag, relations: rels}} = Resources.delete_tag(tag, claims)
       assert %{__meta__: %{state: :deleted}} = tag
       assert {5, updated_ids} = rels
       assert Enum.all?(relations, &(&1.id in updated_ids))
     end
 
-    test "publishes an audit event", %{user: user} do
+    test "publishes an audit event", %{claims: claims} do
       tag = insert(:tag)
-      assert {:ok, %{audit: event_id}} = Resources.delete_tag(tag, user)
+      assert {:ok, %{audit: event_id}} = Resources.delete_tag(tag, claims)
       assert {:ok, [%{id: ^event_id}]} = Stream.read(:redix, @stream, transform: true)
     end
   end
@@ -185,7 +186,7 @@ defmodule TdLm.ResourcesTest do
 
   test "graph/3 gets edges and nodes" do
     tags = Enum.map(1..5, fn _ -> insert(:tag) end)
-    user = %User{id: 1, is_admin: true}
+    claims = %Claims{user_id: 1, is_admin: true}
 
     relations =
       Enum.map(1..10, fn id ->
@@ -198,7 +199,7 @@ defmodule TdLm.ResourcesTest do
         )
       end)
 
-    assert %{nodes: nodes, edges: edges} = Resources.graph(user, 5, "business_concept")
+    assert %{nodes: nodes, edges: edges} = Resources.graph(claims, 5, "business_concept")
     assert Enum.all?(1..11, fn id -> Enum.find(nodes, &(&1.id == "business_concept:#{id}")) end)
 
     assert Enum.all?(relations, fn %{
@@ -217,7 +218,7 @@ defmodule TdLm.ResourcesTest do
 
   test "graph/3 gets empty edges and nodes when we query an non existing node" do
     tags = Enum.map(1..5, fn _ -> insert(:tag) end)
-    user = %User{id: 1, is_admin: true}
+    claims = %Claims{user_id: 1, is_admin: true}
 
     Enum.map(1..10, fn id ->
       insert(:relation,
@@ -229,7 +230,7 @@ defmodule TdLm.ResourcesTest do
       )
     end)
 
-    assert %{nodes: [], edges: []} = Resources.graph(user, 12, "business_concept")
+    assert %{nodes: [], edges: []} = Resources.graph(claims, 12, "business_concept")
   end
 
   describe "deprecate/1" do
@@ -240,7 +241,9 @@ defmodule TdLm.ResourcesTest do
       %{target_id: tid3} =
         insert(:relation, target_type: "data_structure", deleted_at: DateTime.utc_now())
 
-      assert {:ok, %{deprecated: deprecated}} = Resources.deprecate("data_structure", [tid1, tid2, tid3])
+      assert {:ok, %{deprecated: deprecated}} =
+               Resources.deprecate("data_structure", [tid1, tid2, tid3])
+
       assert {2, [%{id: ^id1}, %{id: ^id2}]} = deprecated
     end
 
@@ -264,7 +267,9 @@ defmodule TdLm.ResourcesTest do
       %{id: id3, target_id: tid3} =
         insert(:relation, target_type: "data_structure", deleted_at: DateTime.utc_now())
 
-      assert {:ok, %{activated: activated}} = Resources.activate("data_structure", [tid1, tid2, tid3])
+      assert {:ok, %{activated: activated}} =
+               Resources.activate("data_structure", [tid1, tid2, tid3])
+
       assert {1, [%{id: ^id3}]} = activated
     end
   end

@@ -7,6 +7,7 @@ defmodule TdLm.Resources do
 
   alias Ecto.Multi
   alias TdLm.Audit
+  alias TdLm.Auth.Claims
   alias TdLm.Cache.LinkLoader
   alias TdLm.Graph.Data
   alias TdLm.Repo
@@ -91,14 +92,14 @@ defmodule TdLm.Resources do
 
   ## Examples
 
-      iex> create_relation(%{field: value}, user)
+      iex> create_relation(%{field: value}, claims)
       {:ok, %{audit: "event_id", relation: %Relation{}}}
 
-      iex> create_relation(%{field: bad_value}, user)
+      iex> create_relation(%{field: bad_value}, claims)
       {:error, :relation, %Ecto.Changeset{}, %{}}
 
   """
-  def create_relation(%{} = params, %{id: user_id}) do
+  def create_relation(%{} = params, %Claims{user_id: user_id}) do
     changeset = Relation.changeset(params)
 
     Multi.new()
@@ -120,14 +121,14 @@ defmodule TdLm.Resources do
 
   ## Examples
 
-      iex> delete_relation(relation, user)
+      iex> delete_relation(relation, claims)
       {:ok, %{audit: "event_id", relation: %Relation{}}}
 
-      iex> delete_relation(relation, user)
+      iex> delete_relation(relation, claims)
       {:error, :relation, %Ecto.Changeset{}, %{}}
 
   """
-  def delete_relation(%Relation{} = relation, %{id: user_id}) do
+  def delete_relation(%Relation{} = relation, %Claims{user_id: user_id}) do
     Multi.new()
     |> Multi.delete(:relation, relation)
     |> Multi.run(:audit, Audit, :relation_deleted, [user_id])
@@ -204,14 +205,14 @@ defmodule TdLm.Resources do
 
   ## Examples
 
-      iex> create_tag(%{field: value}, user)
+      iex> create_tag(%{field: value}, claims)
       {:ok, %{audit: "event_id", tag: %Tag{}}}
 
-      iex> create_tag(%{field: bad_value}, user)
+      iex> create_tag(%{field: bad_value}, claims)
       {:error, :tag, %Ecto.Changeset{}, %{}}
 
   """
-  def create_tag(%{} = params, %{id: user_id}) do
+  def create_tag(%{} = params, %Claims{user_id: user_id}) do
     changeset = Tag.changeset(params)
 
     Multi.new()
@@ -225,14 +226,14 @@ defmodule TdLm.Resources do
 
   ## Examples
 
-      iex> delete_tag(tag, user)
+      iex> delete_tag(tag, claims)
       {:ok, %{relations: {0, []}, tag: %Tag{}, audit: "event_id"}
 
-      iex> delete_tag(tag, user)
+      iex> delete_tag(tag, claims)
       {:error, :tag, %Ecto.Changeset{}, %{}}
 
   """
-  def delete_tag(%Tag{id: id} = tag, %{id: user_id}) do
+  def delete_tag(%Tag{id: id} = tag, %Claims{user_id: user_id}) do
     relation_id_query =
       Relation
       |> join(:inner, [r], t in assoc(r, :tags))
@@ -355,7 +356,7 @@ defmodule TdLm.Resources do
     |> Repo.all()
   end
 
-  def graph(user, id, resource_type, opts \\ []) do
+  def graph(claims, id, resource_type, opts \\ []) do
     id = Data.id(resource_type, id)
 
     g = Data.graph()
@@ -367,7 +368,7 @@ defmodule TdLm.Resources do
           |> Data.all([id])
           |> Enum.map(&Graph.vertex(g, &1))
           |> Enum.reject(&reject_by_type(&1, opts[:types]))
-          |> Enum.reject(&reject_by_permissions(&1, user))
+          |> Enum.reject(&reject_by_permissions(&1, claims))
           |> Enum.uniq_by(&Map.get(&1, :id))
 
         ids = Enum.map(all, &Map.get(&1, :id))
@@ -385,9 +386,9 @@ defmodule TdLm.Resources do
 
   defp reject_by_type(_vertex, _types), do: false
 
-  defp reject_by_permissions(%{label: label}, user) do
+  defp reject_by_permissions(%{label: label}, claims) do
     import Canada, only: [can?: 2]
-    not can?(user, show(Map.take(label, [:resource_id, :resource_type])))
+    not can?(claims, show(Map.take(label, [:resource_id, :resource_type])))
   end
 
   defp nodes(nodes) do

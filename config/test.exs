@@ -16,7 +16,6 @@ config :td_lm, TdLm.Repo,
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: 1
 
-config :td_lm, permission_resolver: TdLm.Permissions.MockPermissionResolver
 config :td_lm, :relation_loader, load_on_startup: false
 
 config :td_cache, :audit, stream: "audit:events:test"
