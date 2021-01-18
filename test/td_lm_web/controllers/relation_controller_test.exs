@@ -24,7 +24,7 @@ defmodule TdLmWeb.RelationControllerTest do
     end
   end
 
-  describe "search relation when user has not permissions" do
+  describe "search relation when user has no permissions" do
     @tag authenticated_user: "non_admin"
     test "search all relations", %{conn: conn, swagger_schema: schema} do
       insert(:relation, source_type: "ingest")
@@ -178,7 +178,7 @@ defmodule TdLmWeb.RelationControllerTest do
     test "error when user has not permissions to create a relation", %{conn: conn} do
       params = string_params_for(:relation, source_type: "ingest")
 
-      assert %{"errors" => errors} =
+      assert %{"errors" => _} =
                conn
                |> post(Routes.relation_path(conn, :create), relation: params)
                |> json_response(:forbidden)
@@ -188,14 +188,14 @@ defmodule TdLmWeb.RelationControllerTest do
     test "renders errors when data is invalid", %{conn: conn} do
       params = %{"source_id" => nil}
 
-      assert %{"errors" => errors} =
+      assert %{"errors" => _} =
                conn
                |> post(Routes.relation_path(conn, :create), relation: params)
                |> json_response(:bad_request)
 
       params = %{"source_id" => nil, "source_type" => "foo"}
 
-      assert %{"errors" => errors} =
+      assert %{"errors" => _} =
                conn
                |> post(Routes.relation_path(conn, :create), relation: params)
                |> json_response(:unprocessable_entity)
@@ -212,7 +212,7 @@ defmodule TdLmWeb.RelationControllerTest do
       conn: conn,
       relation: relation
     } do
-      assert %{"errors" => errors} =
+      assert %{"errors" => _} =
                conn
                |> delete(Routes.relation_path(conn, :delete, relation))
                |> json_response(:forbidden)

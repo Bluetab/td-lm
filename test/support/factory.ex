@@ -24,9 +24,14 @@ defmodule TdLm.Factory do
     }
   end
 
-  def user_factory do
-    %{
-      id: sequence(:user_id, & &1)
+  def claims_factory(attrs) do
+    %TdLm.Auth.Claims{
+      user_id: sequence(:user_id, & &1),
+      user_name: sequence("user_name"),
+      role: "user",
+      jti: sequence("jti"),
+      is_admin: Map.get(attrs, :role) == "admin"
     }
+    |> merge_attributes(attrs)
   end
 end

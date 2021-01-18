@@ -23,7 +23,7 @@ defmodule TdLmWeb.RelationController do
         "resource_type" => resource_type,
         "related_to_type" => related_to_type
       }) do
-    user = conn.assigns[:current_resource]
+    claims = conn.assigns[:current_resource]
 
     relations =
       [
@@ -39,7 +39,7 @@ defmodule TdLmWeb.RelationController do
         }
       ]
       |> Enum.flat_map(&Resources.list_relations/1)
-      |> Enum.filter(&can?(user, show(&1)))
+      |> Enum.filter(&can?(claims, show(&1)))
       |> Enum.map(&refresh_attributes(&1, "target", :target_id, related_to_type))
       |> Enum.map(&refresh_attributes(&1, "source", :source_id, related_to_type))
 
@@ -72,12 +72,12 @@ defmodule TdLmWeb.RelationController do
   end
 
   def search(conn, params) do
-    user = conn.assigns[:current_resource]
+    claims = conn.assigns[:current_resource]
 
     relations =
       params
       |> Resources.list_relations()
-      |> Enum.filter(&can?(user, show(&1)))
+      |> Enum.filter(&can?(claims, show(&1)))
 
     resource_key = %{
       resource_id: Map.get(params, "source_id"),
@@ -100,11 +100,11 @@ defmodule TdLmWeb.RelationController do
   end
 
   def index(conn, _params) do
-    user = conn.assigns[:current_resource]
+    claims = conn.assigns[:current_resource]
 
     relations =
       Resources.list_relations()
-      |> Enum.filter(&can?(user, show(&1)))
+      |> Enum.filter(&can?(claims, show(&1)))
 
     render(conn, "index.json", relations: relations)
   end
@@ -123,13 +123,13 @@ defmodule TdLmWeb.RelationController do
   end
 
   def create(conn, %{"relation" => relation_params}) do
-    user = conn.assigns[:current_resource]
+    claims = conn.assigns[:current_resource]
 
     with {:params, %{"source_id" => source_id, "source_type" => source_type}} <-
            {:params, relation_params},
          {:can, true} <-
-           {:can, can?(user, create(%{resource_id: source_id, resource_type: source_type}))},
-         {:ok, %{relation: relation}} <- Resources.create_relation(relation_params, user) do
+           {:can, can?(claims, create(%{resource_id: source_id, resource_type: source_type}))},
+         {:ok, %{relation: relation}} <- Resources.create_relation(relation_params, claims) do
       conn
       |> put_status(:created)
       |> put_resp_header("location", Routes.relation_path(conn, :show, relation))
@@ -151,10 +151,10 @@ defmodule TdLmWeb.RelationController do
   end
 
   def show(conn, %{"id" => id}) do
-    user = conn.assigns[:current_resource]
+    claims = conn.assigns[:current_resource]
     relation = Resources.get_relation!(id)
 
-    with {:can, true} <- {:can, can?(user, show(relation))} do
+    with {:can, true} <- {:can, can?(claims, show(relation))} do
       render(conn, "show.json", relation: relation)
     end
   end
@@ -172,11 +172,11 @@ defmodule TdLmWeb.RelationController do
   end
 
   def delete(conn, %{"id" => id}) do
-    user = conn.assigns[:current_resource]
+    claims = conn.assigns[:current_resource]
     relation = Resources.get_relation!(id)
 
-    with {:can, true} <- {:can, can?(user, delete(relation))},
-         {:ok, _} <- Resources.delete_relation(relation, user) do
+    with {:can, true} <- {:can, can?(claims, delete(relation))},
+         {:ok, _} <- Resources.delete_relation(relation, claims) do
       send_resp(conn, :no_content, "")
     end
   end

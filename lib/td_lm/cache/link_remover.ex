@@ -7,11 +7,12 @@ defmodule TdLm.Cache.LinkRemover do
 
   use GenServer
 
-  alias TdLm.Resources
-
   require Logger
 
-  @system_user %{id: 0, user_name: "system"}
+  alias TdLm.Auth.Claims
+  alias TdLm.Resources
+
+  @system_claims %Claims{user_id: 0, user_name: "system"}
 
   ## Client API
 
@@ -51,7 +52,7 @@ defmodule TdLm.Cache.LinkRemover do
 
     case Resources.get_relation(String.to_integer(id)) do
       nil -> :ok
-      resource -> Resources.delete_relation(resource, @system_user)
+      resource -> Resources.delete_relation(resource, @system_claims)
     end
   end
 

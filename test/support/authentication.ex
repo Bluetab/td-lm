@@ -1,13 +1,13 @@
 defmodule TdLmWeb.Authentication do
   @moduledoc """
-  This module defines the functions required to
-  add auth headers to requests in the tests
+  This module defines the functions required to add auth headers to requests in
+  the tests
   """
-  alias Phoenix.ConnTest
-  alias TdLm.Accounts.User
-  alias TdLm.Auth.Guardian
   import Plug.Conn
-  @headers {"Content-type", "application/json"}
+
+  alias Phoenix.ConnTest
+  alias TdLm.Auth.Claims
+  alias TdLm.Auth.Guardian
 
   def put_auth_headers(conn, jwt) do
     conn
@@ -15,35 +15,27 @@ defmodule TdLmWeb.Authentication do
     |> put_req_header("authorization", "Bearer #{jwt}")
   end
 
-  def create_user_auth_conn(user) do
-    {:ok, jwt, full_claims} = Guardian.encode_and_sign(user)
-    conn = ConnTest.build_conn()
-    conn = put_auth_headers(conn, jwt)
-    {:ok, %{conn: conn, jwt: jwt, claims: full_claims}}
+  def create_user_auth_conn(%{role: role} = claims) do
+    {:ok, jwt, full_claims} = Guardian.encode_and_sign(claims, %{role: role})
+    {:ok, claims} = Guardian.resource_from_claims(full_claims)
+
+    conn =
+      ConnTest.build_conn()
+      |> put_auth_headers(jwt)
+
+    {:ok, %{conn: conn, jwt: jwt, claims: claims}}
   end
 
-  def get_header(token) do
-    [@headers, {"authorization", "Bearer #{token}"}]
-  end
+  def create_claims(user_name, opts \\ []) do
+    user_id = :rand.uniform(100_000)
+    role = Keyword.get(opts, :role, "user")
+    is_admin = role === "admin"
 
-  def create_user(user_name, opts \\ []) do
-    id = Integer.mod(:binary.decode_unsigned(user_name), 100_000)
-    is_admin = Keyword.get(opts, :is_admin, false)
-    %TdLm.Accounts.User{id: id, is_admin: is_admin, user_name: user_name}
-  end
-
-  def build_user_token(%User{} = user) do
-    case Guardian.encode_and_sign(user) do
-      {:ok, jwt, _full_claims} -> jwt
-      _ -> raise "Problems encoding and signing a user"
-    end
-  end
-
-  def build_user_token(user_name, opts \\ []) when is_binary(user_name) do
-    build_user_token(create_user(user_name, opts))
-  end
-
-  def get_user_token(user_name) do
-    build_user_token(user_name, is_admin: user_name == "app-admin")
+    %Claims{
+      user_id: user_id,
+      user_name: user_name,
+      role: role,
+      is_admin: is_admin
+    }
   end
 end

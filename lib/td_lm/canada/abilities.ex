@@ -1,78 +1,78 @@
 defmodule TdBg.Canada.Abilities do
   @moduledoc false
-  alias TdLm.Accounts.User
+  alias TdLm.Auth.Claims
   alias TdLm.Canada.BusinessConceptAbilities
   alias TdLm.Canada.IngestAbilities
   alias TdLm.Resources.Relation
 
-  defimpl Canada.Can, for: User do
+  defimpl Canada.Can, for: Claims do
     # administrator is superpowerful for Domain
-    def can?(%User{is_admin: true} = _user, _permission, _params) do
+    def can?(%Claims{is_admin: true}, _permission, _params) do
       true
     end
 
-    def can?(%User{} = user, action, %Relation{} = relation) do
+    def can?(%Claims{} = claims, action, %Relation{} = relation) do
       resource_key = get_resource_key(relation)
-      can?(user, action, resource_key)
+      can?(claims, action, resource_key)
     end
 
-    def can?(%User{} = user, :add_link, params) do
-      BusinessConceptAbilities.can?(user, :add_link, params)
+    def can?(%Claims{} = claims, :add_link, params) do
+      BusinessConceptAbilities.can?(claims, :add_link, params)
     end
 
-    def can?(%User{} = user, :get_links, params) do
-      BusinessConceptAbilities.can?(user, :get_links, params)
+    def can?(%Claims{} = claims, :get_links, params) do
+      BusinessConceptAbilities.can?(claims, :get_links, params)
     end
 
-    def can?(%User{} = user, :get_link, params) do
-      BusinessConceptAbilities.can?(user, :get_link, params)
+    def can?(%Claims{} = claims, :get_link, params) do
+      BusinessConceptAbilities.can?(claims, :get_link, params)
     end
 
-    def can?(%User{} = user, :delete_link, params) do
-      BusinessConceptAbilities.can?(user, :delete_link, params)
+    def can?(%Claims{} = claims, :delete_link, params) do
+      BusinessConceptAbilities.can?(claims, :delete_link, params)
     end
 
-    def can?(%User{} = user, :search, %{resource_type: "business_concept"} = params) do
-      BusinessConceptAbilities.can?(user, :search, params)
+    def can?(%Claims{} = claims, :search, %{resource_type: "business_concept"} = params) do
+      BusinessConceptAbilities.can?(claims, :search, params)
     end
 
-    def can?(%User{} = user, :create, %{resource_type: "business_concept"} = params) do
-      BusinessConceptAbilities.can?(user, :create, params)
+    def can?(%Claims{} = claims, :create, %{resource_type: "business_concept"} = params) do
+      BusinessConceptAbilities.can?(claims, :create, params)
     end
 
-    def can?(%User{} = user, :show, %{resource_type: "business_concept"} = params) do
-      BusinessConceptAbilities.can?(user, :show, params)
+    def can?(%Claims{} = claims, :show, %{resource_type: "business_concept"} = params) do
+      BusinessConceptAbilities.can?(claims, :show, params)
     end
 
-    def can?(%User{} = user, :update, %{resource_type: "business_concept"} = params) do
-      BusinessConceptAbilities.can?(user, :update, params)
+    def can?(%Claims{} = claims, :update, %{resource_type: "business_concept"} = params) do
+      BusinessConceptAbilities.can?(claims, :update, params)
     end
 
-    def can?(%User{} = user, :delete, %{resource_type: "business_concept"} = params) do
-      BusinessConceptAbilities.can?(user, :delete, params)
+    def can?(%Claims{} = claims, :delete, %{resource_type: "business_concept"} = params) do
+      BusinessConceptAbilities.can?(claims, :delete, params)
     end
 
-    def can?(%User{} = user, :search, %{resource_type: "ingest"} = params) do
-      IngestAbilities.can?(user, :search, params)
+    def can?(%Claims{} = claims, :search, %{resource_type: "ingest"} = params) do
+      IngestAbilities.can?(claims, :search, params)
     end
 
-    def can?(%User{} = user, :create, %{resource_type: "ingest"} = params) do
-      IngestAbilities.can?(user, :create, params)
+    def can?(%Claims{} = claims, :create, %{resource_type: "ingest"} = params) do
+      IngestAbilities.can?(claims, :create, params)
     end
 
-    def can?(%User{} = user, :show, %{resource_type: "ingest"} = params) do
-      IngestAbilities.can?(user, :show, params)
+    def can?(%Claims{} = claims, :show, %{resource_type: "ingest"} = params) do
+      IngestAbilities.can?(claims, :show, params)
     end
 
-    def can?(%User{} = user, :update, %{resource_type: "ingest"} = params) do
-      IngestAbilities.can?(user, :update, params)
+    def can?(%Claims{} = claims, :update, %{resource_type: "ingest"} = params) do
+      IngestAbilities.can?(claims, :update, params)
     end
 
-    def can?(%User{} = user, :delete, %{resource_type: "ingest"} = params) do
-      IngestAbilities.can?(user, :delete, params)
+    def can?(%Claims{} = claims, :delete, %{resource_type: "ingest"} = params) do
+      IngestAbilities.can?(claims, :delete, params)
     end
 
-    def can?(%User{} = _user, _permission, _params) do
+    def can?(%Claims{}, _permission, _params) do
       false
     end
 

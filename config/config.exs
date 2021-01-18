@@ -48,8 +48,6 @@ config :td_lm, :phoenix_swagger,
     "priv/static/swagger.json" => [router: TdLmWeb.Router]
   }
 
-config :td_lm, permission_resolver: TdCache.Permissions
-
 config :td_lm, :relation_loader, load_on_startup: true
 
 config :td_cache, :audit,

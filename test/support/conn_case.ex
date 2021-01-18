@@ -50,12 +50,14 @@ defmodule TdLmWeb.ConnCase do
 
     cond do
       tags[:admin_authenticated] ->
-        user = create_user(@admin_user_name, is_admin: true)
-        create_user_auth_conn(user)
+        @admin_user_name
+        |> create_claims(role: "admin")
+        |> create_user_auth_conn()
 
-      tags[:authenticated_user] ->
-        user = create_user(tags[:authenticated_user], is_admin: false)
-        create_user_auth_conn(user)
+      user_name = tags[:authenticated_user] ->
+        user_name
+        |> create_claims()
+        |> create_user_auth_conn()
 
       true ->
         {:ok, conn: ConnTest.build_conn()}

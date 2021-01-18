@@ -14,4 +14,5 @@ config :td_cache, :event_stream, consumer_id: System.fetch_env!("HOSTNAME")
 
 config :td_cache,
   redis_host: System.fetch_env!("REDIS_HOST"),
-  port: System.get_env("REDIS_PORT", "6379") |> String.to_integer()
+  port: System.get_env("REDIS_PORT", "6379") |> String.to_integer(),
+  password: System.get_env("REDIS_PASSWORD")
