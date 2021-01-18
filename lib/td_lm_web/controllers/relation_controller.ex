@@ -181,7 +181,8 @@ defmodule TdLmWeb.RelationController do
     end
   end
 
-  defp refresh_attributes(relation, relation_side, relation_id_key, target_type) do
+  defp refresh_attributes(relation, relation_side, relation_id_key, target_type)
+       when target_type in ["business_concept", "ingest"] do
     relation_side_attrs =
       relation
       |> Map.get(:context)
@@ -192,25 +193,23 @@ defmodule TdLmWeb.RelationController do
         relation
 
       relation_side_attrs ->
-        target_type
-        |> fetch_attributes(Map.get(relation, relation_id_key))
-        |> case do
-          %{version_id: nil} ->
-            relation
+        cached = fetch_attributes(Map.get(relation, relation_id_key), target_type)
+        version_id = Map.get(cached, :version_id)
+        name = Map.get(cached, :name)
 
-          cached ->
-            relation_side_attrs =
-              relation_side_attrs
-              |> atomize_keys()
-              |> Map.merge(cached)
+        relation_side_attrs =
+          relation_side_attrs
+          |> Map.put("name", name)
+          |> Map.put("version_id", version_id)
 
-            context = Map.put(relation.context, relation_side, relation_side_attrs)
-            Map.put(relation, :context, context)
-        end
+        context = Map.put(relation.context, relation_side, relation_side_attrs)
+        Map.put(relation, :context, context)
     end
   end
 
-  defp fetch_attributes("business_concept", entity_id) do
+  defp refresh_attributes(relation, _, _, _), do: relation
+
+  defp fetch_attributes(entity_id, "business_concept") do
     case ConceptCache.get(entity_id) do
       {:ok, concept = %{}} ->
         concept
@@ -226,7 +225,7 @@ defmodule TdLmWeb.RelationController do
     end
   end
 
-  defp fetch_attributes("ingest", entity_id) do
+  defp fetch_attributes(entity_id, "ingest") do
     case IngestCache.get(entity_id) do
       {:ok, ingest = %{}} ->
         ingest
@@ -242,17 +241,6 @@ defmodule TdLmWeb.RelationController do
     end
   end
 
-  defp fetch_attributes(_, _entity_id), do: %{}
+  defp fetch_attributes(_entity_id, _target_type), do: %{}
 
-  defp atomize_keys(%{} = map) do
-    Enum.into(map, %{}, fn {k, v} -> {String.to_atom(k), atomize_keys(v)} end)
-  end
-
-  defp atomize_keys([head | rest]) do
-    [atomize_keys(head) | atomize_keys(rest)]
-  end
-
-  defp atomize_keys(not_a_map) do
-    not_a_map
-  end
 end
