@@ -4,6 +4,7 @@
 
 ### Changed
 
+- [TD-3083] Enrich cached ingest attributes
 - [TD-3163] Auth tokens now include `role` claim instead of `is_admin` flag
 - [TD-3182] Allow to use redis with password
 
