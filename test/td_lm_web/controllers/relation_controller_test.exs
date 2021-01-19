@@ -70,8 +70,17 @@ defmodule TdLmWeb.RelationControllerTest do
                |> post(Routes.relation_path(conn, :search, params))
                |> json_response(:ok)
 
-      version_id = source["id"]
-      assert [%{"context" => %{"source" => %{"version_id" => ^version_id}}}] = data
+      src_version_id = source["id"]
+      tgt_version_id = target["id"]
+
+      assert [
+               %{
+                 "context" => %{
+                   "source" => %{"version_id" => ^src_version_id, "name" => "src"},
+                   "target" => %{"version_id" => ^tgt_version_id, "name" => "tgt"}
+                 }
+               }
+             ] = data
     end
   end
 
