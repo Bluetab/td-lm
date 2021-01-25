@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [4.12.0] 2021-01-25
+
 ### Changed
 
 - [TD-3083] Enrich cached ingest attributes
