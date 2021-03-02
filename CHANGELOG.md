@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased] 
+
+### Added
+
+- [TD-3063] Send subscribable fields in events payload
+
 ## [4.14.0] 2021-2-22
 
 ### Changed
