@@ -5,6 +5,9 @@ defmodule TdLm.Audit do
   (`repo`) is not currently used.
   """
 
+  alias TdCache.ConceptCache
+  alias TdDfLib.Templates
+
   @doc """
   Publishes a `:relation_deleted` event. Should be called using `Ecto.Multi.run/5`.
   """
@@ -49,17 +52,41 @@ defmodule TdLm.Audit do
   end
 
   defp do_relation_deleted(%{source_type: source_type, source_id: source_id} = relation, user_id) do
-    payload = Map.take(relation, [:id, :target_id, :target_type, :context])
+    payload = payload(relation)
     publish("relation_deleted", source_type, source_id, user_id, payload)
   end
 
   defp do_relation_deprecated(%{source_type: source_type, source_id: source_id} = relation) do
-    payload = Map.take(relation, [:id, :target_id, :target_type, :context])
+    payload = payload(relation)
     publish("relation_deprecated", source_type, source_id, 0, payload)
   end
 
+  defp payload(relation) do
+    relation
+    |> Map.take([:id, :target_id, :target_type, :context, :subscribable_fields])
+    |> put_subscribable_fields(relation)
+  end
+
+  defp put_subscribable_fields(payload, %{source_type: "business_concept", source_id: source_id}) do
+    case ConceptCache.get(source_id) do
+      {:ok, concept = %{}} ->
+        Map.put(payload, :subscribable_fields, subscribable_fields(concept))
+
+      _ ->
+        payload
+    end
+  end
+
+  defp put_subscribable_fields(payload, _relation), do: payload
+
+  defp subscribable_fields(%{content: content}) when map_size(content) == 0, do: %{}
+
+  defp subscribable_fields(%{type: type, content: content}) do
+    Map.take(content, Templates.subscribable_fields(type))
+  end
+
   defp do_relation_created(
-         %{id: id, source_type: source_type, source_id: source_id},
+         %{id: id, source_type: source_type, source_id: source_id} = relation,
          changes,
          user_id
        ) do
@@ -75,6 +102,7 @@ defmodule TdLm.Audit do
           |> Map.put(:id, id)
       end
 
+    changes = put_subscribable_fields(changes, relation)
     publish("relation_created", source_type, source_id, user_id, changes)
   end
 

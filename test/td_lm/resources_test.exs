@@ -1,10 +1,13 @@
 defmodule TdLm.ResourcesTest do
   use TdLm.DataCase
 
+  alias TdCache.ConceptCache
   alias TdCache.Redix
   alias TdCache.Redix.Stream
+  alias TdCache.TemplateCache
   alias TdLm.Auth.Claims
   alias TdLm.Resources
+  alias TdLm.Resources.Relation
 
   @stream TdCache.Audit.stream()
 
@@ -54,10 +57,27 @@ defmodule TdLm.ResourcesTest do
       assert Enum.all?(tags, &(&1.id in tag_ids))
     end
 
-    test "publishes an audit event", %{claims: claims} do
-      params = string_params_for(:relation)
-      assert {:ok, %{audit: event_id}} = Resources.create_relation(params, claims)
-      assert {:ok, [%{id: ^event_id}]} = Stream.read(:redix, @stream, transform: true)
+    setup [:concept]
+
+    test "publishes an audit event", %{claims: claims, concept: concept} do
+      source_id = Integer.to_string(concept.id)
+      target_id = Integer.to_string(:rand.uniform(100_000))
+
+      params = %{
+        source_id: source_id,
+        source_type: "business_concept",
+        target_id: target_id,
+        target_type: "business_concept",
+        context: %{}
+      }
+
+      {:ok, %{audit: event_id, relation: %Relation{source_id: ^source_id, target_id: ^target_id}}} =
+        Resources.create_relation(params, claims)
+
+      {:ok, [%{id: ^event_id, resource_id: ^source_id, payload: payload}]} =
+        Stream.read(:redix, @stream, transform: true)
+
+      assert %{"subscribable_fields" => %{"foo" => "bar"}} = Jason.decode!(payload)
     end
 
     test "returns error and changeset if validations fail", %{claims: claims} do
@@ -272,5 +292,59 @@ defmodule TdLm.ResourcesTest do
 
       assert {1, [%{id: ^id3}]} = activated
     end
+  end
+
+  defp concept(_) do
+    content = [
+      %{
+        "name" => "group",
+        "fields" => [
+          %{
+            name: "foo",
+            type: "string",
+            cardinality: "?",
+            values: %{"fixed" => ["bar"]},
+            subscribable: true
+          },
+          %{
+            name: "xyz",
+            type: "string",
+            cardinality: "?",
+            values: %{"fixed" => ["foo"]}
+          }
+        ]
+      }
+    ]
+
+    template_id = :rand.uniform(100_000)
+
+    TemplateCache.put(%{
+      id: template_id,
+      name: "foo",
+      label: "label",
+      scope: "test",
+      content: content,
+      updated_at: DateTime.utc_now()
+    })
+
+    concept_id = :rand.uniform(100_000)
+
+    concept = %{
+      id: concept_id,
+      domain_id: :rand.uniform(100_000),
+      type: "foo",
+      name: "bar",
+      business_concept_version_id: :rand.uniform(100_000),
+      content: %{"foo" => "bar"}
+    }
+
+    ConceptCache.put(concept)
+
+    on_exit(fn ->
+      TemplateCache.delete(template_id)
+      ConceptCache.delete(concept_id)
+    end)
+
+    {:ok, [concept: concept]}
   end
 end
