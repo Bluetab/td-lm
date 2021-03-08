@@ -1,12 +1,16 @@
 # Changelog
 
-## [Unreleased] 
+## [4.15.0] 2021-03-08
+
+### Changed
+
+- [TD-3341] Build with `elixir:1.11.3-alpine`, runtime `alpine:3.13`
 
 ### Added
 
 - [TD-3063] Send subscribable fields in events payload
 
-## [4.14.0] 2021-2-22
+## [4.14.0] 2021-02-22
 
 ### Changed
 
