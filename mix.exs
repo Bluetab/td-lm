@@ -54,21 +54,21 @@ defmodule TdLm.Mixfile do
       {:phoenix_ecto, "~> 4.0"},
       {:ecto_sql, "~> 3.1"},
       {:jason, "~> 1.0"},
-      {:postgrex, ">= 0.0.0"},
+      {:postgrex, "~> 0.15.0"},
       {:gettext, "~> 0.11"},
       {:httpoison, "~> 1.6"},
       {:credo, "~> 1.4", only: [:dev, :test], runtime: false},
       {:guardian, "~> 2.0"},
       {:canada, "~> 2.0"},
       {:corsica, "~> 1.0"},
-      {:phoenix_swagger, "~> 0.8.2"},
+      {:phoenix_swagger, "~> 0.8.3"},
       {:ex_json_schema, "~> 0.7.3"},
       {:ex_machina, "~> 2.3", only: [:test]},
       {:td_hypermedia, git: "https://github.com/Bluetab/td-hypermedia.git", tag: "4.0.0"},
       {:td_cache, git: "https://github.com/Bluetab/td-cache.git", tag: "4.15.0"},
       {:td_df_lib, git: "https://github.com/Bluetab/td-df-lib.git", tag: "4.15.0"},
       {:quantum, "~> 3.0"},
-      {:graph, git: "https://github.com/Bluetab/graph.git", tag: "1.0.0"}
+      {:graph, git: "https://github.com/Bluetab/graph.git", tag: "1.1.0"}
     ]
   end
 
