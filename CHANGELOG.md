@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- [TD-3753] Build using Elixir 1.12 and Erlang/OTP 24
+
 ## [4.20.0] 2021-05-17
 
 ### Changed
