@@ -17,8 +17,7 @@ defmodule TdLmWeb.RelationView do
   end
 
   def render("relation.json", %{relation: relation}) do
-    relation
-    |> relation_json()
+    relation_json(relation)
   end
 
   defp relation_json(relation) do

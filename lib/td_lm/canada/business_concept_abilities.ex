@@ -23,29 +23,35 @@ defmodule TdLm.Canada.BusinessConceptAbilities do
   end
 
   def can?(%Claims{} = claims, :update, %{resource_id: id, resource_type: "business_concept"}) do
-    Permissions.authorized?(claims, :manage_business_concept_links, "business_concept", id)
+    authorized?(claims, :manage_business_concept_links, id)
   end
 
   def can?(%Claims{} = claims, :create, %{resource_id: id, resource_type: "business_concept"}) do
-    Permissions.authorized?(claims, :manage_business_concept_links, "business_concept", id)
+    authorized?(claims, :manage_business_concept_links, id)
   end
 
   def can?(%Claims{} = claims, :delete, %{resource_id: id, resource_type: "business_concept"}) do
-    Permissions.authorized?(claims, :manage_business_concept_links, "business_concept", id)
+    authorized?(claims, :manage_business_concept_links, id)
   end
 
   def can?(%Claims{}, _permission, _params) do
     false
   end
 
-  defp authorized_any?(claims, permissions, concept_id) do
-    case ConceptCache.get(concept_id) do
-      {:ok, %{domain_id: domain_id, shared_to_ids: shared_to_ids}} ->
-        domain_ids =
-          shared_to_ids
-          |> Enum.concat([domain_id])
-          |> Enum.uniq()
+  defp authorized?(claims, permission, concept_id) do
+    case get_domain_ids(concept_id) do
+      [_ | _] = domain_ids ->
+        Permissions.authorized?(claims, permission, "domain", domain_ids) and
+          can_manage_confidential?(claims, concept_id, domain_ids)
 
+      _ ->
+        false
+    end
+  end
+
+  defp authorized_any?(claims, permissions, concept_id) do
+    case get_domain_ids(concept_id) do
+      [_ | _] = domain_ids ->
         Permissions.authorized_any?(claims, permissions, "domain", domain_ids) and
           can_manage_confidential?(claims, concept_id, domain_ids)
 
@@ -67,6 +73,18 @@ defmodule TdLm.Canada.BusinessConceptAbilities do
 
       _ ->
         true
+    end
+  end
+
+  defp get_domain_ids(concept_id) do
+    case ConceptCache.get(concept_id) do
+      {:ok, %{domain: %{id: domain_id}, shared_to_ids: shared_to_ids}}  ->
+        shared_to_ids
+        |> Enum.concat([domain_id])
+        |> Enum.uniq()
+
+      _ ->
+        []
     end
   end
 end

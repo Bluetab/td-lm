@@ -17,6 +17,7 @@ config :td_lm, TdLm.Repo,
   pool_size: 1
 
 config :td_lm, :relation_loader, load_on_startup: false
+config :td_lm, permission_resolver: MockPermissionResolver
 
 config :td_cache, :audit, stream: "audit:events:test"
 config :td_cache, redis_host: "redis", port: 6380

@@ -49,6 +49,7 @@ config :td_lm, :phoenix_swagger,
   }
 
 config :td_lm, :relation_loader, load_on_startup: true
+config :td_lm, permission_resolver: TdCache.Permissions
 
 config :td_cache, :audit,
   service: "td_lm",

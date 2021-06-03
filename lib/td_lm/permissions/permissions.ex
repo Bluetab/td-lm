@@ -7,6 +7,8 @@ defmodule TdLm.Permissions do
 
   alias TdLm.Auth.Claims
 
+  @permission_resolver Application.compile_env(:td_lm, :permission_resolver)
+
   @doc """
   Check if authenticated user has a permission in a domain.
 
@@ -17,7 +19,7 @@ defmodule TdLm.Permissions do
 
   """
   def authorized?(%Claims{jti: jti}, permission, resource_type, id) do
-    TdCache.Permissions.has_permission?(jti, permission, resource_type, id)
+    @permission_resolver.has_permission?(jti, permission, resource_type, id)
   end
 
   @doc """
@@ -30,6 +32,6 @@ defmodule TdLm.Permissions do
 
   """
   def authorized_any?(%Claims{jti: jti}, permissions, resource_type, id) do
-    TdCache.Permissions.has_any_permission?(jti, permissions, resource_type, id)
+    @permission_resolver.has_any_permission?(jti, permissions, resource_type, id)
   end
 end
