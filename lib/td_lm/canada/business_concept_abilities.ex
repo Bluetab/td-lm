@@ -78,10 +78,8 @@ defmodule TdLm.Canada.BusinessConceptAbilities do
 
   defp get_domain_ids(concept_id) do
     case ConceptCache.get(concept_id) do
-      {:ok, %{domain: %{id: domain_id}, shared_to_ids: shared_to_ids}}  ->
-        shared_to_ids
-        |> Enum.concat([domain_id])
-        |> Enum.uniq()
+      {:ok, %{domain: %{id: domain_id}, shared_to_ids: shared_to_ids}} ->
+        Enum.uniq([domain_id | shared_to_ids])
 
       _ ->
         []
