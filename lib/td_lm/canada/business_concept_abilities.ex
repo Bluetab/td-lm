@@ -22,15 +22,18 @@ defmodule TdLm.Canada.BusinessConceptAbilities do
     authorized_any?(claims, @view_business_concept, id)
   end
 
-  def can?(%Claims{} = claims, :update, %{resource_id: id, resource_type: "business_concept"}) do
-    authorized?(claims, :manage_business_concept_links, id)
+  def can?(%Claims{} = claims, action, %{
+        resource_id: id,
+        resource_type: "business_concept",
+        target_type: "business_concept"
+      })
+      when action in [:update, :create, :delete] do
+    Permissions.authorized?(claims, :manage_business_concept_links, "business_concept", id) and
+      can_manage_confidential?(claims, id)
   end
 
-  def can?(%Claims{} = claims, :create, %{resource_id: id, resource_type: "business_concept"}) do
-    authorized?(claims, :manage_business_concept_links, id)
-  end
-
-  def can?(%Claims{} = claims, :delete, %{resource_id: id, resource_type: "business_concept"}) do
+  def can?(%Claims{} = claims, action, %{resource_id: id, resource_type: "business_concept"})
+      when action in [:update, :create, :delete] do
     authorized?(claims, :manage_business_concept_links, id)
   end
 
@@ -70,6 +73,22 @@ defmodule TdLm.Canada.BusinessConceptAbilities do
       false ->
         {:ok, confidentials} = ConceptCache.confidential_ids()
         not Enum.member?(confidentials, concept_id)
+
+      _ ->
+        true
+    end
+  end
+
+  defp can_manage_confidential?(claims, id) do
+    case Permissions.authorized?(
+           claims,
+           :manage_confidential_business_concepts,
+           "business_concept",
+           id
+         ) do
+      false ->
+        {:ok, confidentials} = ConceptCache.confidential_ids()
+        not Enum.member?(confidentials, id)
 
       _ ->
         true
