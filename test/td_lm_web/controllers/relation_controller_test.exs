@@ -155,52 +155,57 @@ defmodule TdLmWeb.RelationControllerTest do
     end
   end
 
+  describe "show" do
+    setup tags do
+      create_hierarchy(tags)
+    end
+
+    @tag authenticated_user: "non_admin"
+    @tag permissions: [:view_approval_pending_business_concepts]
+    test "relation when user has permissions", %{
+      conn: conn,
+      concept: concept,
+      swagger_schema: schema
+    } do
+      %{id: id} = insert(:relation, source_id: concept.id, source_type: "business_concept")
+
+      assert %{"data" => %{"id" => ^id}} =
+               conn
+               |> get(Routes.relation_path(conn, :show, id))
+               |> validate_resp_schema(schema, "RelationResponse")
+               |> json_response(:ok)
+    end
+
+    @tag authenticated_user: "non_admin"
+    @tag shared_permissions: [:view_approval_pending_business_concepts]
+    test "relation when user has permissions over shared domain", %{
+      conn: conn,
+      concept: concept,
+      swagger_schema: schema
+    } do
+      %{id: id} = insert(:relation, source_id: concept.id, source_type: "business_concept")
+
+      assert %{"data" => %{"id" => ^id}} =
+               conn
+               |> get(Routes.relation_path(conn, :show, id))
+               |> validate_resp_schema(schema, "RelationResponse")
+               |> json_response(:ok)
+    end
+
+    @tag authenticated_user: "non_admin"
+    test "unauthorized when user has not permissions", %{conn: conn, concept: concept} do
+      %{id: id} = insert(:relation, source_id: concept.id, source_type: "business_concept")
+
+      assert %{"errors" => %{"detail" => "Forbidden"}} =
+               conn
+               |> get(Routes.relation_path(conn, :show, id))
+               |> json_response(:forbidden)
+    end
+  end
+
   describe "create relation" do
     setup tags do
-      domain = %{
-        id: System.unique_integer([:positive]),
-        name: "foo",
-        external_id: "bar",
-        updated_at: DateTime.utc_now()
-      }
-
-      shared = %{
-        id: System.unique_integer([:positive]),
-        name: "bar",
-        external_id: "baz",
-        updated_at: DateTime.utc_now()
-      }
-
-      concept = %{
-        id: Integer.to_string(System.unique_integer([:positive])),
-        domain_id: domain.id,
-        name: "xyz",
-        business_concept_version_id: System.unique_integer([:positive]),
-        shared_to_ids: [shared.id]
-      }
-
-      ConceptCache.put(concept)
-      TaxonomyCache.put_domain(domain)
-      TaxonomyCache.put_domain(shared)
-
-      on_exit(fn ->
-        ConceptCache.delete(concept.id)
-        TaxonomyCache.delete_domain(domain.id)
-        TaxonomyCache.delete_domain(shared.id)
-      end)
-
-      case tags do
-        %{shared_permissions: [_ | _] = permissions, claims: %{user_id: user_id}} ->
-          create_acl_entry(user_id, "domain", shared.id, permissions)
-
-        %{permissions: [_ | _] = permissions, claims: %{user_id: user_id}} ->
-          create_acl_entry(user_id, "domain", domain.id, permissions)
-
-        _ ->
-          :ok
-      end
-
-      [concept: concept]
+      create_hierarchy(tags)
     end
 
     @tag :admin_authenticated
@@ -344,6 +349,53 @@ defmodule TdLmWeb.RelationControllerTest do
              |> delete(Routes.relation_path(conn, :delete, relation))
              |> response(:no_content)
     end
+  end
+
+  defp create_hierarchy(tags) do
+    domain = %{
+      id: System.unique_integer([:positive]),
+      name: "foo",
+      external_id: "bar",
+      updated_at: DateTime.utc_now()
+    }
+
+    shared = %{
+      id: System.unique_integer([:positive]),
+      name: "bar",
+      external_id: "baz",
+      updated_at: DateTime.utc_now()
+    }
+
+    concept = %{
+      id: Integer.to_string(System.unique_integer([:positive])),
+      domain_id: domain.id,
+      name: "xyz",
+      business_concept_version_id: System.unique_integer([:positive]),
+      shared_to_ids: [shared.id]
+    }
+
+    ConceptCache.put(concept)
+    TaxonomyCache.put_domain(domain)
+    TaxonomyCache.put_domain(shared)
+
+    on_exit(fn ->
+      ConceptCache.delete(concept.id)
+      TaxonomyCache.delete_domain(domain.id)
+      TaxonomyCache.delete_domain(shared.id)
+    end)
+
+    case tags do
+      %{shared_permissions: [_ | _] = permissions, claims: %{user_id: user_id}} ->
+        create_acl_entry(user_id, "domain", shared.id, permissions)
+
+      %{permissions: [_ | _] = permissions, claims: %{user_id: user_id}} ->
+        create_acl_entry(user_id, "domain", domain.id, permissions)
+
+      _ ->
+        :ok
+    end
+
+    [concept: concept]
   end
 
   defp put_concept_cache(%{
