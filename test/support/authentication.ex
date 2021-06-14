@@ -18,6 +18,7 @@ defmodule TdLmWeb.Authentication do
   def create_user_auth_conn(%{role: role} = claims) do
     {:ok, jwt, full_claims} = Guardian.encode_and_sign(claims, %{role: role})
     {:ok, claims} = Guardian.resource_from_claims(full_claims)
+    register_token(jwt)
 
     conn =
       ConnTest.build_conn()
@@ -37,5 +38,24 @@ defmodule TdLmWeb.Authentication do
       role: role,
       is_admin: is_admin
     }
+  end
+
+  def create_acl_entry(user_id, resource_type, resource_id, permissions) do
+    MockPermissionResolver.create_acl_entry(%{
+      principal_type: "user",
+      principal_id: user_id,
+      resource_type: resource_type,
+      resource_id: resource_id,
+      permissions: permissions
+    })
+  end
+
+  defp register_token(token) do
+    case Guardian.decode_and_verify(token) do
+      {:ok, resource} -> MockPermissionResolver.register_token(resource)
+      _ -> raise "Problems decoding and verifying token"
+    end
+
+    token
   end
 end

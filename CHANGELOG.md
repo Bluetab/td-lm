@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- [TD-3447] Check permissions over shared domains over `concept` source
+
 ## [4.21.0] 2021-05-31
 
 ### Changed

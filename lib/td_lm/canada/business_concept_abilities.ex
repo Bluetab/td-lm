@@ -14,53 +14,69 @@ defmodule TdLm.Canada.BusinessConceptAbilities do
     :view_versioned_business_concepts
   ]
 
-  def can?(%Claims{} = claims, :add_link, %{resource_id: id, resource_type: "business_concept"}) do
-    Permissions.authorized?(claims, :manage_business_concept_links, "business_concept", id) and
-      can_manage_confidential?(claims, id)
-  end
-
-  def can?(%Claims{} = claims, :get_links, %{resource_id: id, resource_type: "business_concept"}) do
-    Permissions.authorized_any?(claims, @view_business_concept, "business_concept", id) and
-      can_manage_confidential?(claims, id)
-  end
-
-  def can?(%Claims{} = claims, :get_link, %{resource_id: id, resource_type: "business_concept"}) do
-    Permissions.authorized_any?(claims, @view_business_concept, "business_concept", id) and
-      can_manage_confidential?(claims, id)
-  end
-
-  def can?(%Claims{} = claims, :delete_link, %{
-        resource_id: id,
-        resource_type: "business_concept"
-      }) do
-    Permissions.authorized?(claims, :manage_business_concept_links, "business_concept", id) and
-      can_manage_confidential?(claims, id)
-  end
-
   def can?(%Claims{} = claims, :search, %{resource_id: id, resource_type: "business_concept"}) do
-    Permissions.authorized_any?(claims, @view_business_concept, "business_concept", id) and
-      can_manage_confidential?(claims, id)
+    authorized_any?(claims, @view_business_concept, id)
   end
 
   def can?(%Claims{} = claims, :show, %{resource_id: id, resource_type: "business_concept"}) do
-    Permissions.authorized_any?(claims, @view_business_concept, "business_concept", id) and
+    authorized_any?(claims, @view_business_concept, id)
+  end
+
+  def can?(%Claims{} = claims, action, %{
+        resource_id: id,
+        resource_type: "business_concept",
+        target_type: "business_concept"
+      })
+      when action in [:update, :create, :delete] do
+    Permissions.authorized?(claims, :manage_business_concept_links, "business_concept", id) and
       can_manage_confidential?(claims, id)
   end
 
-  def can?(%Claims{} = claims, :update, %{resource_id: id, resource_type: "business_concept"}) do
-    Permissions.authorized?(claims, :manage_business_concept_links, "business_concept", id)
-  end
-
-  def can?(%Claims{} = claims, :create, %{resource_id: id, resource_type: "business_concept"}) do
-    Permissions.authorized?(claims, :manage_business_concept_links, "business_concept", id)
-  end
-
-  def can?(%Claims{} = claims, :delete, %{resource_id: id, resource_type: "business_concept"}) do
-    Permissions.authorized?(claims, :manage_business_concept_links, "business_concept", id)
+  def can?(%Claims{} = claims, action, %{resource_id: id, resource_type: "business_concept"})
+      when action in [:update, :create, :delete] do
+    authorized?(claims, :manage_business_concept_links, id)
   end
 
   def can?(%Claims{}, _permission, _params) do
     false
+  end
+
+  defp authorized?(claims, permission, concept_id) do
+    case get_domain_ids(concept_id) do
+      [_ | _] = domain_ids ->
+        Permissions.authorized?(claims, permission, "domain", domain_ids) and
+          can_manage_confidential?(claims, concept_id, domain_ids)
+
+      _ ->
+        false
+    end
+  end
+
+  defp authorized_any?(claims, permissions, concept_id) do
+    case get_domain_ids(concept_id) do
+      [_ | _] = domain_ids ->
+        Permissions.authorized_any?(claims, permissions, "domain", domain_ids) and
+          can_manage_confidential?(claims, concept_id, domain_ids)
+
+      _ ->
+        false
+    end
+  end
+
+  defp can_manage_confidential?(claims, concept_id, domain_ids) do
+    case Permissions.authorized?(
+           claims,
+           :manage_confidential_business_concepts,
+           "domain",
+           domain_ids
+         ) do
+      false ->
+        {:ok, confidentials} = ConceptCache.confidential_ids()
+        not Enum.member?(confidentials, concept_id)
+
+      _ ->
+        true
+    end
   end
 
   defp can_manage_confidential?(claims, id) do
@@ -76,6 +92,16 @@ defmodule TdLm.Canada.BusinessConceptAbilities do
 
       _ ->
         true
+    end
+  end
+
+  defp get_domain_ids(concept_id) do
+    case ConceptCache.get(concept_id) do
+      {:ok, %{domain: %{id: domain_id}, shared_to_ids: shared_to_ids}} ->
+        Enum.uniq([domain_id | shared_to_ids])
+
+      _ ->
+        []
     end
   end
 end

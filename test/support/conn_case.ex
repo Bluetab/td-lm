@@ -25,6 +25,7 @@ defmodule TdLmWeb.ConnCase do
       import Plug.Conn
       import Phoenix.ConnTest
       import TdLm.Factory
+      import TdLmWeb.Authentication, only: [create_acl_entry: 4]
 
       alias TdLmWeb.Router.Helpers, as: Routes
 
@@ -37,6 +38,7 @@ defmodule TdLmWeb.ConnCase do
 
   setup tags do
     :ok = Sandbox.checkout(TdLm.Repo)
+    start_supervised(MockPermissionResolver)
 
     unless tags[:async] do
       Sandbox.mode(TdLm.Repo, {:shared, self()})

@@ -16,22 +16,6 @@ defmodule TdBg.Canada.Abilities do
       can?(claims, action, resource_key)
     end
 
-    def can?(%Claims{} = claims, :add_link, params) do
-      BusinessConceptAbilities.can?(claims, :add_link, params)
-    end
-
-    def can?(%Claims{} = claims, :get_links, params) do
-      BusinessConceptAbilities.can?(claims, :get_links, params)
-    end
-
-    def can?(%Claims{} = claims, :get_link, params) do
-      BusinessConceptAbilities.can?(claims, :get_link, params)
-    end
-
-    def can?(%Claims{} = claims, :delete_link, params) do
-      BusinessConceptAbilities.can?(claims, :delete_link, params)
-    end
-
     def can?(%Claims{} = claims, :search, %{resource_type: "business_concept"} = params) do
       BusinessConceptAbilities.can?(claims, :search, params)
     end
@@ -76,8 +60,8 @@ defmodule TdBg.Canada.Abilities do
       false
     end
 
-    defp get_resource_key(%Relation{source_type: source_type, source_id: source_id}) do
-      %{resource_id: source_id, resource_type: source_type}
+    defp get_resource_key(%Relation{source_type: source_type, source_id: source_id, target_type: target_type}) do
+      %{resource_id: source_id, resource_type: source_type, target_type: target_type}
     end
   end
 end
