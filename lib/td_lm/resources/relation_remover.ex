@@ -1,10 +1,8 @@
 defmodule TdLm.RelationRemover do
   @moduledoc """
-  This Module will be used to perform a removal of those relations which
-  business concept has been deleted
+  Provides functionality for removing relations associated with deleted
+  business concepts.
   """
-  use GenServer
-
   require Logger
 
   alias TdCache.ConceptCache
@@ -12,40 +10,19 @@ defmodule TdLm.RelationRemover do
   alias TdLm.Cache.LinkLoader
   alias TdLm.Resources
 
-  @hourly 60 * 60 * 1000
   @system_claims %Claims{user_id: 0, user_name: "system"}
 
   ## Client API
 
-  def start_link(opts \\ []) do
-    GenServer.start_link(__MODULE__, opts, name: __MODULE__)
-  end
-
-  ## Callbacks
-
-  @impl true
-  def init(state) do
-    schedule_work(0)
-    {:ok, state}
-  end
-
-  @impl true
-  def handle_info(:work, state) do
+  def delete_stale_relations do
     case ConceptCache.active_ids() do
       {:ok, []} -> :ok
       {:ok, active_ids} -> hard_deletion("business_concept", active_ids)
       _ -> :ok
     end
-
-    schedule_work()
-    {:noreply, state}
   end
 
   ## Private functions
-
-  defp schedule_work(ms \\ @hourly) do
-    Process.send_after(self(), :work, ms)
-  end
 
   defp hard_deletion(_, []), do: :ok
 
