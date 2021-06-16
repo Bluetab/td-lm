@@ -6,7 +6,7 @@ defmodule TdLm.Mixfile do
       app: :td_lm,
       version:
         case System.get_env("APP_VERSION") do
-          nil -> "4.22.1-local"
+          nil -> "4.22.2-local"
           v -> v
         end,
       elixir: "~> 1.10",
