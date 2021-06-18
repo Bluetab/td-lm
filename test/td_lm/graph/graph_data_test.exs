@@ -12,8 +12,8 @@ defmodule TdLm.Graph.DataTest do
         insert(:relation,
           source_type: "business_concept",
           target_type: "business_concept",
-          source_id: "#{id}",
-          target_id: "#{id + 1}",
+          source_id: id,
+          target_id: id + 1,
           tags: tags
         )
       end)
@@ -23,24 +23,37 @@ defmodule TdLm.Graph.DataTest do
 
   describe "Graph.Data" do
     test "graph/0 creates a graph", %{relations: relations} do
-      ids = Enum.map(1..11, fn i -> "#{i}" end)
+      ids = Enum.map(1..11, fn i -> "business_concept:#{i}" end)
       assert %Graph{} = graph = Data.graph()
-      Enum.all?(ids, fn id -> id in Graph.vertices(graph) end)
+      vs = Graph.vertices(graph)
 
-      Enum.all?(relations, fn %{
-                                source_id: source_id,
-                                target_id: target_id,
-                                source_type: source_type,
-                                target_type: target_type
-                              } ->
-        Graph.has_edge?(graph, "#{source_type}:#{source_id}", "#{target_type}:#{target_id}")
-      end)
+      for id <- ids do
+        assert id in vs
+      end
+
+      for %{
+            source_id: source_id,
+            target_id: target_id,
+            source_type: source_type,
+            target_type: target_type
+          } <- relations do
+        assert Graph.has_edge?(
+                 graph,
+                 "#{source_type}:#{source_id}",
+                 "#{target_type}:#{target_id}"
+               )
+      end
     end
 
     test "reachable/2 gets all reachable nodes" do
       ids = Enum.map(1..11, fn i -> "business_concept:#{i}" end)
       assert %Graph{} = graph = Data.graph()
-      assert Enum.all?(ids, fn id -> id in Data.reachable(graph, "business_concept:1") end)
+      reachable = Data.reachable(graph, "business_concept:1")
+
+      for id <- ids do
+        assert id in reachable
+      end
+
       assert Data.reachable(graph, "business_concept:11") == ["business_concept:11"]
     end
 

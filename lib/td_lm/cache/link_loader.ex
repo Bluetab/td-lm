@@ -99,14 +99,13 @@ defmodule TdLm.Cache.LinkLoader do
   ## Private functions
 
   defp undo_deletion(resource_type) do
-    referenced_ids = TdCache.StructureCache.referenced_ids() |> MapSet.new()
+    referenced_ids = StructureCache.referenced_ids() |> MapSet.new()
     deleted_ids = StructureCache.deleted_ids() |> MapSet.new()
 
     active_ids =
       referenced_ids
       |> MapSet.difference(deleted_ids)
       |> MapSet.to_list()
-      |> Enum.map(&to_string/1)
 
     with res <- Resources.activate(resource_type, active_ids),
          {:ok, %{activated: {n, _}}} when n > 0 <- res do
@@ -119,7 +118,7 @@ defmodule TdLm.Cache.LinkLoader do
   end
 
   defp soft_deletion(resource_type) do
-    deleted_ids = Enum.map(StructureCache.deleted_ids(), &to_string/1)
+    deleted_ids = StructureCache.deleted_ids()
 
     with res <- Resources.deprecate(resource_type, deleted_ids),
          {:ok, %{deprecated: {n, _}}} when n > 0 <- res do

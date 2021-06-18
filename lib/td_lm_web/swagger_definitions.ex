@@ -10,7 +10,7 @@ defmodule TdLmWeb.SwaggerDefinitions do
             relation(
               Schema.new do
                 properties do
-                  source_id(:string, "Id of the source of the relation to be created",
+                  source_id(:integer, "Id of the source of the relation to be created",
                     required: true
                   )
 
@@ -18,11 +18,11 @@ defmodule TdLmWeb.SwaggerDefinitions do
                     required: true
                   )
 
-                  target_id(:string, "Id of the source of the relation to be created",
+                  target_id(:integer, "Id of the target of the relation to be created",
                     required: true
                   )
 
-                  target_type(:string, "Type of the source of the relation to be created",
+                  target_type(:string, "Type of the target of the relation to be created",
                     required: true
                   )
 
@@ -78,9 +78,9 @@ defmodule TdLmWeb.SwaggerDefinitions do
 
           properties do
             id(:integer, "Relation Id", required: true)
-            source_id(:string, "Id of the source of the relation", required: true)
+            source_id(:integer, "Id of the source of the relation", required: true)
             source_type(:string, "Type of the source of the relation", required: true)
-            target_id(:string, "Id of the source of the relation", required: true)
+            target_id(:integer, "Id of the source of the relation", required: true)
             target_type(:string, "Type of the source of the relation", required: true)
             context(:object, "Context information of the source and the target", required: true)
           end
@@ -95,9 +95,9 @@ defmodule TdLmWeb.SwaggerDefinitions do
         swagger_schema do
           properties do
             id(:integer, "Relation Id", required: true)
-            source_id(:string, "Id of the source of the relation", required: false)
+            source_id(:integer, "Id of the source of the relation", required: false)
             source_type(:string, "Type of the source of the relation", required: false)
-            target_id(:string, "Id of the source of the relation", required: false)
+            target_id(:integer, "Id of the source of the relation", required: false)
             target_type(:string, "Type of the source of the relation", required: false)
             context(:object, "Context information of the source and the target", required: false)
             value(:object, "Value of the relation type", required: false)
@@ -105,9 +105,9 @@ defmodule TdLmWeb.SwaggerDefinitions do
 
           example(%{
             id: "1",
-            source_id: "1",
+            source_id: 1,
             source_type: "business_concept",
-            target_id: "2",
+            target_id: 2,
             target_type: "data_filed",
             context: %{},
             value: %{type: "business_concept_to_field"}

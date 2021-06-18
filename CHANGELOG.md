@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- [TD-3842] Improve validation of relation fields, `source_id` and `target_id`
+  are now integers
+
 ## [4.22.2] 2021-06-16
 
 ### Fixed
