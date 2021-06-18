@@ -7,10 +7,10 @@ defmodule TdLm.Factory do
 
   def relation_factory do
     %TdLm.Resources.Relation{
-      source_type: "source_type",
-      source_id: sequence("source_id"),
-      target_type: "target_type",
-      target_id: sequence("target_id"),
+      source_type: sequence(:source_or_target_type, ["business_concept", "data_field", "data_structure", "ingest"]),
+      source_id: sequence(:source_id, & &1),
+      target_type: sequence(:source_or_target_type, ["business_concept", "data_field", "data_structure", "ingest"]),
+      target_id: sequence(:target_id, & &1),
       tags: []
     }
   end
@@ -18,8 +18,8 @@ defmodule TdLm.Factory do
   def tag_factory do
     %TdLm.Resources.Tag{
       value: %{
-        "type" => sequence("source_type"),
-        "target_type" => sequence("source_type")
+        "type" => sequence(:source_or_target_type, ["business_concept", "data_field", "data_structure", "ingest"]),
+        "target_type" => sequence(:source_or_target_type, ["business_concept", "data_field", "data_structure", "ingest"]),
       }
     }
   end

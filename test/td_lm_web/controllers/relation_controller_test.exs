@@ -39,8 +39,8 @@ defmodule TdLmWeb.RelationControllerTest do
 
   describe "search relations with source/target of type business concept" do
     setup do
-      source = %{"id" => "141", "name" => "src", "version" => "2", "business_concept_id" => "14"}
-      target = %{"id" => "131", "name" => "tgt", "version" => "1", "business_concept_id" => "13"}
+      source = %{"id" => "141", "name" => "src", "version" => "2", "business_concept_id" => 14}
+      target = %{"id" => "131", "name" => "tgt", "version" => "1", "business_concept_id" => 13}
       context = %{"source" => source, "target" => target}
 
       insert(:relation,
@@ -129,7 +129,13 @@ defmodule TdLmWeb.RelationControllerTest do
   describe "search ingest to ingest relations" do
     @tag :admin_authenticated
     test "get relation between ingests", %{conn: conn} do
-      %{source_id: source_id} = insert(:relation, source_type: "ingest", target_type: "ingest")
+      %{source_id: source_id} =
+        insert(:relation,
+          source_type: "ingest",
+          target_type: "ingest",
+          target_id: System.unique_integer([:positive]),
+          source_id: System.unique_integer([:positive])
+        )
 
       params = %{
         "resource_id" => source_id,
@@ -367,7 +373,7 @@ defmodule TdLmWeb.RelationControllerTest do
     }
 
     concept = %{
-      id: Integer.to_string(System.unique_integer([:positive])),
+      id: System.unique_integer([:positive]),
       domain_id: domain.id,
       name: "xyz",
       business_concept_version_id: System.unique_integer([:positive]),

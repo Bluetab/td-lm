@@ -284,27 +284,24 @@ defmodule TdLm.Resources do
   end
 
   defp include_where_for_external_params(query, %{"value" => value}) do
-    dynamic = false
+    values_type = Map.get(value, "type")
 
-    values_type = value |> Map.get("type")
+    if is_list(values_type) do
+      condition =
+        Enum.reduce(values_type, false, fn el, acc ->
+          param_value = %{"type" => el}
+          dynamic([_, t], fragment("(?) @> ?::jsonb", field(t, :value), ^param_value) or ^acc)
+        end)
 
-    case is_list(values_type) do
-      true ->
-        condition =
-          Enum.reduce(values_type, dynamic, fn el, acc ->
-            param_value = Map.new() |> Map.put("type", el)
-            dynamic([_, t], fragment("(?) @> ?::jsonb", field(t, :value), ^param_value) or ^acc)
-          end)
-
-        query |> where(^condition)
-
-      false ->
-        query |> where([_, t], fragment("(?) @> ?::jsonb", field(t, :value), ^value))
+      where(query, ^condition)
+    else
+      where(query, [_, t], fragment("(?) @> ?::jsonb", field(t, :value), ^value))
     end
   end
 
   defp include_where_for_external_params(query, _), do: query
 
+  @spec list_stale_relations(String.t(), list(integer)) :: list(Relation.t())
   def list_stale_relations(resource_type, active_ids) do
     Relation
     |> where([r], r.source_type == ^resource_type and r.source_id not in ^active_ids)
@@ -312,7 +309,7 @@ defmodule TdLm.Resources do
     |> Repo.all()
   end
 
-  @spec deprecate(String.t(), list(String.t())) ::
+  @spec deprecate(String.t(), list(integer)) ::
           :ok | {:ok, map} | {:error, Multi.name(), any, %{required(Multi.name()) => any}}
   def deprecate(resource_type, [_ | _] = resource_ids) do
     ts = DateTime.utc_now()
@@ -332,8 +329,7 @@ defmodule TdLm.Resources do
 
   def deprecate(_resource_type, []), do: {:ok, %{deprecated: {0, []}}}
 
-  @spec activate(String.t(), list(String.t())) ::
-          :ok | {:ok, map}
+  @spec activate(String.t(), list(integer)) :: :ok | {:ok, map}
   def activate(resource_type, [_ | _] = resource_ids) do
     reply =
       Relation

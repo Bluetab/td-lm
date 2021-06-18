@@ -64,34 +64,28 @@ defmodule TdLm.Canada.BusinessConceptAbilities do
   end
 
   defp can_manage_confidential?(claims, concept_id, domain_ids) do
-    case Permissions.authorized?(
-           claims,
-           :manage_confidential_business_concepts,
-           "domain",
-           domain_ids
-         ) do
-      false ->
-        {:ok, confidentials} = ConceptCache.confidential_ids()
-        not Enum.member?(confidentials, concept_id)
-
-      _ ->
-        true
+    if Permissions.authorized?(
+         claims,
+         :manage_confidential_business_concepts,
+         "domain",
+         domain_ids
+       ) do
+      true
+    else
+      not ConceptCache.is_confidential?(concept_id)
     end
   end
 
   defp can_manage_confidential?(claims, id) do
-    case Permissions.authorized?(
-           claims,
-           :manage_confidential_business_concepts,
-           "business_concept",
-           id
-         ) do
-      false ->
-        {:ok, confidentials} = ConceptCache.confidential_ids()
-        not Enum.member?(confidentials, id)
-
-      _ ->
-        true
+    if Permissions.authorized?(
+         claims,
+         :manage_confidential_business_concepts,
+         "business_concept",
+         id
+       ) do
+      true
+    else
+      not ConceptCache.is_confidential?(id)
     end
   end
 

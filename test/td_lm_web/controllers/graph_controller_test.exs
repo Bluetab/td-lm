@@ -19,8 +19,8 @@ defmodule TdLmWeb.GraphControllerTest do
           insert(:relation,
             source_type: "business_concept",
             target_type: "business_concept",
-            source_id: "#{id}",
-            target_id: "#{id + 1}",
+            source_id: id,
+            target_id: id + 1,
             tags: tags
           )
         end)

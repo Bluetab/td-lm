@@ -10,10 +10,12 @@ defmodule TdLm.Resources.Relation do
   alias TdLm.Resources
   alias TdLm.Resources.Tag
 
+  @valid_types ["business_concept", "data_field", "data_structure", "ingest"]
+
   schema "relations" do
-    field(:source_id, :string)
+    field(:source_id, :integer)
     field(:source_type, :string)
-    field(:target_id, :string)
+    field(:target_id, :integer)
     field(:target_type, :string)
     field(:context, :map, default: %{})
     field(:deleted_at, :utc_datetime_usec)
@@ -35,6 +37,8 @@ defmodule TdLm.Resources.Relation do
     relation
     |> cast(params, [:source_id, :source_type, :target_id, :target_type, :context, :deleted_at])
     |> validate_required([:source_id, :source_type, :target_id, :target_type, :context])
+    |> validate_inclusion(:source_type, @valid_types)
+    |> validate_inclusion(:target_type, @valid_types)
     |> put_tags()
   end
 

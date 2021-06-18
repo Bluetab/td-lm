@@ -60,8 +60,8 @@ defmodule TdLm.ResourcesTest do
     setup [:concept]
 
     test "publishes an audit event", %{claims: claims, concept: concept} do
-      source_id = Integer.to_string(concept.id)
-      target_id = Integer.to_string(:rand.uniform(100_000))
+      source_id = concept.id
+      target_id = System.unique_integer([:positive])
 
       params = %{
         source_id: source_id,
@@ -74,8 +74,10 @@ defmodule TdLm.ResourcesTest do
       {:ok, %{audit: event_id, relation: %Relation{source_id: ^source_id, target_id: ^target_id}}} =
         Resources.create_relation(params, claims)
 
-      {:ok, [%{id: ^event_id, resource_id: ^source_id, payload: payload}]} =
+      {:ok, [%{id: ^event_id, resource_id: resource_id, payload: payload}]} =
         Stream.read(:redix, @stream, transform: true)
+
+      assert resource_id == "#{source_id}"
 
       assert %{"subscribable_fields" => %{"foo" => "bar"}} = Jason.decode!(payload)
     end
@@ -213,8 +215,8 @@ defmodule TdLm.ResourcesTest do
         insert(:relation,
           source_type: "business_concept",
           target_type: "business_concept",
-          source_id: "#{id}",
-          target_id: "#{id + 1}",
+          source_id: id,
+          target_id: id + 1,
           tags: tags
         )
       end)
@@ -244,8 +246,8 @@ defmodule TdLm.ResourcesTest do
       insert(:relation,
         source_type: "business_concept",
         target_type: "business_concept",
-        source_id: "#{id}",
-        target_id: "#{id + 1}",
+        source_id: id,
+        target_id: id + 1,
         tags: tags
       )
     end)
