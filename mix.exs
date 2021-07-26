@@ -6,10 +6,10 @@ defmodule TdLm.Mixfile do
       app: :td_lm,
       version:
         case System.get_env("APP_VERSION") do
-          nil -> "4.23.0-local"
+          nil -> "4.25.0-local"
           v -> v
         end,
-      elixir: "~> 1.10",
+      elixir: "~> 1.11",
       elixirc_paths: elixirc_paths(Mix.env()),
       compilers: [:phoenix, :gettext] ++ Mix.compilers() ++ [:phoenix_swagger],
       start_permanent: Mix.env() == :prod,
@@ -57,16 +57,16 @@ defmodule TdLm.Mixfile do
       {:postgrex, "~> 0.15.0"},
       {:gettext, "~> 0.11"},
       {:httpoison, "~> 1.6"},
-      {:credo, "~> 1.4", only: [:dev, :test], runtime: false},
+      {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
       {:guardian, "~> 2.0"},
       {:canada, "~> 2.0"},
       {:corsica, "~> 1.0"},
       {:phoenix_swagger, "~> 0.8.3"},
       {:ex_json_schema, "~> 0.7.3"},
-      {:ex_machina, "~> 2.3", only: [:test]},
+      {:ex_machina, "~> 2.3", only: :test},
       {:td_hypermedia, git: "https://github.com/Bluetab/td-hypermedia.git", tag: "4.0.0"},
-      {:td_cache, git: "https://github.com/Bluetab/td-cache.git", tag: "4.23.2", override: true},
-      {:td_df_lib, git: "https://github.com/Bluetab/td-df-lib.git", tag: "4.21.0"},
+      {:td_cache, git: "https://github.com/Bluetab/td-cache.git", tag: "4.25.4"},
+      {:td_df_lib, git: "https://github.com/Bluetab/td-df-lib.git", tag: "4.25.0"},
       {:quantum, "~> 3.0"},
       {:graph, git: "https://github.com/Bluetab/graph.git", tag: "1.1.1"}
     ]

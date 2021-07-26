@@ -40,11 +40,12 @@ defmodule TdLm.DataCase do
             nil -> nil
             pid -> Sandbox.allow(TdLm.Repo, parent, pid)
           end
-            end
+        end
 
       {:already, :owner} ->
         :ok
     end
+
     :ok
   end
 

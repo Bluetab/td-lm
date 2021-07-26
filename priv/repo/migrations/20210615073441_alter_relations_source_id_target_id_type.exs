@@ -4,8 +4,8 @@ defmodule TdLm.Repo.Migrations.AlterRelationsSourceIdTargetIdType do
   def change do
     execute("delete from relations where source_id !~ '^[0-9]+$' or target_id !~ '^[0-9]+$'", "")
 
-    rename table("relations"), :source_id, to: :_source_id_
-    rename table("relations"), :target_id, to: :_target_id_
+    rename(table("relations"), :source_id, to: :_source_id_)
+    rename(table("relations"), :target_id, to: :_target_id_)
 
     alter table("relations") do
       add(:source_id, :bigint)
@@ -21,6 +21,5 @@ defmodule TdLm.Repo.Migrations.AlterRelationsSourceIdTargetIdType do
       remove(:_source_id_, :string)
       remove(:_target_id_, :string)
     end
-
   end
 end

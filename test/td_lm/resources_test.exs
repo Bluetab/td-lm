@@ -57,7 +57,7 @@ defmodule TdLm.ResourcesTest do
       assert Enum.all?(tags, &(&1.id in tag_ids))
     end
 
-    setup [:concept]
+    setup :concept
 
     test "publishes an audit event", %{claims: claims, concept: concept} do
       source_id = concept.id
@@ -318,7 +318,7 @@ defmodule TdLm.ResourcesTest do
       }
     ]
 
-    template_id = :rand.uniform(100_000)
+    template_id = System.unique_integer([:positive])
 
     TemplateCache.put(%{
       id: template_id,
@@ -329,14 +329,14 @@ defmodule TdLm.ResourcesTest do
       updated_at: DateTime.utc_now()
     })
 
-    concept_id = :rand.uniform(100_000)
+    concept_id = System.unique_integer([:positive])
 
     concept = %{
       id: concept_id,
-      domain_id: :rand.uniform(100_000),
+      domain_id: System.unique_integer([:positive]),
       type: "foo",
       name: "bar",
-      business_concept_version_id: :rand.uniform(100_000),
+      business_concept_version_id: System.unique_integer([:positive]),
       content: %{"foo" => "bar"}
     }
 

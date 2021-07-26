@@ -242,5 +242,4 @@ defmodule TdLmWeb.RelationController do
   end
 
   defp fetch_attributes(_entity_id, _target_type), do: %{}
-
 end
