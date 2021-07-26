@@ -51,8 +51,11 @@ defmodule TdLm.Resources.RelationTest do
       assert %{valid?: true, changes: changes} = Relation.changeset(relation, params)
 
       assert %{tags: tags} = changes
-      assert %{replace: old_tag_ids, update: [^new_tag_id]} = Enum.group_by(tags, & &1.action, & &1.data.id)
-      assert Enum.all?(relation.tags, & &1.id in old_tag_ids)
+
+      assert %{replace: old_tag_ids, update: [^new_tag_id]} =
+               Enum.group_by(tags, & &1.action, & &1.data.id)
+
+      assert Enum.all?(relation.tags, &(&1.id in old_tag_ids))
     end
 
     test "is updated successfully", %{relation: relation} do

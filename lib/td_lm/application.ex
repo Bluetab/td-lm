@@ -9,10 +9,11 @@ defmodule TdLm.Application do
     env = Application.get_env(:td_lm, :env)
 
     # Define workers and child supervisors to be supervised
-    children = [
-      TdLm.Repo,
-      TdLmWeb.Endpoint
-    ] ++ children(env)
+    children =
+      [
+        TdLm.Repo,
+        TdLmWeb.Endpoint
+      ] ++ children(env)
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options

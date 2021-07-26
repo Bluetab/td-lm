@@ -23,8 +23,14 @@ defmodule TdLm.Graph.Data do
          %Graph{} = g
        ) do
     g
-    |> Graph.add_vertex(id(source_type, source_id), resource_type: source_type, resource_id: source_id)
-    |> Graph.add_vertex(id(target_type, target_id), resource_type: target_type, resource_id: target_id)
+    |> Graph.add_vertex(id(source_type, source_id),
+      resource_type: source_type,
+      resource_id: source_id
+    )
+    |> Graph.add_vertex(id(target_type, target_id),
+      resource_type: target_type,
+      resource_id: target_id
+    )
     |> Graph.add_edge(id, id(source_type, source_id), id(target_type, target_id), tags: tags)
   end
 
@@ -36,6 +42,7 @@ defmodule TdLm.Graph.Data do
 
   def all(%Graph{} = g, ids) when is_list(ids),
     do: Enum.concat(reaching(g, ids), reachable(g, ids))
+
   def all(%Graph{} = g, id), do: all(g, [id])
 
   def subgraph(g, ids), do: Graph.subgraph(g, ids)

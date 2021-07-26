@@ -28,7 +28,7 @@ defmodule TdLmWeb.Authentication do
   end
 
   def create_claims(user_name, opts \\ []) do
-    user_id = :rand.uniform(100_000)
+    user_id = System.unique_integer([:positive])
     role = Keyword.get(opts, :role, "user")
     is_admin = role === "admin"
 

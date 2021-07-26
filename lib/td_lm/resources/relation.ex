@@ -42,7 +42,8 @@ defmodule TdLm.Resources.Relation do
     |> put_tags()
   end
 
-  defp put_tags(%{valid?: true, params: %{"tag_ids" => tag_ids}} = changeset) when length(tag_ids) > 0 do
+  defp put_tags(%{valid?: true, params: %{"tag_ids" => tag_ids}} = changeset)
+       when length(tag_ids) > 0 do
     tags = Resources.find_tags(id: {:in, tag_ids})
     put_assoc(changeset, :tags, tags)
   end

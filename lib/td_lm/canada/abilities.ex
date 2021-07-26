@@ -60,7 +60,11 @@ defmodule TdBg.Canada.Abilities do
       false
     end
 
-    defp get_resource_key(%Relation{source_type: source_type, source_id: source_id, target_type: target_type}) do
+    defp get_resource_key(%Relation{
+           source_type: source_type,
+           source_id: source_id,
+           target_type: target_type
+         }) do
       %{resource_id: source_id, resource_type: source_type, target_type: target_type}
     end
   end
