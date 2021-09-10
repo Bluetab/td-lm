@@ -62,6 +62,7 @@ defmodule TdLm.ResourcesTest do
     test "publishes an audit event", %{claims: claims, concept: concept} do
       source_id = concept.id
       target_id = System.unique_integer([:positive])
+      domain_ids = [concept.domain_id]
 
       params = %{
         source_id: source_id,
@@ -79,7 +80,8 @@ defmodule TdLm.ResourcesTest do
 
       assert resource_id == "#{source_id}"
 
-      assert %{"subscribable_fields" => %{"foo" => "bar"}} = Jason.decode!(payload)
+      assert %{"subscribable_fields" => %{"foo" => "bar"}, "domain_ids" => ^domain_ids} =
+               Jason.decode!(payload)
     end
 
     test "returns error and changeset if validations fail", %{claims: claims} do
@@ -96,10 +98,20 @@ defmodule TdLm.ResourcesTest do
       assert %{__meta__: %{state: :deleted}} = relation
     end
 
-    test "publishes an audit event", %{claims: claims} do
-      relation = insert(:relation)
+    setup :concept
+
+    test "publishes an audit event", %{
+      claims: claims,
+      concept: %{id: concept_id, domain_id: domain_id}
+    } do
+      domain_ids = [domain_id]
+      relation = insert(:relation, source_type: "business_concept", source_id: concept_id)
       assert {:ok, %{audit: event_id}} = Resources.delete_relation(relation, claims)
-      assert {:ok, [%{id: ^event_id}]} = Stream.read(:redix, @stream, transform: true)
+
+      assert {:ok, [%{id: ^event_id, payload: payload}]} =
+               Stream.read(:redix, @stream, transform: true)
+
+      assert %{"domain_ids" => ^domain_ids} = Jason.decode!(payload)
     end
   end
 
@@ -269,8 +281,17 @@ defmodule TdLm.ResourcesTest do
       assert {2, [%{id: ^id1}, %{id: ^id2}]} = deprecated
     end
 
-    test "publishes audit events" do
-      %{target_id: tid1} = insert(:relation, target_type: "data_structure")
+    setup :concept
+
+    test "publishes audit events", %{concept: %{id: concept_id, domain_id: domain_id}} do
+      domain_ids = [domain_id]
+      %{target_id: tid1} =
+        insert(:relation,
+          source_id: concept_id,
+          source_type: "business_concept",
+          target_type: "data_structure"
+        )
+
       %{target_id: tid2} = insert(:relation, target_type: "data_structure")
 
       %{target_id: tid3} =
@@ -278,6 +299,9 @@ defmodule TdLm.ResourcesTest do
 
       assert {:ok, %{audit: audit}} = Resources.deprecate("data_structure", [tid1, tid2, tid3])
       assert length(audit) == 2
+      [event_id | _] = audit
+      assert {:ok, [%{id: ^event_id, payload: payload}]} = Stream.range(:redix, @stream, event_id, event_id, transform: :range)
+      assert %{"domain_ids" => ^domain_ids} = Jason.decode!(payload)
     end
   end
 
