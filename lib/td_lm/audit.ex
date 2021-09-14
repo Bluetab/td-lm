@@ -6,6 +6,7 @@ defmodule TdLm.Audit do
   """
 
   alias TdCache.ConceptCache
+  alias TdCache.IngestCache
   alias TdDfLib.Templates
 
   @doc """
@@ -65,6 +66,7 @@ defmodule TdLm.Audit do
     relation
     |> Map.take([:id, :target_id, :target_type, :context, :subscribable_fields])
     |> put_subscribable_fields(relation)
+    |> put_domain_ids(relation)
   end
 
   defp put_subscribable_fields(payload, %{source_type: "business_concept", source_id: source_id}) do
@@ -102,7 +104,7 @@ defmodule TdLm.Audit do
           |> Map.put(:id, id)
       end
 
-    changes = put_subscribable_fields(changes, relation)
+    changes = changes |> put_subscribable_fields(relation) |> put_domain_ids(relation)
     publish("relation_created", source_type, source_id, user_id, changes)
   end
 
@@ -127,6 +129,20 @@ defmodule TdLm.Audit do
   end
 
   defp tags_from_changes(_), do: []
+
+  defp put_domain_ids(payload, %{source_type: "business_concept", source_id: source_id}) do
+    case ConceptCache.get(source_id, :domain_ids) do
+      {:ok, [_ | _] = domain_ids} -> Map.put(payload, :domain_ids, domain_ids)
+      _ -> payload
+    end
+  end
+
+  defp put_domain_ids(payload, %{source_type: "ingest", source_id: source_id})
+       when not is_integer(source_id) do
+    Map.put(payload, :domain_ids, IngestCache.get_domain_ids(source_id))
+  end
+
+  defp put_domain_ids(payload, _), do: payload
 
   defp publish(event, resource_type, resource_id, user_id, payload \\ %{}) do
     TdCache.Audit.publish(
