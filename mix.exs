@@ -65,10 +65,10 @@ defmodule TdLm.Mixfile do
       {:ex_json_schema, "~> 0.7.3"},
       {:ex_machina, "~> 2.3", only: :test},
       {:td_hypermedia, git: "https://github.com/Bluetab/td-hypermedia.git", tag: "4.0.0"},
-      {:td_cache, git: "https://github.com/Bluetab/td-cache.git", tag: "4.25.4"},
-      {:td_df_lib, git: "https://github.com/Bluetab/td-df-lib.git", tag: "4.28.0"},
+      {:td_cache, git: "https://github.com/Bluetab/td-cache.git", tag: "4.40.0"},
+      {:td_df_lib, git: "https://github.com/Bluetab/td-df-lib.git", tag: "4.40.0"},
       {:quantum, "~> 3.0"},
-      {:graph, git: "https://github.com/Bluetab/graph.git", tag: "1.1.1"}
+      {:graph, git: "https://github.com/Bluetab/graph.git", tag: "1.2.0"}
     ]
   end
 

@@ -1,7 +1,6 @@
 defmodule TdLm.Graph.DataTest do
   use TdLm.DataCase
 
-  alias Graph
   alias TdLm.Graph.Data
 
   setup do

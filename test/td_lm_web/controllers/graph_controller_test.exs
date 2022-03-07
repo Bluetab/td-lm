@@ -28,7 +28,7 @@ defmodule TdLmWeb.GraphControllerTest do
       [relations: relations, tags: tags]
     end
 
-    @tag :admin_authenticated
+    @tag authentication: [role: "admin"]
     test "get all relations", %{conn: conn} do
       id = "11"
       type = "business_concept"

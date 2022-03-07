@@ -7,7 +7,7 @@ defmodule TdBg.Canada.Abilities do
 
   defimpl Canada.Can, for: Claims do
     # administrator is superpowerful for Domain
-    def can?(%Claims{is_admin: true}, _permission, _params) do
+    def can?(%Claims{role: "admin"}, _permission, _params) do
       true
     end
 

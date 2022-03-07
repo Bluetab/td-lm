@@ -15,7 +15,7 @@ defmodule TdLmWeb.Authentication do
     |> put_req_header("authorization", "Bearer #{jwt}")
   end
 
-  def create_user_auth_conn(%{role: role} = claims) do
+  def create_user_auth_conn(%Claims{role: role} = claims) do
     {:ok, jwt, full_claims} = Guardian.encode_and_sign(claims, %{role: role})
     {:ok, claims} = Guardian.resource_from_claims(full_claims)
     register_token(jwt)
@@ -27,32 +27,29 @@ defmodule TdLmWeb.Authentication do
     {:ok, %{conn: conn, jwt: jwt, claims: claims}}
   end
 
-  def create_claims(user_name, opts \\ []) do
-    user_id = System.unique_integer([:positive])
+  def create_claims(opts \\ []) do
     role = Keyword.get(opts, :role, "user")
-    is_admin = role === "admin"
+    user_name = Keyword.get(opts, :user_name, "joe")
+    %{id: user_id} = CacheHelpers.put_user(user_name: user_name)
 
     %Claims{
       user_id: user_id,
       user_name: user_name,
-      role: role,
-      is_admin: is_admin
+      role: role
     }
   end
 
-  def create_acl_entry(user_id, resource_type, resource_id, permissions) do
-    MockPermissionResolver.create_acl_entry(%{
-      principal_type: "user",
-      principal_id: user_id,
-      resource_type: resource_type,
-      resource_id: resource_id,
-      permissions: permissions
-    })
+  def assign_permissions({:ok, %{claims: claims} = state}, [_ | _] = permissions) do
+    %{id: domain_id} = domain = CacheHelpers.put_domain()
+    CacheHelpers.put_session_permissions(claims, domain_id, permissions)
+    {:ok, Map.put(state, :domain, domain)}
   end
+
+  def assign_permissions(state, _), do: state
 
   defp register_token(token) do
     case Guardian.decode_and_verify(token) do
-      {:ok, resource} -> MockPermissionResolver.register_token(resource)
+      {:ok, _} -> :ok
       _ -> raise "Problems decoding and verifying token"
     end
 

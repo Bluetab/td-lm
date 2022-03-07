@@ -49,7 +49,6 @@ config :td_lm, :phoenix_swagger,
   }
 
 config :td_lm, :relation_loader, load_on_startup: true
-config :td_lm, permission_resolver: TdCache.Permissions
 
 config :td_cache, :audit,
   service: "td_lm",
@@ -62,21 +61,24 @@ config :td_cache, :event_stream,
     [key: "link:commands", consumer: TdLm.Cache.LinkRemover]
   ]
 
-config :td_lm, :cache_cleaner,
-  clean_on_startup: true,
-  patterns: [
-    "relation_type:*",
-    "business_concept*:",
-    "data_field*:",
-    "data_structure*:",
-    "ingest*:",
-    "*:bc_padre",
-    "*:bc_caculo",
-    "*:relations"
-  ]
-
 config :td_lm, TdLm.Scheduler,
   jobs: [
+    cache_cleaner: [
+      schedule: "@reboot",
+      task:
+        {TdCache.CacheCleaner, :clean,
+         [
+           "relation_type:*",
+           "business_concept*:",
+           "data_field*:",
+           "data_structure*:",
+           "ingest*:",
+           "*:bc_padre",
+           "*:bc_caculo",
+           "*:relations"
+         ]},
+      run_strategy: Quantum.RunStrategy.Local
+    ],
     link_refresher: [
       schedule: "@hourly",
       task: {TdLm.Cache.LinkLoader, :refresh, []},

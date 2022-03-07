@@ -25,7 +25,6 @@ defmodule TdLmWeb.ConnCase do
       import Plug.Conn
       import Phoenix.ConnTest
       import TdLm.Factory
-      import TdLmWeb.Authentication, only: [create_acl_entry: 4]
 
       alias TdLmWeb.Router.Helpers, as: Routes
 
@@ -34,11 +33,8 @@ defmodule TdLmWeb.ConnCase do
     end
   end
 
-  @admin_user_name "app-admin"
-
   setup tags do
     :ok = Sandbox.checkout(TdLm.Repo)
-    start_supervised(MockPermissionResolver)
 
     unless tags[:async] do
       Sandbox.mode(TdLm.Repo, {:shared, self()})
@@ -50,19 +46,15 @@ defmodule TdLmWeb.ConnCase do
       end
     end
 
-    cond do
-      tags[:admin_authenticated] ->
-        @admin_user_name
-        |> create_claims(role: "admin")
-        |> create_user_auth_conn()
+    case tags[:authentication] do
+      nil ->
+        [conn: ConnTest.build_conn()]
 
-      user_name = tags[:authenticated_user] ->
-        user_name
+      auth_opts ->
+        auth_opts
         |> create_claims()
         |> create_user_auth_conn()
-
-      true ->
-        {:ok, conn: ConnTest.build_conn()}
+        |> assign_permissions(auth_opts[:permissions])
     end
   end
 end
