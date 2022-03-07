@@ -1,10 +1,8 @@
 defmodule TdLm.ResourcesTest do
   use TdLm.DataCase
 
-  alias TdCache.ConceptCache
   alias TdCache.Redix
   alias TdCache.Redix.Stream
-  alias TdCache.TemplateCache
   alias TdLm.Auth.Claims
   alias TdLm.Resources
   alias TdLm.Resources.Relation
@@ -23,6 +21,8 @@ defmodule TdLm.ResourcesTest do
   end
 
   describe "create_relation/2" do
+    setup [:put_template, :put_concept]
+
     test "creates a relation without tags", %{claims: claims} do
       %{
         "source_id" => source_id,
@@ -57,8 +57,6 @@ defmodule TdLm.ResourcesTest do
       assert Enum.all?(tags, &(&1.id in tag_ids))
     end
 
-    setup :concept
-
     test "publishes an audit event", %{claims: claims, concept: concept} do
       source_id = concept.id
       target_id = System.unique_integer([:positive])
@@ -92,13 +90,13 @@ defmodule TdLm.ResourcesTest do
   end
 
   describe "delete_relation/2" do
+    setup [:put_template, :put_concept]
+
     test "delete_relation/2 deletes", %{claims: claims} do
       relation = insert(:relation)
       assert {:ok, %{relation: relation}} = Resources.delete_relation(relation, claims)
       assert %{__meta__: %{state: :deleted}} = relation
     end
-
-    setup :concept
 
     test "publishes an audit event", %{
       claims: claims,
@@ -220,7 +218,7 @@ defmodule TdLm.ResourcesTest do
 
   test "graph/3 gets edges and nodes" do
     tags = Enum.map(1..5, fn _ -> insert(:tag) end)
-    claims = %Claims{user_id: 1, is_admin: true}
+    claims = %Claims{user_id: 1, role: "admin"}
 
     relations =
       Enum.map(1..10, fn id ->
@@ -252,7 +250,7 @@ defmodule TdLm.ResourcesTest do
 
   test "graph/3 gets empty edges and nodes when we query an non existing node" do
     tags = Enum.map(1..5, fn _ -> insert(:tag) end)
-    claims = %Claims{user_id: 1, is_admin: true}
+    claims = %Claims{user_id: 1, role: "admin"}
 
     Enum.map(1..10, fn id ->
       insert(:relation,
@@ -268,6 +266,8 @@ defmodule TdLm.ResourcesTest do
   end
 
   describe "deprecate/1" do
+    setup [:put_template, :put_concept]
+
     test "logically deletes relations" do
       %{id: id1, target_id: tid1} = insert(:relation, target_type: "data_structure")
       %{id: id2, target_id: tid2} = insert(:relation, target_type: "data_structure")
@@ -281,10 +281,9 @@ defmodule TdLm.ResourcesTest do
       assert {2, [%{id: ^id1}, %{id: ^id2}]} = deprecated
     end
 
-    setup :concept
-
     test "publishes audit events", %{concept: %{id: concept_id, domain_id: domain_id}} do
       domain_ids = [domain_id]
+
       %{target_id: tid1} =
         insert(:relation,
           source_id: concept_id,
@@ -300,7 +299,10 @@ defmodule TdLm.ResourcesTest do
       assert {:ok, %{audit: audit}} = Resources.deprecate("data_structure", [tid1, tid2, tid3])
       assert length(audit) == 2
       [event_id | _] = audit
-      assert {:ok, [%{id: ^event_id, payload: payload}]} = Stream.range(:redix, @stream, event_id, event_id, transform: :range)
+
+      assert {:ok, [%{id: ^event_id, payload: payload}]} =
+               Stream.range(:redix, @stream, event_id, event_id, transform: :range)
+
       assert %{"domain_ids" => ^domain_ids} = Jason.decode!(payload)
     end
   end
@@ -320,57 +322,42 @@ defmodule TdLm.ResourcesTest do
     end
   end
 
-  defp concept(_) do
-    content = [
-      %{
-        "name" => "group",
-        "fields" => [
+  defp put_template(_) do
+    template =
+      CacheHelpers.put_template(
+        name: "foo",
+        scope: "test",
+        content: [
           %{
-            name: "foo",
-            type: "string",
-            cardinality: "?",
-            values: %{"fixed" => ["bar"]},
-            subscribable: true
-          },
-          %{
-            name: "xyz",
-            type: "string",
-            cardinality: "?",
-            values: %{"fixed" => ["foo"]}
+            "name" => "group",
+            "fields" => [
+              %{
+                name: "foo",
+                type: "string",
+                cardinality: "?",
+                values: %{"fixed" => ["bar"]},
+                subscribable: true
+              },
+              %{
+                name: "xyz",
+                type: "string",
+                cardinality: "?",
+                values: %{"fixed" => ["foo"]}
+              }
+            ]
           }
         ]
-      }
-    ]
+      )
 
-    template_id = System.unique_integer([:positive])
+    [template: template]
+  end
 
-    TemplateCache.put(%{
-      id: template_id,
-      name: "foo",
-      label: "label",
-      scope: "test",
-      content: content,
-      updated_at: DateTime.utc_now()
-    })
+  defp put_concept(_) do
+    %{id: domain_id} = CacheHelpers.put_domain()
 
-    concept_id = System.unique_integer([:positive])
+    concept =
+      CacheHelpers.put_concept(domain_id: domain_id, type: "foo", content: %{"foo" => "bar"})
 
-    concept = %{
-      id: concept_id,
-      domain_id: System.unique_integer([:positive]),
-      type: "foo",
-      name: "bar",
-      business_concept_version_id: System.unique_integer([:positive]),
-      content: %{"foo" => "bar"}
-    }
-
-    ConceptCache.put(concept)
-
-    on_exit(fn ->
-      TemplateCache.delete(template_id)
-      ConceptCache.delete(concept_id)
-    end)
-
-    {:ok, [concept: concept]}
+    [concept: concept]
   end
 end

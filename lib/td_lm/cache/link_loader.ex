@@ -62,7 +62,7 @@ defmodule TdLm.Cache.LinkLoader do
     reply =
       ids
       |> Enum.map(&Resources.get_relation!/1)
-      |> load_links
+      |> load_links()
 
     {:reply, reply, state}
   end

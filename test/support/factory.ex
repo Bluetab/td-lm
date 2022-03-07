@@ -4,6 +4,7 @@ defmodule TdLm.Factory do
   """
 
   use ExMachina.Ecto, repo: TdLm.Repo
+  use TdDfLib.TemplateFactory
 
   def relation_factory do
     %TdLm.Resources.Relation{
@@ -54,8 +55,34 @@ defmodule TdLm.Factory do
       user_name: sequence("user_name"),
       role: "user",
       jti: sequence("jti"),
-      is_admin: Map.get(attrs, :role) == "admin"
+      exp: DateTime.add(DateTime.utc_now(), 10)
     }
     |> merge_attributes(attrs)
+  end
+
+  def domain_factory do
+    %{
+      name: sequence("domain_name"),
+      id: System.unique_integer([:positive]),
+      external_id: sequence("domain_external_id"),
+      updated_at: DateTime.utc_now()
+    }
+  end
+
+  def concept_factory do
+    %{
+      id: System.unique_integer([:positive]),
+      name: sequence("concept_name")
+    }
+  end
+
+  def user_factory do
+    %{
+      id: System.unique_integer([:positive]),
+      user_name: sequence("user_name"),
+      full_name: sequence("full_name"),
+      external_id: sequence("user_external_id"),
+      email: sequence("email") <> "@example.com"
+    }
   end
 end

@@ -7,7 +7,7 @@ defmodule TdLmWeb.TagControllerTest do
   end
 
   describe "GET /api/tags" do
-    @tag :admin_authenticated
+    @tag authentication: [role: "admin"]
     test "lists tags", %{conn: conn, swagger_schema: schema} do
       %{id: id} = insert(:tag)
 
@@ -22,7 +22,7 @@ defmodule TdLmWeb.TagControllerTest do
   end
 
   describe "GET /api/tags/:id" do
-    @tag :admin_authenticated
+    @tag authentication: [role: "admin"]
     test "renders tag when data is valid", %{conn: conn, swagger_schema: schema} do
       %{id: id, value: value} = insert(:tag)
 
@@ -35,14 +35,14 @@ defmodule TdLmWeb.TagControllerTest do
       assert %{"id" => ^id, "value" => ^value} = data
     end
 
-    @tag :admin_authenticated
+    @tag authentication: [role: "admin"]
     test "returns not found if tag does not exist", %{conn: conn} do
       assert_error_sent(:not_found, fn -> get(conn, Routes.tag_path(conn, :show, 123)) end)
     end
   end
 
   describe "POST /api/tags/search" do
-    @tag :admin_authenticated
+    @tag authentication: [role: "admin"]
     test "search tags", %{conn: conn, swagger_schema: schema} do
       %{id: id} = insert(:tag, value: %{"target_type" => "ingest", "type" => "ingest"})
 
@@ -59,7 +59,7 @@ defmodule TdLmWeb.TagControllerTest do
   end
 
   describe "POST /api/tags" do
-    @tag :admin_authenticated
+    @tag authentication: [role: "admin"]
     test "renders tag when data is valid", %{conn: conn, swagger_schema: schema} do
       params = string_params_for(:tag)
 
@@ -72,7 +72,7 @@ defmodule TdLmWeb.TagControllerTest do
       assert Map.delete(data, "id") == params
     end
 
-    @tag :admin_authenticated
+    @tag authentication: [role: "admin"]
     test "renders errors when data is invalid", %{conn: conn} do
       params = string_params_for(:tag) |> Map.put("value", "string")
 
@@ -84,7 +84,7 @@ defmodule TdLmWeb.TagControllerTest do
   end
 
   describe "DELETE /api/tags/:id" do
-    @tag :admin_authenticated
+    @tag authentication: [role: "admin"]
     test "deletes chosen tag", %{conn: conn} do
       %{id: id} = insert(:tag)
 

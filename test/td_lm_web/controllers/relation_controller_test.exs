@@ -2,8 +2,6 @@ defmodule TdLmWeb.RelationControllerTest do
   use TdLmWeb.ConnCase
   use PhoenixSwagger.SchemaTest, "priv/static/swagger.json"
 
-  alias TdCache.{ConceptCache, TaxonomyCache}
-
   setup_all do
     start_supervised(TdLm.Cache.LinkLoader)
     :ok
@@ -14,7 +12,7 @@ defmodule TdLmWeb.RelationControllerTest do
   end
 
   describe "search" do
-    @tag :admin_authenticated
+    @tag authentication: [role: "admin"]
     test "search all relations", %{conn: conn, swagger_schema: schema} do
       assert %{"data" => []} =
                conn
@@ -25,7 +23,7 @@ defmodule TdLmWeb.RelationControllerTest do
   end
 
   describe "search relation when user has no permissions" do
-    @tag authenticated_user: "non_admin"
+    @tag authentication: [user_name: "not_an_admin"]
     test "search all relations", %{conn: conn, swagger_schema: schema} do
       insert(:relation, source_type: "ingest")
 
@@ -56,7 +54,7 @@ defmodule TdLmWeb.RelationControllerTest do
       [source: source, target: target]
     end
 
-    @tag :admin_authenticated
+    @tag authentication: [role: "admin"]
     test "get last version_id of business_concept in a relation between business concepts created with a previous target version",
          %{conn: conn, source: source, target: target} do
       params = %{
@@ -99,7 +97,7 @@ defmodule TdLmWeb.RelationControllerTest do
       ]
     end
 
-    @tag :admin_authenticated
+    @tag authentication: [role: "admin"]
     test "get relation without version id when target is data_field", %{
       conn: conn,
       context: context
@@ -127,7 +125,7 @@ defmodule TdLmWeb.RelationControllerTest do
   end
 
   describe "search ingest to ingest relations" do
-    @tag :admin_authenticated
+    @tag authentication: [role: "admin"]
     test "get relation between ingests", %{conn: conn} do
       %{source_id: source_id} =
         insert(:relation,
@@ -151,7 +149,7 @@ defmodule TdLmWeb.RelationControllerTest do
   end
 
   describe "index" do
-    @tag :admin_authenticated
+    @tag authentication: [role: "admin"]
     test "lists all relations", %{conn: conn, swagger_schema: schema} do
       assert %{"data" => []} =
                conn
@@ -166,8 +164,7 @@ defmodule TdLmWeb.RelationControllerTest do
       create_hierarchy(tags)
     end
 
-    @tag authenticated_user: "non_admin"
-    @tag permissions: [:view_approval_pending_business_concepts]
+    @tag authentication: [permissions: ["view_approval_pending_business_concepts"]]
     test "relation when user has permissions", %{
       conn: conn,
       concept: concept,
@@ -182,14 +179,15 @@ defmodule TdLmWeb.RelationControllerTest do
                |> json_response(:ok)
     end
 
-    @tag authenticated_user: "non_admin"
-    @tag shared_permissions: [:view_approval_pending_business_concepts]
+    @tag authentication: [user_name: "not_an_admin"]
     test "relation when user has permissions over shared domain", %{
       conn: conn,
-      concept: concept,
+      claims: claims,
+      concept: %{shared_to_ids: [shared_id], id: concept_id},
       swagger_schema: schema
     } do
-      %{id: id} = insert(:relation, source_id: concept.id, source_type: "business_concept")
+      CacheHelpers.put_session_permissions(claims, %{"view_approval_pending_business_concepts" => [shared_id]})
+      %{id: id} = insert(:relation, source_id: concept_id, source_type: "business_concept")
 
       assert %{"data" => %{"id" => ^id}} =
                conn
@@ -198,7 +196,7 @@ defmodule TdLmWeb.RelationControllerTest do
                |> json_response(:ok)
     end
 
-    @tag authenticated_user: "non_admin"
+    @tag authentication: [user_name: "not_an_admin"]
     test "unauthorized when user has not permissions", %{conn: conn, concept: concept} do
       %{id: id} = insert(:relation, source_id: concept.id, source_type: "business_concept")
 
@@ -210,11 +208,9 @@ defmodule TdLmWeb.RelationControllerTest do
   end
 
   describe "create relation" do
-    setup tags do
-      create_hierarchy(tags)
-    end
+    setup :create_hierarchy
 
-    @tag :admin_authenticated
+    @tag authentication: [role: "admin"]
     test "renders relation when data is valid", %{conn: conn, swagger_schema: schema} do
       %{
         "context" => context,
@@ -241,8 +237,7 @@ defmodule TdLmWeb.RelationControllerTest do
              } = data
     end
 
-    @tag authenticated_user: "non_admin"
-    @tag permissions: [:manage_business_concept_links]
+    @tag authentication: [permissions: ["manage_business_concept_links"]]
     test "renders relation when user has permission over domain", %{
       conn: conn,
       concept: %{id: id},
@@ -273,8 +268,7 @@ defmodule TdLmWeb.RelationControllerTest do
              } = data
     end
 
-    @tag authenticated_user: "non_admin"
-    @tag shared_permissions: [:manage_business_concept_links]
+    @tag authentication: [permissions: ["manage_business_concept_links"]]
     test "renders relation when user has permission over shared domain", %{
       conn: conn,
       concept: %{id: id},
@@ -305,7 +299,7 @@ defmodule TdLmWeb.RelationControllerTest do
              } = data
     end
 
-    @tag authenticated_user: "non_admin"
+    @tag authentication: [user_name: "not_an_admin"]
     test "error when user has not permissions to create a relation", %{conn: conn} do
       params = string_params_for(:relation, source_type: "ingest")
 
@@ -315,7 +309,7 @@ defmodule TdLmWeb.RelationControllerTest do
                |> json_response(:forbidden)
     end
 
-    @tag :admin_authenticated
+    @tag authentication: [role: "admin"]
     test "renders errors when data is invalid", %{conn: conn} do
       params = %{"source_id" => nil}
 
@@ -338,7 +332,7 @@ defmodule TdLmWeb.RelationControllerTest do
       [relation: insert(:relation, source_type: "ingest")]
     end
 
-    @tag authenticated_user: "non_admin"
+    @tag authentication: [user_name: "not_an_admin"]
     test "error when user has not permissions to create a relation", %{
       conn: conn,
       relation: relation
@@ -349,7 +343,7 @@ defmodule TdLmWeb.RelationControllerTest do
                |> json_response(:forbidden)
     end
 
-    @tag :admin_authenticated
+    @tag authentication: [role: "admin"]
     test "deletes chosen relation", %{conn: conn, relation: relation} do
       assert conn
              |> delete(Routes.relation_path(conn, :delete, relation))
@@ -357,49 +351,16 @@ defmodule TdLmWeb.RelationControllerTest do
     end
   end
 
-  defp create_hierarchy(tags) do
-    domain = %{
-      id: System.unique_integer([:positive]),
-      name: "foo",
-      external_id: "bar",
-      updated_at: DateTime.utc_now()
-    }
+  defp create_hierarchy(context) do
+    %{id: domain_id} = Map.get(context, :domain, CacheHelpers.put_domain())
+    %{id: shared_id} = CacheHelpers.put_domain()
 
-    shared = %{
-      id: System.unique_integer([:positive]),
-      name: "bar",
-      external_id: "baz",
-      updated_at: DateTime.utc_now()
-    }
-
-    concept = %{
-      id: System.unique_integer([:positive]),
-      domain_id: domain.id,
-      name: "xyz",
-      business_concept_version_id: System.unique_integer([:positive]),
-      shared_to_ids: [shared.id]
-    }
-
-    ConceptCache.put(concept)
-    TaxonomyCache.put_domain(domain)
-    TaxonomyCache.put_domain(shared)
-
-    on_exit(fn ->
-      ConceptCache.delete(concept.id)
-      TaxonomyCache.delete_domain(domain.id)
-      TaxonomyCache.delete_domain(shared.id)
-    end)
-
-    case tags do
-      %{shared_permissions: [_ | _] = permissions, claims: %{user_id: user_id}} ->
-        create_acl_entry(user_id, "domain", shared.id, permissions)
-
-      %{permissions: [_ | _] = permissions, claims: %{user_id: user_id}} ->
-        create_acl_entry(user_id, "domain", domain.id, permissions)
-
-      _ ->
-        :ok
-    end
+    concept =
+      CacheHelpers.put_concept(
+        domain_id: domain_id,
+        name: "xyz",
+        shared_to_ids: [shared_id]
+      )
 
     [concept: concept]
   end
@@ -409,15 +370,11 @@ defmodule TdLmWeb.RelationControllerTest do
          "id" => business_concept_version_id,
          "name" => name
        }) do
-    ConceptCache.put(%{
+    CacheHelpers.put_concept(
       id: id,
       domain_id: 1,
       name: name,
       business_concept_version_id: business_concept_version_id
-    })
-
-    on_exit(fn ->
-      ConceptCache.delete(id)
-    end)
+    )
   end
 end
