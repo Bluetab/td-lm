@@ -1,10 +1,16 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- [TD-4491] Refactored search and permissions
+
 ## [4.28.0] 2021-09-20
 
 ### Added
 
-- [TD-3780] Missing `domain_ids` in Audit events 
+- [TD-3780] Missing `domain_ids` in Audit events
 - [TD-3971] Template mandatory dependent field
 
 ## [4.27.0] 2021-09-07
