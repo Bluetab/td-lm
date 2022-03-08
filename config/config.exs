@@ -68,14 +68,16 @@ config :td_lm, TdLm.Scheduler,
       task:
         {TdCache.CacheCleaner, :clean,
          [
-           "relation_type:*",
-           "business_concept*:",
-           "data_field*:",
-           "data_structure*:",
-           "ingest*:",
-           "*:bc_padre",
-           "*:bc_caculo",
-           "*:relations"
+           [
+             "relation_type:*",
+             "business_concept*:",
+             "data_field*:",
+             "data_structure*:",
+             "ingest*:",
+             "*:bc_padre",
+             "*:bc_caculo",
+             "*:relations"
+           ]
          ]},
       run_strategy: Quantum.RunStrategy.Local
     ],
