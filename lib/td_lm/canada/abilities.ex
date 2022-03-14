@@ -2,6 +2,7 @@ defmodule TdBg.Canada.Abilities do
   @moduledoc false
   alias TdLm.Auth.Claims
   alias TdLm.Canada.BusinessConceptAbilities
+  alias TdLm.Canada.ImplementationAbilities
   alias TdLm.Canada.IngestAbilities
   alias TdLm.Resources.Relation
 
@@ -54,6 +55,14 @@ defmodule TdBg.Canada.Abilities do
 
     def can?(%Claims{} = claims, :delete, %{resource_type: "ingest"} = params) do
       IngestAbilities.can?(claims, :delete, params)
+    end
+
+    def can?(%Claims{} = claims, :create, %{resource_type: "implementation"} = params) do
+      ImplementationAbilities.can?(claims, :create, params)
+    end
+
+    def can?(%Claims{} = claims, :delete, %{resource_type: "implementation"} = params) do
+      ImplementationAbilities.can?(claims, :delete, params)
     end
 
     def can?(%Claims{}, _permission, _params) do

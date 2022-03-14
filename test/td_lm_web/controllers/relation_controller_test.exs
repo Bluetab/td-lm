@@ -186,7 +186,10 @@ defmodule TdLmWeb.RelationControllerTest do
       concept: %{shared_to_ids: [shared_id], id: concept_id},
       swagger_schema: schema
     } do
-      CacheHelpers.put_session_permissions(claims, %{"view_approval_pending_business_concepts" => [shared_id]})
+      CacheHelpers.put_session_permissions(claims, %{
+        "view_approval_pending_business_concepts" => [shared_id]
+      })
+
       %{id: id} = insert(:relation, source_id: concept_id, source_type: "business_concept")
 
       assert %{"data" => %{"id" => ^id}} =
@@ -268,6 +271,44 @@ defmodule TdLmWeb.RelationControllerTest do
              } = data
     end
 
+    @tag authentication: [permissions: ["link_implementation_business_concept"]]
+    test "can create implementation link when user has permissions", %{
+      conn: conn,
+      concept: concept,
+      swagger_schema: schema
+    } do
+      %{
+        "context" => context,
+        "source_id" => source_id,
+        "source_type" => source_type,
+        "target_id" => target_id,
+        "target_type" => target_type
+      } =
+        params =
+        string_params_for(:relation,
+          source_id: System.unique_integer([:positive]),
+          source_type: "implementation",
+          target_id: concept.id,
+          target_type: "business_concept"
+        )
+
+      assert %{"data" => data} =
+               conn
+               |> post(Routes.relation_path(conn, :create), relation: params)
+               |> validate_resp_schema(schema, "RelationResponse")
+               |> json_response(:created)
+
+      assert %{
+               "id" => _id,
+               "source_id" => ^source_id,
+               "source_type" => ^source_type,
+               "target_id" => ^target_id,
+               "target_type" => ^target_type,
+               "context" => ^context,
+               "tags" => []
+             } = data
+    end
+
     @tag authentication: [permissions: ["manage_business_concept_links"]]
     test "renders relation when user has permission over shared domain", %{
       conn: conn,
@@ -302,6 +343,20 @@ defmodule TdLmWeb.RelationControllerTest do
     @tag authentication: [user_name: "not_an_admin"]
     test "error when user has not permissions to create a relation", %{conn: conn} do
       params = string_params_for(:relation, source_type: "ingest")
+
+      assert %{"errors" => _} =
+               conn
+               |> post(Routes.relation_path(conn, :create), relation: params)
+               |> json_response(:forbidden)
+    end
+
+    @tag authentication: [user_name: "not_an_admin"]
+    test "error when user has not permissions to create a implementation link", %{conn: conn} do
+      params =
+        string_params_for(:relation,
+          source_type: "implementation",
+          target_type: "business_concept"
+        )
 
       assert %{"errors" => _} =
                conn
