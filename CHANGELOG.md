@@ -4,6 +4,8 @@
 
 ### Changed
 
+- [TD-2501] Database timeout and pool size can now be configured using
+  `DB_TIMEOUT_MILLIS` and `DB_POOL_SIZE` environment variables
 - [TD-4491] Refactored search and permissions
 
 ## [4.28.0] 2021-09-20

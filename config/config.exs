@@ -10,7 +10,7 @@ config :td_lm, :env, Mix.env()
 
 # General application configuration
 config :td_lm, ecto_repos: [TdLm.Repo]
-config :td_lm, TdLm.Repo, pool_size: 5
+config :td_lm, TdLm.Repo, pool_size: 4
 
 # Configures the endpoint
 config :td_lm, TdLmWeb.Endpoint,
