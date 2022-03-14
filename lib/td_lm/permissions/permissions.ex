@@ -14,4 +14,8 @@ defmodule TdLm.Permissions do
   def authorized_any?(%Claims{jti: jti}, permissions, resource_type, id) do
     TdCache.Permissions.has_any_permission?(jti, permissions, resource_type, id)
   end
+
+  def has_any_permission?(%Claims{jti: jti}, permissions) do
+    TdCache.Permissions.has_any_permission?(jti, permissions)
+  end
 end
