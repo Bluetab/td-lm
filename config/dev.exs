@@ -21,7 +21,6 @@ config :td_lm, TdLm.Repo,
   username: "postgres",
   password: "postgres",
   database: "td_lm_dev",
-  hostname: "postgres",
-  pool_size: 4
+  hostname: "postgres"
 
 config :td_cache, redis_host: "redis"
