@@ -37,23 +37,30 @@ defmodule TdLm.Cache.LinkLoader do
     GenServer.call(__MODULE__, {:delete, [id]})
   end
 
+  def load do
+    GenServer.cast(__MODULE__, :load)
+  end
+
   ## Callbacks
 
   @impl true
   def init(state) do
-    unless Application.get_env(:td_lm, :env) == :test do
-      Process.send_after(self(), :load, 0)
-    end
-
     {:ok, state}
   end
 
   @impl true
-  def handle_info(:load, state) do
+  def handle_cast(:load, state) do
     {:ok, _count} =
       Resources.list_relations()
-      |> load_links
+      |> load_links()
 
+    {:noreply, state}
+  end
+
+  @impl GenServer
+  def handle_cast(:refresh, state) do
+    do_deprecate()
+    do_activate()
     {:noreply, state}
   end
 
@@ -71,13 +78,6 @@ defmodule TdLm.Cache.LinkLoader do
   def handle_call({:delete, ids}, _from, state) do
     reply = delete_ids(ids)
     {:reply, reply, state}
-  end
-
-  @impl GenServer
-  def handle_cast(:refresh, state) do
-    do_deprecate()
-    do_activate()
-    {:noreply, state}
   end
 
   @spec do_deprecate :: :ok

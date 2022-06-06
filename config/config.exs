@@ -48,8 +48,6 @@ config :td_lm, :phoenix_swagger,
     "priv/static/swagger.json" => [router: TdLmWeb.Router]
   }
 
-config :td_lm, :relation_loader, load_on_startup: true
-
 config :td_cache, :audit,
   service: "td_lm",
   stream: "audit:events"
@@ -80,6 +78,11 @@ config :td_lm, TdLm.Scheduler,
              "*:relations"
            ]
          ]},
+      run_strategy: Quantum.RunStrategy.Local
+    ],
+    link_loader: [
+      schedule: "@reboot",
+      task: {TdLm.Cache.LinkLoader, :load, []},
       run_strategy: Quantum.RunStrategy.Local
     ],
     link_refresher: [

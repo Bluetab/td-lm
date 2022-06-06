@@ -364,6 +364,7 @@ defmodule TdLm.Resources do
           |> Data.all([id])
           |> Enum.map(&Graph.vertex(g, &1))
           |> Enum.reject(&reject_by_type(&1, opts[:types]))
+          # credo:disable-for-next-line
           |> Enum.reject(&reject_by_permissions(&1, claims))
           |> Enum.uniq_by(&Map.get(&1, :id))
 
