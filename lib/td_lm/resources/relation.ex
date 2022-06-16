@@ -7,6 +7,7 @@ defmodule TdLm.Resources.Relation do
 
   import Ecto.Changeset
 
+  alias TdDfLib.Validation
   alias TdLm.Resources
   alias TdLm.Resources.Tag
 
@@ -39,6 +40,7 @@ defmodule TdLm.Resources.Relation do
     |> validate_required([:source_id, :source_type, :target_id, :target_type, :context])
     |> validate_inclusion(:source_type, @valid_types)
     |> validate_inclusion(:target_type, @valid_types)
+    |> validate_change(:context, &Validation.validate_safe/2)
     |> put_tags()
   end
 

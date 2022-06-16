@@ -7,6 +7,7 @@ defmodule TdLm.Resources.Tag do
 
   import Ecto.Changeset
 
+  alias TdDfLib.Validation
   alias TdLm.Resources.Relation
 
   schema "tags" do
@@ -27,6 +28,7 @@ defmodule TdLm.Resources.Tag do
   def changeset(%__MODULE__{} = tag, %{} = params) do
     tag
     |> cast(params, [:value])
-    |> validate_required([:value])
+    |> validate_required(:value)
+    |> validate_change(:value, &Validation.validate_safe/2)
   end
 end
