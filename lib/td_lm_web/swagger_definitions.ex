@@ -78,11 +78,13 @@ defmodule TdLmWeb.SwaggerDefinitions do
 
           properties do
             id(:integer, "Relation Id", required: true)
+            context(:object, "Context information of the source and the target", required: true)
             source_id(:integer, "Id of the source of the relation", required: true)
             source_type(:string, "Type of the source of the relation", required: true)
             target_id(:integer, "Id of the source of the relation", required: true)
             target_type(:string, "Type of the source of the relation", required: true)
-            context(:object, "Context information of the source and the target", required: true)
+            inserted_at(:string, "insert timestamp")
+            updated_at(:string, "update timestamp")
           end
         end,
       RelationResponse:

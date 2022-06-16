@@ -21,22 +21,27 @@ defmodule TdLmWeb.RelationView do
   end
 
   defp relation_json(relation) do
-    tags = parse_relation_tags(relation)
+    tags = relation_tags(relation)
 
     relation
-    |> Map.take([:id, :context, :source_id, :source_type, :target_id, :target_type])
+    |> Map.take([
+      :context,
+      :id,
+      :inserted_at,
+      :source_id,
+      :source_type,
+      :target_id,
+      :target_type,
+      :updated_at
+    ])
     |> Map.put(:tags, tags)
   end
 
-  defp parse_relation_tags(relation) do
-    case Ecto.assoc_loaded?(relation.tags) do
-      true ->
-        relation
-        |> Map.get(:tags, [])
-        |> Enum.map(&Map.take(&1, [:id, :value]))
-
-      false ->
-        []
+  defp relation_tags(%{tags: tags}) do
+    if Ecto.assoc_loaded?(tags) do
+      Enum.map(tags, &Map.take(&1, [:id, :value]))
+    else
+      []
     end
   end
 end

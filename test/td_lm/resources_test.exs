@@ -119,7 +119,7 @@ defmodule TdLm.ResourcesTest do
   end
 
   test "list_relations/1 returns the relations filter by the provided params" do
-    tag_1 = insert(:tag, value: %{"type" => "First type"})
+    tag_1 = insert(:tag, value: %{"type" => "First type", "target_type" => "foo"})
     tag_2 = insert(:tag, value: %{"type" => "Second type"})
     tag_3 = insert(:tag, value: %{"type" => "Third type"})
 
@@ -127,27 +127,37 @@ defmodule TdLm.ResourcesTest do
     relation_2 = insert(:relation, tags: [tag_2])
     relation_3 = insert(:relation, tags: [tag_3])
 
-    result_list =
-      Resources.list_relations(%{"value" => %{"type" => ["First type", "Second type"]}})
+    relations = Resources.list_relations(%{"value" => %{"type" => ["First type", "Second type"]}})
+    assert_lists_equal(relations, [relation_1, relation_2])
 
-    assert length(result_list) == 2
+    relations = Resources.list_relations(%{"value" => %{"type" => "Third type"}})
+    assert_lists_equal(relations, [relation_3])
 
-    assert Enum.any?(result_list, &(&1.id == relation_1.id))
-    assert Enum.any?(result_list, &(&1.id == relation_2.id))
-
-    result_list = Resources.list_relations(%{"value" => %{"type" => "Third type"}})
-    assert length(result_list) == 1
-
-    assert Enum.any?(result_list, &(&1.id == relation_3.id))
-
-    result_list =
+    relations =
       Resources.list_relations(%{
         "value" => %{"type" => ["First type", "Second type"]},
         "source_type" => "new type"
       })
 
-    assert length(result_list) == 1
-    assert Enum.any?(result_list, &(&1.id == relation_1.id))
+    assert_lists_equal(relations, [relation_1])
+  end
+
+  test "list_relations/1 filters by pagination parameters" do
+    ts = DateTime.utc_now()
+    relations = Enum.map(10..1, fn i -> insert(:relation, updated_at: DateTime.add(ts, -i, :second)) end)
+
+    # min_id
+    {%{id: min_id}, %{id: max_id}} = Enum.min_max_by(relations, & &1.id)
+    assert_lists_equal(relations, Resources.list_relations(%{"min_id" => min_id}))
+    assert [%{id: ^max_id}] = Resources.list_relations(%{"min_id" => max_id})
+
+    # since
+    {%{updated_at: min_ts}, %{updated_at: max_ts}} = Enum.min_max_by(relations, & &1.updated_at, DateTime)
+    assert_lists_equal(relations, Resources.list_relations(%{"since" => min_ts}))
+    assert [%{updated_at: ^max_ts}] = Resources.list_relations(%{"since" => max_ts})
+
+    # limit
+    assert_lists_equal(Enum.take(relations, 5), Resources.list_relations(%{"limit" => 5}))
   end
 
   test "get_relation!/1 returns the relation with given id" do
@@ -197,7 +207,7 @@ defmodule TdLm.ResourcesTest do
   end
 
   test "list_tags/1 filtering by several return types returns all tags" do
-    tag_1 = insert(:tag, value: %{"type" => "First type"})
+    %{id: id1} = tag_1 = insert(:tag, value: %{"type" => "First type", "target_type" => "Foo"})
     tag_2 = insert(:tag, value: %{"type" => "Second type"})
     insert(:tag, value: %{"type" => "Third type"})
 
@@ -206,9 +216,7 @@ defmodule TdLm.ResourcesTest do
 
     result_tags = Resources.list_tags(%{"value" => %{"type" => "First type"}})
 
-    assert length(result_tags) == 1
-
-    assert Enum.any?(result_tags, &(&1.id == tag_1.id))
+    assert [%{id: ^id1}] = result_tags
   end
 
   test "get_tag!/1 returns the tag with given id" do

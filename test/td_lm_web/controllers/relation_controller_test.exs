@@ -20,6 +20,21 @@ defmodule TdLmWeb.RelationControllerTest do
                |> validate_resp_schema(schema, "RelationsResponse")
                |> json_response(:ok)
     end
+
+    @tag authentication: [role: "admin"]
+    test "includes updated_at in response", %{conn: conn} do
+      %{updated_at: updated_at} = insert(:relation)
+
+      params = %{}
+
+      assert %{"data" => data} =
+               conn
+               |> post(Routes.relation_path(conn, :search, params))
+               |> json_response(:ok)
+
+      assert [%{"updated_at" => ts}] = data
+      assert ts == DateTime.to_iso8601(updated_at)
+    end
   end
 
   describe "search relation when user has no permissions" do
