@@ -14,27 +14,33 @@ defmodule TdLm.Resources do
   alias TdLm.Resources.Relation
   alias TdLm.Resources.Tag
 
-  @doc """
-  Returns the list of relations.
-
-  ## Examples
-
-      iex> list_relations()
-      [%Relation{}, ...]
-
-  """
   def list_relations(params \\ %{}) do
-    fields = Relation.__schema__(:fields)
-    dynamic = and_filter(params, fields)
-
-    Relation
-    |> preload([:tags])
-    |> join(:left, [p], _ in assoc(p, :tags))
-    |> where(^dynamic)
-    |> include_where_for_external_params(params)
+    params
+    |> Enum.reduce(Relation, fn
+      {"id", id}, q -> where(q, [r], r.id == ^id)
+      {"limit", limit}, q -> limit(q, ^limit)
+      {"min_id", min_id}, q -> where(q, [r], r.id >= ^min_id)
+      {"since", since}, q -> where(q, [r], r.updated_at >= ^since)
+      {"source_id", id}, q -> where(q, [r], r.source_id == ^id)
+      {"source_type", t}, q -> where(q, [r], r.source_type == ^t)
+      {"target_id", id}, q -> where(q, [r], r.target_id == ^id)
+      {"target_type", t}, q -> where(q, [r], r.target_type == ^t)
+      {"value", %{} = value}, q -> where_relation_value(q, value)
+    end)
+    |> order_by([:updated_at, :id])
+    |> preload(:tags)
     |> Repo.all()
   end
 
+  defp where_relation_value(q, %{} = value) do
+    q = join(q, :left, [r], _ in assoc(r, :tags))
+
+    Enum.reduce(value, q, fn {k, v}, q ->
+      where(q, [_, rt], rt.value[^k] in ^List.wrap(v))
+    end)
+  end
+
+  @spec count_relations_by_source(any, any) :: map
   def count_relations_by_source(source_type, target_type) do
     Relation
     |> Repo.all()
@@ -52,18 +58,7 @@ defmodule TdLm.Resources do
   end
 
   @doc """
-  Gets a single relation.
-
-  Raises `Ecto.NoResultsError` if the Relation does not exist.
-
-  ## Examples
-
-      iex> get_relation!(123)
-      %Relation{}
-
-      iex> get_relation!(456)
-      ** (Ecto.NoResultsError)
-
+  Gets a single relation.   Raises `Ecto.NoResultsError` if the Relation does not exist.
   """
   def get_relation!(id) do
     Relation
@@ -71,33 +66,10 @@ defmodule TdLm.Resources do
     |> Repo.preload(:tags)
   end
 
-  @doc """
-  Gets a single relation.
-
-  Returns nil if the Relation does not exist.
-
-  ## Examples
-
-      iex> get_relation(123)
-      %Relation{}
-
-      iex> get_relation(456)
-      ** nil
-
-  """
   def get_relation(id), do: Repo.get(Relation, id)
 
   @doc """
   Creates a relation and publishes an audit event.
-
-  ## Examples
-
-      iex> create_relation(%{field: value}, claims)
-      {:ok, %{audit: "event_id", relation: %Relation{}}}
-
-      iex> create_relation(%{field: bad_value}, claims)
-      {:error, :relation, %Ecto.Changeset{}, %{}}
-
   """
   def create_relation(%{} = params, %Claims{user_id: user_id}) do
     changeset = Relation.changeset(params)
@@ -118,15 +90,6 @@ defmodule TdLm.Resources do
 
   @doc """
   Deletes a relation and publishes an audit event.
-
-  ## Examples
-
-      iex> delete_relation(relation, claims)
-      {:ok, %{audit: "event_id", relation: %Relation{}}}
-
-      iex> delete_relation(relation, claims)
-      {:error, :relation, %Ecto.Changeset{}, %{}}
-
   """
   def delete_relation(%Relation{} = relation, %Claims{user_id: user_id}) do
     Multi.new()
@@ -145,38 +108,25 @@ defmodule TdLm.Resources do
 
   @doc """
   Returns the list of tags.
-
-  ## Examples
-
-      iex> list_tags()
-      [%Tag{}, ...]
-
   """
   def list_tags(params \\ %{}) do
-    fields = Tag.__schema__(:fields)
-    dynamic = filter_tags(params, fields)
+    params
+    |> Enum.reduce(Tag, fn
+      {"value", %{} = value}, q -> where_tag_value(q, value)
+    end)
+    |> Repo.all()
+  end
 
-    Repo.all(
-      from(
-        p in Tag,
-        where: ^dynamic
-      )
-    )
+  defp where_tag_value(q, %{} = value) do
+    Enum.reduce(value, q, fn {k, v}, q ->
+      where(q, [t], t.value[^k] in ^List.wrap(v))
+    end)
   end
 
   @doc """
   Gets a single tag.
 
   Raises `Ecto.NoResultsError` if the Tag does not exist.
-
-  ## Examples
-
-      iex> get_tag!(123)
-      %Tag{}
-
-      iex> get_tag!(456)
-      ** (Ecto.NoResultsError)
-
   """
   def get_tag!(id) do
     Tag
@@ -188,29 +138,11 @@ defmodule TdLm.Resources do
   Gets a single tag.
 
   Returns nil if the Tag does not exist.
-
-  ## Examples
-
-      iex> get_tag(123)
-      %Tag{}
-
-      iex> get_tag(456)
-      ** nil
-
   """
   def get_tag(id), do: Repo.get(Tag, id)
 
   @doc """
   Creates a tag and publishes and audit event.
-
-  ## Examples
-
-      iex> create_tag(%{field: value}, claims)
-      {:ok, %{audit: "event_id", tag: %Tag{}}}
-
-      iex> create_tag(%{field: bad_value}, claims)
-      {:error, :tag, %Ecto.Changeset{}, %{}}
-
   """
   def create_tag(%{} = params, %Claims{user_id: user_id}) do
     changeset = Tag.changeset(params)
@@ -223,15 +155,6 @@ defmodule TdLm.Resources do
 
   @doc """
   Deletes a tag and publishes an audit event.
-
-  ## Examples
-
-      iex> delete_tag(tag, claims)
-      {:ok, %{relations: {0, []}, tag: %Tag{}, audit: "event_id"}
-
-      iex> delete_tag(tag, claims)
-      {:error, :tag, %Ecto.Changeset{}, %{}}
-
   """
   def delete_tag(%Tag{id: id} = tag, %Claims{user_id: user_id}) do
     relation_id_query =
@@ -254,52 +177,6 @@ defmodule TdLm.Resources do
       res
     end
   end
-
-  defp filter_tags(params, fields) do
-    and_filter(params, fields)
-  end
-
-  defp and_filter(params, fields) do
-    dynamic = true
-
-    Enum.reduce(Map.keys(params), dynamic, fn key, acc ->
-      key_as_atom = if is_binary(key), do: String.to_atom(key), else: key
-
-      case Enum.member?(fields, key_as_atom) do
-        true ->
-          filter_by_field(key_as_atom, params[key], acc)
-
-        false ->
-          acc
-      end
-    end)
-  end
-
-  defp filter_by_field(atom_key, param_value, acc) when is_map(param_value) do
-    dynamic([p, _], fragment("(?) @> ?::jsonb", field(p, ^atom_key), ^param_value) and ^acc)
-  end
-
-  defp filter_by_field(atom_key, param_value, acc) do
-    dynamic([p, _], field(p, ^atom_key) == ^param_value and ^acc)
-  end
-
-  defp include_where_for_external_params(query, %{"value" => value}) do
-    values_type = Map.get(value, "type")
-
-    if is_list(values_type) do
-      condition =
-        Enum.reduce(values_type, false, fn el, acc ->
-          param_value = %{"type" => el}
-          dynamic([_, t], fragment("(?) @> ?::jsonb", field(t, :value), ^param_value) or ^acc)
-        end)
-
-      where(query, ^condition)
-    else
-      where(query, [_, t], fragment("(?) @> ?::jsonb", field(t, :value), ^value))
-    end
-  end
-
-  defp include_where_for_external_params(query, _), do: query
 
   @spec list_stale_relations(String.t(), list(integer)) :: list(Relation.t())
   def list_stale_relations(resource_type, active_ids) do

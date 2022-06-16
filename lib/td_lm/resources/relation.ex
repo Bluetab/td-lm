@@ -27,7 +27,7 @@ defmodule TdLm.Resources.Relation do
       on_replace: :delete
     )
 
-    timestamps()
+    timestamps(type: :utc_datetime_usec)
   end
 
   def changeset(%{} = params) do

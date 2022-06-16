@@ -5,6 +5,9 @@
 ### Changed
 
 - [TD-4739] Validate dynamic content for safety to prevent XSS attacks
+- [TD-4839] `POST /api/relations/search` now support pagination parameters
+  `since`, `min_id` and `limit`. Response includes UTC timestamps `inserted_at`
+  and `updated_at`.
 
 ## [4.45.0] 2022-06-06
 
