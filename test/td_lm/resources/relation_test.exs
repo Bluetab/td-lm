@@ -4,6 +4,8 @@ defmodule TdLm.Resources.RelationTest do
   alias TdLm.Repo
   alias TdLm.Resources.Relation
 
+  @unsafe "javascript:alert(document)"
+
   setup do
     tags = Enum.map(1..5, fn _ -> insert(:tag) end)
     relation = insert(:relation, tags: tags)
@@ -22,6 +24,16 @@ defmodule TdLm.Resources.RelationTest do
 
       assert %{tags: tags} = changes
       assert Enum.map(tags, & &1.data.id) == tag_ids
+    end
+
+    test "validates content is safe" do
+      assert %{valid?: false, errors: errors} =
+               :relation
+               |> params_for()
+               |> Map.put(:context, %{"foo" => @unsafe})
+               |> Relation.changeset()
+
+      assert errors[:context] == {"invalid content", []}
     end
 
     test "is inserted successfully", %{tags: tags} do
