@@ -3,7 +3,7 @@
 #
 # This configuration file is loaded before any dependency and
 # is restricted to this project.
-use Mix.Config
+import Config
 
 # Environment
 config :td_lm, :env, Mix.env()
@@ -20,7 +20,6 @@ config :td_lm, TdLmWeb.Endpoint,
 
 # Configures Auth module Guardian
 config :td_lm, TdLm.Auth.Guardian,
-  # optional
   allowed_algos: ["HS512"],
   issuer: "tdauth",
   ttl: {1, :hours},

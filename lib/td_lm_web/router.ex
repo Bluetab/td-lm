@@ -2,17 +2,12 @@ defmodule TdLmWeb.Router do
   use TdLmWeb, :router
 
   pipeline :api do
-    plug(TdLm.Auth.Pipeline.Unsecure)
-    plug(:accepts, ["json"])
+    plug TdLm.Auth.Pipeline.Unsecure
+    plug :accepts, ["json"]
   end
 
-  pipeline :api_secure do
-    plug(TdLm.Auth.Pipeline.Secure)
-  end
-
-  pipeline :api_authorized do
-    plug(TdLm.Auth.CurrentResource)
-    plug(Guardian.Plug.LoadResource)
+  pipeline :api_auth do
+    plug TdLm.Auth.Pipeline.Secure
   end
 
   scope "/api/swagger" do
@@ -25,7 +20,7 @@ defmodule TdLmWeb.Router do
   end
 
   scope "/api", TdLmWeb do
-    pipe_through([:api, :api_secure, :api_authorized])
+    pipe_through [:api, :api_auth]
 
     resources "/relations", RelationController, except: [:new, :edit, :update]
     get "/relations/:resource_id/graph", GraphController, :graph
