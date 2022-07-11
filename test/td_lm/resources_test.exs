@@ -144,7 +144,9 @@ defmodule TdLm.ResourcesTest do
 
   test "list_relations/1 filters by pagination parameters" do
     ts = DateTime.utc_now()
-    relations = Enum.map(10..1, fn i -> insert(:relation, updated_at: DateTime.add(ts, -i, :second)) end)
+
+    relations =
+      Enum.map(10..1, fn i -> insert(:relation, updated_at: DateTime.add(ts, -i, :second)) end)
 
     # min_id
     {%{id: min_id}, %{id: max_id}} = Enum.min_max_by(relations, & &1.id)
@@ -152,7 +154,9 @@ defmodule TdLm.ResourcesTest do
     assert [%{id: ^max_id}] = Resources.list_relations(%{"min_id" => max_id})
 
     # since
-    {%{updated_at: min_ts}, %{updated_at: max_ts}} = Enum.min_max_by(relations, & &1.updated_at, DateTime)
+    {%{updated_at: min_ts}, %{updated_at: max_ts}} =
+      Enum.min_max_by(relations, & &1.updated_at, DateTime)
+
     assert_lists_equal(relations, Resources.list_relations(%{"since" => min_ts}))
     assert [%{updated_at: ^max_ts}] = Resources.list_relations(%{"since" => max_ts})
 
