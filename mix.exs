@@ -67,11 +67,11 @@ defmodule TdLm.Mixfile do
       {:ex_machina, "~> 2.3", only: :test},
       {:assertions, "~> 0.19", only: :test},
       {:td_hypermedia, git: "https://github.com/Bluetab/td-hypermedia.git", tag: "4.0.0"},
-      {:td_cache,
-       git: "https://github.com/Bluetab/td-cache.git", tag: "4.48.1", override: true},
+      {:td_cache, git: "https://github.com/Bluetab/td-cache.git", tag: "4.48.1", override: true},
       {:td_df_lib, git: "https://github.com/Bluetab/td-df-lib.git", tag: "4.48.0"},
       {:quantum, "~> 3.0"},
-      {:graph, git: "https://github.com/Bluetab/graph.git", tag: "1.2.0"}
+      {:graph, git: "https://github.com/Bluetab/graph.git", tag: "1.2.0"},
+      {:sobelow, "~> 0.11", only: [:dev, :test]}
     ]
   end
 
