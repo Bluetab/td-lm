@@ -84,6 +84,11 @@ config :td_lm, TdLm.Scheduler,
       task: {TdLm.Cache.LinkLoader, :load, []},
       run_strategy: Quantum.RunStrategy.Local
     ],
+    implementation_link_migration_id_to_ref: [
+      schedule: "@reboot",
+      task: {TdLm.Cache.LinkLoader, :check_relation_impl_id_to_impl_ref, []},
+      run_strategy: Quantum.RunStrategy.Local
+    ],
     link_refresher: [
       schedule: "@hourly",
       task: {TdLm.Cache.LinkLoader, :refresh, []},

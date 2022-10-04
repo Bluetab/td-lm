@@ -206,6 +206,27 @@ defmodule TdLm.Resources do
 
   def deprecate(_resource_type, []), do: {:ok, %{deprecated: {0, []}}}
 
+  def migrate_impl_id_to_impl_ref([]), do: []
+
+  def migrate_impl_id_to_impl_ref(relations) do
+    relations
+    |> Enum.chunk_every(2)
+    |> Enum.map(fn relation ->
+      {_, relations} = update_implementation_relation(relation)
+      relations
+    end)
+    |> List.flatten()
+    |> Enum.filter(&(&1 != nil))
+    |> Enum.map(fn %{id: id} -> id end)
+  end
+
+  defp update_implementation_relation([implementation_id, implementation_ref]) do
+    Relation
+    |> where([r], r.source_type == "implementation" and r.source_id == ^implementation_id)
+    |> select([r], r)
+    |> Repo.update_all(set: [source_type: "implementation_ref", source_id: implementation_ref])
+  end
+
   @spec activate(String.t(), list(integer)) :: :ok | {:ok, map}
   def activate(resource_type, [_ | _] = resource_ids) do
     reply =

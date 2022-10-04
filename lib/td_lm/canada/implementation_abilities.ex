@@ -3,7 +3,7 @@ defmodule TdLm.Canada.ImplementationAbilities do
   alias TdLm.Auth.Claims
   alias TdLm.Permissions
 
-  def can?(%Claims{} = claims, action, %{resource_id: _id, resource_type: "implementation"})
+  def can?(%Claims{} = claims, action, %{resource_id: _id, resource_type: "implementation_ref"})
       when action in [:create, :delete] do
     Permissions.has_any_permission?(
       claims,

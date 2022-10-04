@@ -287,7 +287,7 @@ defmodule TdLmWeb.RelationControllerTest do
     end
 
     @tag authentication: [permissions: ["link_implementation_business_concept"]]
-    test "can create implementation link when user has permissions", %{
+    test "can create implementation_ref link when user has permissions", %{
       conn: conn,
       concept: concept,
       swagger_schema: schema
@@ -302,7 +302,7 @@ defmodule TdLmWeb.RelationControllerTest do
         params =
         string_params_for(:relation,
           source_id: System.unique_integer([:positive]),
-          source_type: "implementation",
+          source_type: "implementation_ref",
           target_id: concept.id,
           target_type: "business_concept"
         )
@@ -366,10 +366,10 @@ defmodule TdLmWeb.RelationControllerTest do
     end
 
     @tag authentication: [user_name: "not_an_admin"]
-    test "error when user has not permissions to create a implementation link", %{conn: conn} do
+    test "error when user has not permissions to create a implementation_ref link", %{conn: conn} do
       params =
         string_params_for(:relation,
-          source_type: "implementation",
+          source_type: "implementation_ref",
           target_type: "business_concept"
         )
 
