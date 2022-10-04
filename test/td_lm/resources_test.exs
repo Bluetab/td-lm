@@ -334,6 +334,58 @@ defmodule TdLm.ResourcesTest do
     end
   end
 
+  describe "migrate_impl_ids_to_impl_ref/1" do
+    test "update relations for implementation_id to implementation_ref" do
+      %{id: relation_id_1, source_id: source_id_relation_1_from} =
+        insert(:relation,
+          source_type: "implementation",
+          target_type: "bussiness_concept",
+          source_id: 123
+        )
+
+      %{id: relation_id_2, source_id: source_id_relation_2_from} =
+        insert(:relation,
+          source_type: "implementation",
+          target_type: "bussiness_concept",
+          source_id: 222
+        )
+
+      relation_3 =
+        insert(:relation,
+          source_type: "implementation",
+          target_type: "bussiness_concept",
+          source_id: 333
+        )
+
+      source_id_relation_1_to = 246
+      source_id_relation_2_to = 222
+
+      assert [^relation_id_1, ^relation_id_2] =
+               Resources.migrate_impl_id_to_impl_ref([
+                 source_id_relation_1_from,
+                 source_id_relation_1_to,
+                 source_id_relation_2_from,
+                 source_id_relation_2_to
+               ])
+
+      [new_relation_1, new_relation_2, new_relation_3] = Resources.list_relations()
+
+      assert %{
+               id: ^relation_id_1,
+               source_type: "implementation_ref",
+               source_id: ^source_id_relation_1_to
+             } = new_relation_1
+
+      assert %{
+               id: ^relation_id_2,
+               source_type: "implementation_ref",
+               source_id: ^source_id_relation_2_to
+             } = new_relation_2
+
+      assert ^relation_3 = new_relation_3
+    end
+  end
+
   defp put_template(_) do
     template =
       CacheHelpers.put_template(

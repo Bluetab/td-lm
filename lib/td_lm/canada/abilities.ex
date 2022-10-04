@@ -57,11 +57,11 @@ defmodule TdBg.Canada.Abilities do
       IngestAbilities.can?(claims, :delete, params)
     end
 
-    def can?(%Claims{} = claims, :create, %{resource_type: "implementation"} = params) do
+    def can?(%Claims{} = claims, :create, %{resource_type: "implementation_ref"} = params) do
       ImplementationAbilities.can?(claims, :create, params)
     end
 
-    def can?(%Claims{} = claims, :delete, %{resource_type: "implementation"} = params) do
+    def can?(%Claims{} = claims, :delete, %{resource_type: "implementation_ref"} = params) do
       ImplementationAbilities.can?(claims, :delete, params)
     end
 

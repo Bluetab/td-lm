@@ -5,6 +5,7 @@ defmodule TdLm.Cache.LinkLoader do
 
   use GenServer
 
+  alias TdCache.ImplementationCache
   alias TdCache.LinkCache
   alias TdCache.StructureCache
   alias TdLm.Resources
@@ -19,6 +20,10 @@ defmodule TdLm.Cache.LinkLoader do
 
   def refresh do
     GenServer.cast(__MODULE__, :refresh)
+  end
+
+  def check_relation_impl_id_to_impl_ref do
+    GenServer.cast(__MODULE__, :check_relation_impl_id_to_impl_ref)
   end
 
   def refresh(ids) when is_list(ids) do
@@ -61,6 +66,20 @@ defmodule TdLm.Cache.LinkLoader do
   def handle_cast(:refresh, state) do
     do_deprecate()
     do_activate()
+    {:noreply, state}
+  end
+
+  def handle_cast(:check_relation_impl_id_to_impl_ref, state) do
+    relations = ImplementationCache.get_relation_impl_id_and_impl_ref()
+
+    relation_ids = Resources.migrate_impl_id_to_impl_ref(relations)
+
+    Enum.each(relation_ids, fn id -> LinkCache.delete(id, publish: false) end)
+
+    relation_ids
+    |> Enum.map(&Resources.get_relation!/1)
+    |> load_links()
+
     {:noreply, state}
   end
 

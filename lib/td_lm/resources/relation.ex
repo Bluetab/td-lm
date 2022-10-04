@@ -11,7 +11,13 @@ defmodule TdLm.Resources.Relation do
   alias TdLm.Resources
   alias TdLm.Resources.Tag
 
-  @valid_types ["business_concept", "data_field", "data_structure", "ingest", "implementation"]
+  @valid_types [
+    "business_concept",
+    "data_field",
+    "data_structure",
+    "ingest",
+    "implementation_ref"
+  ]
 
   schema "relations" do
     field(:source_id, :integer)
