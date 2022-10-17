@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [4.53.0] 2022-10-17
 
 - [TD-5140] Changed implementations ids by implementations refs for link manager 
 
