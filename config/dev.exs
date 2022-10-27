@@ -21,6 +21,7 @@ config :td_lm, TdLm.Repo,
   username: "postgres",
   password: "postgres",
   database: "td_lm_dev",
-  hostname: "postgres"
+  hostname: "postgres",
+  stacktrace: true
 
 config :td_cache, redis_host: "redis"
