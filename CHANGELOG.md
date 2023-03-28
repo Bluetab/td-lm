@@ -1,5 +1,11 @@
 # Changelog
 
+## [5.4.0] 2023-03-28
+
+### Added
+
+- [] Add whitesource file
+
 ## [4.54.0] 2022-10-31
 
 ### Changed
