@@ -30,17 +30,20 @@ defmodule TdLm.Cache.LinkRemover do
   ## GenServer Callbacks
 
   @impl true
-  def init(state) do
-    {:ok, state}
+  def init(opts) do
+    {:ok, %{parent: Keyword.get(opts, :parent)}}
   end
 
   @impl true
-  def handle_call({:consume, events}, _from, state) do
+  def handle_call({:consume, events}, _from, %{parent: parent} = state) do
     reply =
       events
       |> Enum.map(&process/1)
       |> Enum.filter(&(&1 == :ok))
       |> Enum.count()
+
+    # Notify parent that events have been consumed (for tests)
+    if parent != nil, do: send(parent, {:consumed, events})
 
     {:reply, reply, state}
   end

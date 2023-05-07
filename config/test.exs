@@ -22,4 +22,16 @@ config :td_lm, TdLm.Repo,
 config :td_cache, :audit, stream: "audit:events:test"
 config :td_cache, redis_host: "redis", port: 6380
 
+config :td_cache, :event_stream,
+  consumer_id: "default",
+  consumer_group: "lm",
+  streams: [
+    [
+      key: "link:commands",
+      consumer: TdLm.Cache.LinkRemover,
+      quiesce: 100,
+      interval: 10
+    ]
+  ]
+
 config :td_lm, TdLm.Scheduler, jobs: []
