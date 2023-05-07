@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- [TD-5442] Clean stale implementation links
+
 ## [5.5.0] 2023-04-18
 
 ### Added
@@ -20,7 +24,7 @@
 
 ## [4.53.0] 2022-10-17
 
-- [TD-5140] Changed implementations ids by implementations refs for link manager 
+- [TD-5140] Changed implementations ids by implementations refs for link manager
 
 ## [4.52.0] 2022-10-03
 
