@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+## Added
+
+- [TD-5770] Add database TSL configuration
+
 ## [5.6.0] 2023-05-09
 
 - [TD-5442] Clean stale implementation links
