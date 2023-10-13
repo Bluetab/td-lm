@@ -39,8 +39,7 @@ defmodule TdLm.Cache.LinkRemover do
     reply =
       events
       |> Enum.map(&process/1)
-      |> Enum.filter(&(&1 == :ok))
-      |> Enum.count()
+      |> Enum.count(&(&1 == :ok))
 
     # Notify parent that events have been consumed (for tests)
     if parent != nil, do: send(parent, {:consumed, events})

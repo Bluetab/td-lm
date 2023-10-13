@@ -8,6 +8,9 @@ import Config
 # Environment
 config :td_lm, :env, Mix.env()
 
+config :td_cluster, :env, Mix.env()
+config :td_cluster, groups: [:lm]
+
 # General application configuration
 config :td_lm, ecto_repos: [TdLm.Repo]
 config :td_lm, TdLm.Repo, pool_size: 4
@@ -33,7 +36,7 @@ config :td_lm, hashing_module: Comeonin.Bcrypt
 # EX_LOGGER_FORMAT='$date $time [$level] $message'
 config :logger, :console,
   format:
-    (System.get_env("EX_LOGGER_FORMAT") || "$date\T$time\Z [$level]$levelpad $metadata$message") <>
+    (System.get_env("EX_LOGGER_FORMAT") || "$date\T$time\Z [$level] $metadata$message") <>
       "\n",
   level: :info,
   metadata: [:pid, :module],

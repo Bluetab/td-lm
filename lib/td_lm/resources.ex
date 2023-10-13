@@ -71,6 +71,28 @@ defmodule TdLm.Resources do
   @doc """
   Creates a relation and publishes an audit event.
   """
+
+  def clone_relations(original_source_id, new_source_id, relation_type, %{
+        __struct__: _,
+        user_id: user_id
+      }) do
+    %{"target_type" => relation_type, "source_id" => original_source_id}
+    |> list_relations()
+    |> Enum.map(fn %{
+                     source_type: source_type,
+                     target_id: target_id,
+                     target_type: target_type
+                   } ->
+      %{
+        "source_id" => new_source_id,
+        "source_type" => source_type,
+        "target_id" => target_id,
+        "target_type" => target_type
+      }
+    end)
+    |> Enum.map(&create_relation(&1, %Claims{user_id: user_id}))
+  end
+
   def create_relation(%{} = params, %Claims{user_id: user_id}) do
     changeset = Relation.changeset(params)
 

@@ -9,7 +9,7 @@ defmodule TdLm.Mixfile do
           nil -> "5.13.0-local"
           v -> v
         end,
-      elixir: "~> 1.12",
+      elixir: "~> 1.14",
       elixirc_paths: elixirc_paths(Mix.env()),
       compilers: [:phoenix] ++ Mix.compilers() ++ [:phoenix_swagger],
       start_permanent: Mix.env() == :prod,
@@ -66,9 +66,10 @@ defmodule TdLm.Mixfile do
       {:ex_json_schema, "~> 0.7.3"},
       {:ex_machina, "~> 2.3", only: :test},
       {:assertions, "~> 0.19", only: :test},
-      {:td_cache, git: "https://github.com/Bluetab/td-cache.git", tag: "5.12.1"},
-      {:td_df_lib, git: "https://github.com/Bluetab/td-df-lib.git", tag: "5.12.2"},
+      {:td_cache, git: "https://github.com/Bluetab/td-cache.git", tag: "5.14.0"},
+      {:td_df_lib, git: "https://github.com/Bluetab/td-df-lib.git", tag: "5.14.0"},
       {:td_hypermedia, git: "https://github.com/Bluetab/td-hypermedia.git", tag: "4.54.0"},
+      {:td_cluster, git: "https://github.com/Bluetab/td-cluster.git", tag: "5.16.0"},
       {:quantum, "~> 3.0"},
       {:graph, git: "https://github.com/Bluetab/graph.git", tag: "1.3.0"},
       {:sobelow, "~> 0.11", only: [:dev, :test]}
