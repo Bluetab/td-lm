@@ -1,20 +1,26 @@
 # Changelog
 
+## [5.16.0] 2023-10-18
+
+### Added
+
+- [TD-5582]  Updated to Elixir 1.14 and added support for TdCluster
+
 ## [5.13.0] 2023-09-05
 
-## Changed
+### Changed
 
 - [TD-5913] Update td-df-lib to fix depends validation
 
 ## [5.10.0] 2023-07-06
 
-## Changed
+### Changed
 
 - [TD-5912] `.gitlab-ci.yml` adaptations for develop and main branches
 
 ## [5.9.0] 2023-06-20
 
-## Added
+### Added
 
 - [TD-5770] Add database TSL configuration
 
