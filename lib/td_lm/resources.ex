@@ -81,13 +81,15 @@ defmodule TdLm.Resources do
     |> Enum.map(fn %{
                      source_type: source_type,
                      target_id: target_id,
-                     target_type: target_type
+                     target_type: target_type,
+                     tags: tags
                    } ->
       %{
         "source_id" => new_source_id,
         "source_type" => source_type,
         "target_id" => target_id,
-        "target_type" => target_type
+        "target_type" => target_type,
+        "tags" => tags
       }
     end)
     |> Enum.map(&create_relation(&1, %Claims{user_id: user_id}))
