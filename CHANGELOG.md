@@ -1,5 +1,11 @@
 # Changelog
 
+## [5.17.0] 2023-10-31
+
+### Fixed
+
+- [TD-6147] Remove relation_remover from config scheduler
+
 ## [5.16.0] 2023-10-18
 
 ### Added

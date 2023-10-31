@@ -96,11 +96,6 @@ config :td_lm, TdLm.Scheduler,
       schedule: "@hourly",
       task: {TdLm.Cache.LinkLoader, :refresh, []},
       run_strategy: Quantum.RunStrategy.Local
-    ],
-    relation_remover: [
-      schedule: "@hourly",
-      task: {TdLm.RelationRemover, :delete_stale_relations, []},
-      run_strategy: Quantum.RunStrategy.Local
     ]
   ]
 
