@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- [TD-6177] Update td-df-lib to fix format field
+
 ## [5.17.0] 2023-10-31
 
 ### Fixed
@@ -10,7 +16,7 @@
 
 ### Added
 
-- [TD-5582]  Updated to Elixir 1.14 and added support for TdCluster
+- [TD-5582] Updated to Elixir 1.14 and added support for TdCluster
 
 ## [5.13.0] 2023-09-05
 
