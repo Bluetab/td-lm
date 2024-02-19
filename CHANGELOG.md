@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- [TD-6425] Ensure SSL if configured for release migration
+
 ## [5.18.0] 2023-11-13
 
 ### Changed
