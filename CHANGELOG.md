@@ -1,5 +1,11 @@
 # Changelog
 
+## [6.4.0] 2024-04-09
+
+### Fixed
+
+- [TD-6507] Update df-lib lib
+
 ## [6.3.0] 2024-03-18
 
 ### Added
