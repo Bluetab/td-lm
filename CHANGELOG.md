@@ -8,6 +8,12 @@
 
 ## [6.7.0] 2024-06-13
 
+### Added
+
+- [TD-6499] Update td-df-lib to add template content origin
+
+## [6.7.0] 2024-06-13
+  
 ### Fixed
 
 - [TD-6440] Update td-df-lib
