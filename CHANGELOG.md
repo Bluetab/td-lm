@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- [TD-6602] Update td-cache and td-df-lib
+
 ## [6.8.1] 2024-07-18
 
 ### Added
@@ -17,11 +23,6 @@
 ### Added
 
 - [TD-6499] Update td-df-lib to add template content origin
-
-## [6.7.0] 2024-06-13
-  
-### Fixed
-
 - [TD-6440] Update td-df-lib
 
 ## [6.5.0] 2024-04-30
