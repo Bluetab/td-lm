@@ -6,7 +6,7 @@ defmodule TdLm.Mixfile do
       app: :td_lm,
       version:
         case System.get_env("APP_VERSION") do
-          nil -> "6.9.1-local"
+          nil -> "6.9.2-local"
           v -> v
         end,
       elixir: "~> 1.14",
@@ -67,7 +67,7 @@ defmodule TdLm.Mixfile do
       {:ex_machina, "~> 2.3", only: :test},
       {:assertions, "~> 0.19", only: :test},
       {:td_cache, git: "https://github.com/Bluetab/td-cache.git", tag: "6.9.2"},
-      {:td_df_lib, git: "https://github.com/Bluetab/td-df-lib.git", tag: "6.9.5"},
+      {:td_df_lib, git: "https://github.com/Bluetab/td-df-lib.git", tag: "6.9.6"},
       {:td_hypermedia, git: "https://github.com/Bluetab/td-hypermedia.git", tag: "4.54.0"},
       {:td_cluster, git: "https://github.com/Bluetab/td-cluster.git", tag: "5.19.0"},
       {:quantum, "~> 3.0"},
