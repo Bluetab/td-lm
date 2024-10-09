@@ -24,6 +24,7 @@ defmodule TdLmWeb.RelationController do
         "related_to_type" => related_to_type
       }) do
     claims = conn.assigns[:current_resource]
+    lang = conn.assigns[:locale]
 
     relations =
       [
@@ -40,8 +41,8 @@ defmodule TdLmWeb.RelationController do
       ]
       |> Enum.flat_map(&Resources.list_relations/1)
       |> Enum.filter(&can?(claims, show(&1)))
-      |> Enum.map(&refresh_attributes(&1, "target", :target_id, related_to_type))
-      |> Enum.map(&refresh_attributes(&1, "source", :source_id, related_to_type))
+      |> Enum.map(&refresh_attributes(&1, "target", :target_id, related_to_type, lang: lang))
+      |> Enum.map(&refresh_attributes(&1, "source", :source_id, related_to_type, lang: lang))
 
     render(
       conn,
@@ -181,7 +182,7 @@ defmodule TdLmWeb.RelationController do
     end
   end
 
-  defp refresh_attributes(relation, relation_side, relation_id_key, target_type)
+  defp refresh_attributes(relation, relation_side, relation_id_key, target_type, opts)
        when target_type in ["business_concept", "ingest"] do
     relation_side_attrs =
       relation
@@ -193,7 +194,7 @@ defmodule TdLmWeb.RelationController do
         relation
 
       relation_side_attrs ->
-        cached = fetch_attributes(Map.get(relation, relation_id_key), target_type)
+        cached = fetch_attributes(Map.get(relation, relation_id_key), target_type, opts)
         version_id = Map.get(cached, :version_id)
         name = Map.get(cached, :name)
 
@@ -207,10 +208,10 @@ defmodule TdLmWeb.RelationController do
     end
   end
 
-  defp refresh_attributes(relation, _, _, _), do: relation
+  defp refresh_attributes(relation, _, _, _, _), do: relation
 
-  defp fetch_attributes(entity_id, "business_concept") do
-    case ConceptCache.get(entity_id) do
+  defp fetch_attributes(entity_id, "business_concept", opts) do
+    case ConceptCache.get(entity_id, opts) do
       {:ok, concept = %{}} ->
         concept
         |> Map.take([:name, :business_concept_version_id])
@@ -225,7 +226,7 @@ defmodule TdLmWeb.RelationController do
     end
   end
 
-  defp fetch_attributes(entity_id, "ingest") do
+  defp fetch_attributes(entity_id, "ingest", _opts) do
     case IngestCache.get(entity_id) do
       {:ok, ingest = %{}} ->
         ingest
@@ -241,5 +242,5 @@ defmodule TdLmWeb.RelationController do
     end
   end
 
-  defp fetch_attributes(_entity_id, _target_type), do: %{}
+  defp fetch_attributes(_entity_id, _target_type, _opts), do: %{}
 end
