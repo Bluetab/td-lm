@@ -69,11 +69,13 @@ defmodule TdLm.Factory do
     }
   end
 
-  def concept_factory do
+  def concept_factory(attrs) do
     %{
       id: System.unique_integer([:positive]),
-      name: sequence("concept_name")
+      name: sequence("concept_name"),
+      content: %{}
     }
+    |> merge_attributes(attrs)
   end
 
   def user_factory do

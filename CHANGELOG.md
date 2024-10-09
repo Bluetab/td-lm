@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- [TD-6469] Graph concepts links is returned in browser language
+
 ## [6.9.2] 2024-07-29
 
 ### Added
