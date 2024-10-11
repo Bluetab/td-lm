@@ -5,6 +5,7 @@
 ### Changed
 
 - [TD-6469] Graph concepts links is returned in browser language
+- [TD-6773] Update td-df-lib and td-core
 
 ## [6.9.2] 2024-07-29
 
