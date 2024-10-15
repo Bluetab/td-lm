@@ -52,9 +52,23 @@ defmodule TdLmWeb.RelationControllerTest do
 
   describe "search relations with source/target of type business concept" do
     setup do
-      source = %{"id" => "141", "name" => "src", "version" => "2", "business_concept_id" => 14}
-      target = %{"id" => "131", "name" => "tgt", "version" => "1", "business_concept_id" => 13}
+      source = %{"id" => "141", "name" => "src_en", "version" => "2", "business_concept_id" => 14}
+      target = %{"id" => "131", "name" => "tgt_en", "version" => "1", "business_concept_id" => 13}
       context = %{"source" => source, "target" => target}
+
+      source_i8n = %{
+        "es" => %{
+          "name" => "src_es",
+          "content" => %{}
+        }
+      }
+
+      target_i8n = %{
+        "es" => %{
+          "name" => "tgt_es",
+          "content" => %{}
+        }
+      }
 
       insert(:relation,
         source_type: "business_concept",
@@ -64,8 +78,9 @@ defmodule TdLmWeb.RelationControllerTest do
         context: context
       )
 
-      put_concept_cache(source)
-      put_concept_cache(target)
+      put_concept_cache(Map.put(source, "i18n", source_i8n))
+      put_concept_cache(Map.put(target, "i18n", target_i8n))
+
       [source: source, target: target]
     end
 
@@ -89,8 +104,36 @@ defmodule TdLmWeb.RelationControllerTest do
       assert [
                %{
                  "context" => %{
-                   "source" => %{"version_id" => ^src_version_id, "name" => "src"},
-                   "target" => %{"version_id" => ^tgt_version_id, "name" => "tgt"}
+                   "source" => %{"version_id" => ^src_version_id, "name" => "src_en"},
+                   "target" => %{"version_id" => ^tgt_version_id, "name" => "tgt_en"}
+                 }
+               }
+             ] = data
+    end
+
+    @tag authentication: [role: "admin"]
+    test "get last version_id of business_concept in a relation between business concepts created with a previous target version with lang",
+         %{conn: conn, source: source, target: target} do
+      params = %{
+        "resource_id" => target["business_concept_id"],
+        "resource_type" => "business_concept",
+        "related_to_type" => "business_concept"
+      }
+
+      assert %{"data" => data} =
+               conn
+               |> put_req_header("accept-language", "es")
+               |> post(Routes.relation_path(conn, :search, params))
+               |> json_response(:ok)
+
+      src_version_id = source["id"]
+      tgt_version_id = target["id"]
+
+      assert [
+               %{
+                 "context" => %{
+                   "source" => %{"version_id" => ^src_version_id, "name" => "src_es"},
+                   "target" => %{"version_id" => ^tgt_version_id, "name" => "tgt_es"}
                  }
                }
              ] = data
@@ -438,13 +481,15 @@ defmodule TdLmWeb.RelationControllerTest do
   defp put_concept_cache(%{
          "business_concept_id" => id,
          "id" => business_concept_version_id,
-         "name" => name
+         "name" => name,
+         "i18n" => i18n
        }) do
     CacheHelpers.put_concept(
       id: id,
       domain_id: 1,
       name: name,
-      business_concept_version_id: business_concept_version_id
+      business_concept_version_id: business_concept_version_id,
+      i18n: i18n
     )
   end
 end
