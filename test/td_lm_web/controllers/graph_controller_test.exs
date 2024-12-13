@@ -3,12 +3,8 @@ defmodule TdLmWeb.GraphControllerTest do
 
   alias TdCache.ConceptCache
 
-  setup_all do
-    start_supervised(TdLm.Cache.LinkLoader)
-    :ok
-  end
-
   setup %{conn: conn} do
+    start_supervised!(TdLm.Cache.LinkLoader)
     [conn: put_req_header(conn, "accept", "application/json")]
   end
 
