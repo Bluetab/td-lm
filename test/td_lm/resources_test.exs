@@ -11,11 +11,11 @@ defmodule TdLm.ResourcesTest do
 
   setup_all do
     Redix.del!(@stream)
-    start_supervised(TdLm.Cache.LinkLoader)
     [claims: build(:claims)]
   end
 
   setup do
+    start_supervised!(TdLm.Cache.LinkLoader)
     on_exit(fn -> Redix.del!(@stream) end)
     :ok
   end

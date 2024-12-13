@@ -52,6 +52,13 @@ defmodule TdLm.Audit do
     do_tag_created(tag, user_id)
   end
 
+  @doc """
+  Publishes a `:tag_updated` event. Should be called using `Ecto.Multi.run/5`.
+  """
+  def tag_updated(_repo, %{tag: tag}, user_id) do
+    do_tag_updated(tag, user_id)
+  end
+
   defp do_relation_deleted(%{source_type: source_type, source_id: source_id} = relation, user_id) do
     payload = payload(relation)
     publish("relation_deleted", source_type, source_id, user_id, payload)
@@ -111,6 +118,11 @@ defmodule TdLm.Audit do
   defp do_tag_created(%{id: id, value: _value} = tag, user_id) do
     payload = Map.take(tag, [:value])
     publish("tag_created", "tag", id, user_id, payload)
+  end
+
+  defp do_tag_updated(%{id: id, value: _value} = tag, user_id) do
+    payload = Map.take(tag, [:value])
+    publish("tag_updated", "tag", id, user_id, payload)
   end
 
   defp do_tag_deleted(%{id: id}, user_id) do

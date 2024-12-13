@@ -8,6 +8,7 @@ defmodule TdLm.Cache.LinkLoader do
   alias TdCache.ImplementationCache
   alias TdCache.LinkCache
   alias TdCache.StructureCache
+  alias TdCache.TagCache
   alias TdLm.Resources
 
   require Logger
@@ -34,12 +35,24 @@ defmodule TdLm.Cache.LinkLoader do
     GenServer.call(__MODULE__, {:refresh, [id]})
   end
 
+  def refresh_tags do
+    GenServer.call(__MODULE__, :refresh_tags)
+  end
+
   def delete(ids) when is_list(ids) do
     GenServer.call(__MODULE__, {:delete, ids})
   end
 
   def delete(id) do
     GenServer.call(__MODULE__, {:delete, [id]})
+  end
+
+  def delete_tags(ids) when is_list(ids) do
+    GenServer.call(__MODULE__, {:delete_tag, ids})
+  end
+
+  def delete_tag(id) do
+    GenServer.call(__MODULE__, {:delete_tag, [id]})
   end
 
   def load do
@@ -59,13 +72,20 @@ defmodule TdLm.Cache.LinkLoader do
       Resources.list_relations()
       |> load_links()
 
+    {:ok, _count} =
+      Resources.list_tags()
+      |> load_links_tags()
+
     {:noreply, state}
   end
 
-  @impl GenServer
   def handle_cast(:refresh, state) do
     do_deprecate()
     do_activate()
+
+    Resources.list_tags()
+    |> load_links_tags()
+
     {:noreply, state}
   end
 
@@ -93,11 +113,24 @@ defmodule TdLm.Cache.LinkLoader do
     {:reply, reply, state}
   end
 
-  @impl true
+  def handle_call(:refresh_tags, _from, state) do
+    Resources.list_tags()
+    |> load_links_tags()
+
+    {:reply, :ok, state}
+  end
+
   def handle_call({:delete, ids}, _from, state) do
     reply = delete_ids(ids)
     {:reply, reply, state}
   end
+
+  def handle_call({:delete_tag, ids}, _from, state) do
+    reply = delete_tag_ids(ids)
+    {:reply, reply, state}
+  end
+
+  ## Private functions
 
   @spec do_deprecate :: :ok
   defp do_deprecate do
@@ -114,8 +147,6 @@ defmodule TdLm.Cache.LinkLoader do
   rescue
     e -> Logger.error("Unexpected error while deprecateding cached structures... #{inspect(e)}")
   end
-
-  ## Private functions
 
   defp undo_deletion(resource_type) do
     referenced_ids = StructureCache.referenced_ids() |> MapSet.new()
@@ -166,6 +197,22 @@ defmodule TdLm.Cache.LinkLoader do
     {:ok, count}
   end
 
+  defp load_links_tags(tags) do
+    count =
+      tags
+      |> Enum.map(&TagCache.put/1)
+      |> Enum.reject(&(&1 == {:ok, []}))
+      |> Enum.count()
+
+    case count do
+      0 -> Logger.debug("LinkLoader: no tag changed")
+      1 -> Logger.info("LinkLoader: put 1 tag")
+      n -> Logger.info("LinkLoader: put #{n} tags")
+    end
+
+    {:ok, count}
+  end
+
   defp delete_ids(ids) do
     count =
       ids
@@ -182,14 +229,21 @@ defmodule TdLm.Cache.LinkLoader do
     {:ok, count}
   end
 
+  defp delete_tag_ids(ids) do
+    count =
+      ids
+      |> Enum.map(&TagCache.delete/1)
+      |> Enum.count()
+
+    {:ok, count}
+  end
+
   defp with_tags(%{tags: tags} = link) do
     types = Enum.flat_map(tags, &tag_types/1)
     Map.put(link, :tags, types)
   end
 
-  defp with_tags(link) do
-    Map.put(link, :tags, [])
-  end
+  defp with_tags(link), do: Map.put(link, :tags, [])
 
   defp tag_types(%{value: %{"type" => type}}), do: [type]
   defp tag_types(_), do: []

@@ -27,7 +27,7 @@ defmodule TdLmWeb.Router do
     resources "/relations", RelationController, except: [:new, :edit, :update]
     get "/relations/:resource_id/graph", GraphController, :graph
     post "/relations/search", RelationController, :search
-    resources "/tags", TagController, except: [:new, :edit, :update]
+    resources "/tags", TagController, except: [:new, :edit]
     post "/tags/search", TagController, :search
   end
 
