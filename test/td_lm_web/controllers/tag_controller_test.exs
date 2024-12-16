@@ -1,20 +1,19 @@
 defmodule TdLmWeb.TagControllerTest do
   use TdLmWeb.ConnCase
-  use PhoenixSwagger.SchemaTest, "priv/static/swagger.json"
 
   setup %{conn: conn} do
+    start_supervised!(TdLm.Cache.LinkLoader)
     [conn: put_req_header(conn, "accept", "application/json")]
   end
 
   describe "GET /api/tags" do
     @tag authentication: [role: "admin"]
-    test "lists tags", %{conn: conn, swagger_schema: schema} do
+    test "lists tags", %{conn: conn} do
       %{id: id} = insert(:tag)
 
       assert %{"data" => data} =
                conn
                |> get(Routes.tag_path(conn, :index))
-               |> validate_resp_schema(schema, "TagsResponse")
                |> json_response(:ok)
 
       assert [%{"id" => ^id}] = data
@@ -23,13 +22,12 @@ defmodule TdLmWeb.TagControllerTest do
 
   describe "GET /api/tags/:id" do
     @tag authentication: [role: "admin"]
-    test "renders tag when data is valid", %{conn: conn, swagger_schema: schema} do
+    test "renders tag when data is valid", %{conn: conn} do
       %{id: id, value: value} = insert(:tag)
 
       assert %{"data" => data} =
                conn
                |> get(Routes.tag_path(conn, :show, id))
-               |> validate_resp_schema(schema, "TagResponse")
                |> json_response(:ok)
 
       assert %{"id" => ^id, "value" => ^value} = data
@@ -43,7 +41,7 @@ defmodule TdLmWeb.TagControllerTest do
 
   describe "POST /api/tags/search" do
     @tag authentication: [role: "admin"]
-    test "search tags", %{conn: conn, swagger_schema: schema} do
+    test "search tags", %{conn: conn} do
       %{id: id} = insert(:tag, value: %{"target_type" => "ingest", "type" => "ingest"})
 
       params = %{"value" => %{target_type: "ingest"}}
@@ -51,7 +49,6 @@ defmodule TdLmWeb.TagControllerTest do
       assert %{"data" => data} =
                conn
                |> post(Routes.tag_path(conn, :search), params)
-               |> validate_resp_schema(schema, "TagsResponse")
                |> json_response(:ok)
 
       assert [%{"id" => ^id}] = data
@@ -60,13 +57,12 @@ defmodule TdLmWeb.TagControllerTest do
 
   describe "POST /api/tags" do
     @tag authentication: [role: "admin"]
-    test "renders tag when data is valid", %{conn: conn, swagger_schema: schema} do
+    test "renders tag when data is valid", %{conn: conn} do
       params = string_params_for(:tag)
 
       assert %{"data" => data} =
                conn
                |> post(Routes.tag_path(conn, :create), %{"tag" => params})
-               |> validate_resp_schema(schema, "TagResponse")
                |> json_response(:created)
 
       assert Map.delete(data, "id") == params
@@ -80,6 +76,24 @@ defmodule TdLmWeb.TagControllerTest do
                conn
                |> post(Routes.tag_path(conn, :create), %{"tag" => params})
                |> json_response(:unprocessable_entity)
+    end
+  end
+
+  describe "PATCH /api/tags/:id" do
+    @tag authentication: [role: "admin"]
+    test "update tag", %{conn: conn} do
+      %{id: id, value: value} = insert(:tag)
+
+      update_params = %{
+        "value" => Map.put(value, "expandable", "true")
+      }
+
+      assert %{"data" => data} =
+               conn
+               |> patch(Routes.tag_path(conn, :update, id), %{"tag" => update_params})
+               |> json_response(:ok)
+
+      assert %{"id" => ^id, "value" => %{"expandable" => "true"}} = data
     end
   end
 

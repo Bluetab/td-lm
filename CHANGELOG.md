@@ -1,5 +1,13 @@
 # Changelog
 
+## [6.16.0] 2024-12-16
+
+### Added
+
+- [TD-6888]
+  - Support for updating tags
+  - Tags are now persisted on Cache
+
 ## [6.13.0] 2024-10-15
 
 ### Changed

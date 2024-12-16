@@ -71,7 +71,6 @@ defmodule TdLm.Resources do
   @doc """
   Creates a relation and publishes an audit event.
   """
-
   def clone_relations(original_source_id, new_source_id, relation_type, %{
         __struct__: _,
         user_id: user_id
@@ -175,7 +174,28 @@ defmodule TdLm.Resources do
     |> Multi.insert(:tag, changeset)
     |> Multi.run(:audit, Audit, :tag_created, [user_id])
     |> Repo.transaction()
+    |> maybe_refresh_tag_cache()
   end
+
+  @doc """
+  Updates a tag and publishes and audit event.
+  """
+  def update_tag(tag, params, %Claims{user_id: user_id}) do
+    changeset = Tag.changeset(tag, params)
+
+    Multi.new()
+    |> Multi.update(:tag, changeset)
+    |> Multi.run(:audit, Audit, :tag_updated, [user_id])
+    |> Repo.transaction()
+    |> maybe_refresh_tag_cache()
+  end
+
+  defp maybe_refresh_tag_cache({:ok, _} = res) do
+    LinkLoader.refresh_tags()
+    res
+  end
+
+  defp maybe_refresh_tag_cache(error), do: error
 
   @doc """
   Deletes a tag and publishes an audit event.
@@ -196,8 +216,9 @@ defmodule TdLm.Resources do
   end
 
   defp on_delete_tag(res) do
-    with {:ok, %{relations: {count, ids}}} = res when count > 0 <- res do
+    with {:ok, %{relations: {count, ids}, tag: %{id: tag_id}}} = res when count > 0 <- res do
       LinkLoader.refresh(ids)
+      LinkLoader.delete_tag(tag_id)
       res
     end
   end
