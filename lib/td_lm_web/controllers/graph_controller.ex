@@ -1,7 +1,6 @@
 defmodule TdLmWeb.GraphController do
   use TdHypermedia, :controller
   use TdLmWeb, :controller
-  use PhoenixSwagger
 
   import Canada, only: [can?: 2]
 

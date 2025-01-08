@@ -21,7 +21,6 @@ defmodule TdLmWeb do
     quote do
       use Phoenix.Controller, namespace: TdLmWeb
       import Plug.Conn
-      import TdLmWeb.Gettext
       alias TdLmWeb.Router.Helpers, as: Routes
     end
   end
@@ -37,7 +36,6 @@ defmodule TdLmWeb do
         only: [get_flash: 1, get_flash: 2, view_module: 1, view_template: 1]
 
       import TdLmWeb.ErrorHelpers
-      import TdLmWeb.Gettext
       alias TdLmWeb.Router.Helpers, as: Routes
     end
   end
@@ -53,7 +51,6 @@ defmodule TdLmWeb do
   def channel do
     quote do
       use Phoenix.Channel
-      import TdLmWeb.Gettext
     end
   end
 
