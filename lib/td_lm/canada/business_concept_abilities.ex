@@ -72,7 +72,7 @@ defmodule TdLm.Canada.BusinessConceptAbilities do
        ) do
       true
     else
-      not ConceptCache.is_confidential?(concept_id)
+      not ConceptCache.confidential?(concept_id)
     end
   end
 
@@ -85,7 +85,7 @@ defmodule TdLm.Canada.BusinessConceptAbilities do
        ) do
       true
     else
-      not ConceptCache.is_confidential?(id)
+      not ConceptCache.confidential?(id)
     end
   end
 

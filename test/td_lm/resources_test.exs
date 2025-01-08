@@ -146,7 +146,7 @@ defmodule TdLm.ResourcesTest do
     ts = DateTime.utc_now()
 
     relations =
-      Enum.map(10..1, fn i -> insert(:relation, updated_at: DateTime.add(ts, -i, :second)) end)
+      Enum.map(10..1//-1, fn i -> insert(:relation, updated_at: DateTime.add(ts, -i, :second)) end)
 
     # min_id
     {%{id: min_id}, %{id: max_id}} = Enum.min_max_by(relations, & &1.id)

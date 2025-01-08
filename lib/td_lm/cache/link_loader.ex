@@ -157,14 +157,9 @@ defmodule TdLm.Cache.LinkLoader do
       |> MapSet.difference(deleted_ids)
       |> MapSet.to_list()
 
-    with res <- Resources.activate(resource_type, active_ids),
-         {:ok, %{activated: {n, _}}} when n > 0 <- res do
-      Logger.info("Activated #{n} relations")
-    else
-      :ok -> :ok
-      {:ok, %{activated: {0, _}}} -> :ok
-      {:error, _} -> Logger.warn("Failed to activate relations")
-    end
+    {:ok, %{activated: {n, _}}} = Resources.activate(resource_type, active_ids)
+    Logger.info("Activated #{n} relations")
+    :ok
   end
 
   defp soft_deletion(resource_type) do
@@ -176,7 +171,7 @@ defmodule TdLm.Cache.LinkLoader do
     else
       :ok -> :ok
       {:ok, %{deprecated: {0, _}}} -> :ok
-      {:error, op, _, _} -> Logger.warn("Failed to deprecate implementations #{op}")
+      {:error, op, _, _} -> Logger.warning("Failed to deprecate implementations #{op}")
     end
   end
 

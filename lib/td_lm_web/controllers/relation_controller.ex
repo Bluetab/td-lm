@@ -1,22 +1,16 @@
 defmodule TdLmWeb.RelationController do
   use TdHypermedia, :controller
   use TdLmWeb, :controller
-  use PhoenixSwagger
 
   import Canada, only: [can?: 2]
 
   alias TdCache.ConceptCache
   alias TdCache.IngestCache
   alias TdLm.Resources
-  alias TdLmWeb.SwaggerDefinitions
 
   require Logger
 
   action_fallback(TdLmWeb.FallbackController)
-
-  def swagger_definitions do
-    SwaggerDefinitions.relation_definitions()
-  end
 
   def search(conn, %{
         "resource_id" => resource_id,
@@ -56,22 +50,6 @@ defmodule TdLmWeb.RelationController do
     )
   end
 
-  swagger_path :search do
-    description("Search relations")
-
-    parameters do
-      search(
-        :body,
-        Schema.ref(:RelationFilterRequest),
-        "Search query and filter parameters"
-      )
-    end
-
-    produces("application/json")
-    response(200, "OK", Schema.ref(:RelationsResponse))
-    response(400, "Client Error")
-  end
-
   def search(conn, params) do
     claims = conn.assigns[:current_resource]
 
@@ -93,13 +71,6 @@ defmodule TdLmWeb.RelationController do
     )
   end
 
-  swagger_path :index do
-    description("Get a list of relations")
-    produces("application/json")
-    response(200, "OK", Schema.ref(:RelationsResponse))
-    response(400, "Client Error")
-  end
-
   def index(conn, _params) do
     claims = conn.assigns[:current_resource]
 
@@ -108,19 +79,6 @@ defmodule TdLmWeb.RelationController do
       |> Enum.filter(&can?(claims, show(&1)))
 
     render(conn, "index.json", relations: relations)
-  end
-
-  swagger_path :create do
-    description("Adds a new relation between existing entities")
-    produces("application/json")
-
-    parameters do
-      relation(:body, Schema.ref(:AddRelation), "Parameters used to create a relation")
-    end
-
-    response(200, "OK", Schema.ref(:RelationResponse))
-    response(403, "Forbidden")
-    response(422, "Client Error")
   end
 
   def create(conn, %{"relation" => relation_params}) do
@@ -138,19 +96,6 @@ defmodule TdLmWeb.RelationController do
     end
   end
 
-  swagger_path :show do
-    description("Get the relation of a provided id")
-    produces("application/json")
-
-    parameters do
-      id(:path, :integer, "ID of the relation", required: true)
-    end
-
-    response(200, "OK", Schema.ref(:RelationResponse))
-    response(403, "Forbidden")
-    response(422, "Client Error")
-  end
-
   def show(conn, %{"id" => id}) do
     claims = conn.assigns[:current_resource]
     relation = Resources.get_relation!(id)
@@ -158,18 +103,6 @@ defmodule TdLmWeb.RelationController do
     with {:can, true} <- {:can, can?(claims, show(relation))} do
       render(conn, "show.json", relation: relation)
     end
-  end
-
-  swagger_path :delete do
-    description("Deletes a relation between entities")
-
-    parameters do
-      id(:path, :integer, "Relation ID", required: true)
-    end
-
-    response(204, "No Content")
-    response(403, "Forbidden")
-    response(422, "Client Error")
   end
 
   def delete(conn, %{"id" => id}) do

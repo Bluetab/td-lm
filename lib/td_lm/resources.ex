@@ -223,7 +223,6 @@ defmodule TdLm.Resources do
     end
   end
 
-  @spec list_stale_relations(String.t(), list(integer)) :: list(Relation.t())
   def list_stale_relations(resource_type, active_ids) do
     Relation
     |> where([r], r.source_type == ^resource_type and r.source_id not in ^active_ids)

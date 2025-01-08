@@ -1,6 +1,5 @@
 defmodule TdLmWeb.RelationControllerTest do
   use TdLmWeb.ConnCase
-  use PhoenixSwagger.SchemaTest, "priv/static/swagger.json"
 
   setup %{conn: conn} do
     start_supervised!(TdLm.Cache.LinkLoader)
@@ -9,11 +8,10 @@ defmodule TdLmWeb.RelationControllerTest do
 
   describe "search" do
     @tag authentication: [role: "admin"]
-    test "search all relations", %{conn: conn, swagger_schema: schema} do
+    test "search all relations", %{conn: conn} do
       assert %{"data" => []} =
                conn
                |> post(Routes.relation_path(conn, :search, %{}))
-               |> validate_resp_schema(schema, "RelationsResponse")
                |> json_response(:ok)
     end
 
@@ -35,13 +33,12 @@ defmodule TdLmWeb.RelationControllerTest do
 
   describe "search relation when user has no permissions" do
     @tag authentication: [user_name: "not_an_admin"]
-    test "search all relations", %{conn: conn, swagger_schema: schema} do
+    test "search all relations", %{conn: conn} do
       insert(:relation, source_type: "ingest")
 
       assert %{"data" => []} =
                conn
                |> post(Routes.relation_path(conn, :search, %{}))
-               |> validate_resp_schema(schema, "RelationsResponse")
                |> json_response(:ok)
     end
   end
@@ -204,11 +201,10 @@ defmodule TdLmWeb.RelationControllerTest do
 
   describe "index" do
     @tag authentication: [role: "admin"]
-    test "lists all relations", %{conn: conn, swagger_schema: schema} do
+    test "lists all relations", %{conn: conn} do
       assert %{"data" => []} =
                conn
                |> get(Routes.relation_path(conn, :index))
-               |> validate_resp_schema(schema, "RelationsResponse")
                |> json_response(:ok)
     end
   end
@@ -221,15 +217,13 @@ defmodule TdLmWeb.RelationControllerTest do
     @tag authentication: [permissions: ["view_approval_pending_business_concepts"]]
     test "relation when user has permissions", %{
       conn: conn,
-      concept: concept,
-      swagger_schema: schema
+      concept: concept
     } do
       %{id: id} = insert(:relation, source_id: concept.id, source_type: "business_concept")
 
       assert %{"data" => %{"id" => ^id}} =
                conn
                |> get(Routes.relation_path(conn, :show, id))
-               |> validate_resp_schema(schema, "RelationResponse")
                |> json_response(:ok)
     end
 
@@ -237,8 +231,7 @@ defmodule TdLmWeb.RelationControllerTest do
     test "relation when user has permissions over shared domain", %{
       conn: conn,
       claims: claims,
-      concept: %{shared_to_ids: [shared_id], id: concept_id},
-      swagger_schema: schema
+      concept: %{shared_to_ids: [shared_id], id: concept_id}
     } do
       CacheHelpers.put_session_permissions(claims, %{
         "view_approval_pending_business_concepts" => [shared_id]
@@ -249,7 +242,6 @@ defmodule TdLmWeb.RelationControllerTest do
       assert %{"data" => %{"id" => ^id}} =
                conn
                |> get(Routes.relation_path(conn, :show, id))
-               |> validate_resp_schema(schema, "RelationResponse")
                |> json_response(:ok)
     end
 
@@ -268,7 +260,7 @@ defmodule TdLmWeb.RelationControllerTest do
     setup :create_hierarchy
 
     @tag authentication: [role: "admin"]
-    test "renders relation when data is valid", %{conn: conn, swagger_schema: schema} do
+    test "renders relation when data is valid", %{conn: conn} do
       %{
         "context" => context,
         "source_id" => source_id,
@@ -280,7 +272,6 @@ defmodule TdLmWeb.RelationControllerTest do
       assert %{"data" => data} =
                conn
                |> post(Routes.relation_path(conn, :create), relation: params)
-               |> validate_resp_schema(schema, "RelationResponse")
                |> json_response(:created)
 
       assert %{
@@ -297,8 +288,7 @@ defmodule TdLmWeb.RelationControllerTest do
     @tag authentication: [permissions: ["manage_business_concept_links"]]
     test "renders relation when user has permission over domain", %{
       conn: conn,
-      concept: %{id: id},
-      swagger_schema: schema
+      concept: %{id: id}
     } do
       %{
         "context" => context,
@@ -311,7 +301,6 @@ defmodule TdLmWeb.RelationControllerTest do
       assert %{"data" => data} =
                conn
                |> post(Routes.relation_path(conn, :create), relation: params)
-               |> validate_resp_schema(schema, "RelationResponse")
                |> json_response(:created)
 
       assert %{
@@ -328,8 +317,7 @@ defmodule TdLmWeb.RelationControllerTest do
     @tag authentication: [permissions: ["link_implementation_business_concept"]]
     test "can create implementation_ref link when user has permissions", %{
       conn: conn,
-      concept: concept,
-      swagger_schema: schema
+      concept: concept
     } do
       %{
         "context" => context,
@@ -349,7 +337,6 @@ defmodule TdLmWeb.RelationControllerTest do
       assert %{"data" => data} =
                conn
                |> post(Routes.relation_path(conn, :create), relation: params)
-               |> validate_resp_schema(schema, "RelationResponse")
                |> json_response(:created)
 
       assert %{
@@ -366,8 +353,7 @@ defmodule TdLmWeb.RelationControllerTest do
     @tag authentication: [permissions: ["manage_business_concept_links"]]
     test "renders relation when user has permission over shared domain", %{
       conn: conn,
-      concept: %{id: id},
-      swagger_schema: schema
+      concept: %{id: id}
     } do
       %{
         "context" => context,
@@ -380,7 +366,6 @@ defmodule TdLmWeb.RelationControllerTest do
       assert %{"data" => data} =
                conn
                |> post(Routes.relation_path(conn, :create), relation: params)
-               |> validate_resp_schema(schema, "RelationResponse")
                |> json_response(:created)
 
       assert %{
