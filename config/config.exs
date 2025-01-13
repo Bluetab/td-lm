@@ -43,12 +43,6 @@ config :logger, :console,
   utc_log: true
 
 config :phoenix, :json_library, Jason
-config :phoenix_swagger, :json_library, Jason
-
-config :td_lm, :phoenix_swagger,
-  swagger_files: %{
-    "priv/static/swagger.json" => [router: TdLmWeb.Router]
-  }
 
 config :td_cache, :audit,
   service: "td_lm",

@@ -14,10 +14,10 @@ To start your Phoenix server:
 
 ### Installing
 
-  * Create and migrate your database with `mix ecto.create && mix ecto.migrate`
-  * Start Phoenix endpoint with `mix phx.server`
+- Create and migrate your database with `mix ecto.create && mix ecto.migrate`
+- Start Phoenix endpoint with `mix phx.server`
 
-  * Now you can visit [`localhost:4012`](http://localhost:4012) from your browser.
+- Now you can visit [`localhost:4012`](http://localhost:4012) from your browser.
 
 ## Running the tests
 
@@ -37,25 +37,22 @@ Ready to run in production? Please [check deployment guides](http://www.phoenixf
 
 ## Built With
 
-* [Phoenix](http://www.phoenixframework.org/) - Web framework
-* [Ecto](http://www.phoenixframework.org/) - Phoenix and Ecto integration
-* [Postgrex](http://hexdocs.pm/postgrex/) - PostgreSQL driver for Elixir
-* [Gettext](https://hexdocs.pm/gettext) - Internationalization and localization support for Elixir
-* [Cowboy](https://ninenines.eu) - HTTP server for Erlang/OTP
-* [httpoison](https://hex.pm/packages/httpoison) - HTTP client for Elixir
-* [credo](http://credo-ci.org/) - Static code analysis tool for the Elixir language
-* [guardian](https://github.com/ueberauth/guardian) - Authentication library
-* [canada](https://github.com/jarednorman/canada) - Permission definitions in Elixir apps
-* [ex_machina](https://hex.pm/packages/ex_machina) - Create test data for Elixir applications
-* [phoenix_swagger](https://github.com/xerions/phoenix_swagger) - Swagger integration to Phoenix framework
-* [ex_json_schema](https://github.com/jonasschmidt/ex_json_schema) - Elixir JSON Schema validator
-* [json_diff](https://github.com/jonasschmidt/ex_json_schema) - Elixir JSON Schema validator
-* [corsica](http://hexdocs.pm/corsica) - Elixir library for dealing with CORS requests.
-
+- [Phoenix](http://www.phoenixframework.org/) - Web framework
+- [Ecto](http://www.phoenixframework.org/) - Phoenix and Ecto integration
+- [Postgrex](http://hexdocs.pm/postgrex/) - PostgreSQL driver for Elixir
+- [Cowboy](https://ninenines.eu) - HTTP server for Erlang/OTP
+- [httpoison](https://hex.pm/packages/httpoison) - HTTP client for Elixir
+- [credo](http://credo-ci.org/) - Static code analysis tool for the Elixir language
+- [guardian](https://github.com/ueberauth/guardian) - Authentication library
+- [canada](https://github.com/jarednorman/canada) - Permission definitions in Elixir apps
+- [ex_machina](https://hex.pm/packages/ex_machina) - Create test data for Elixir applications
+- [ex_json_schema](https://github.com/jonasschmidt/ex_json_schema) - Elixir JSON Schema validator
+- [json_diff](https://github.com/jonasschmidt/ex_json_schema) - Elixir JSON Schema validator
+- [corsica](http://hexdocs.pm/corsica) - Elixir library for dealing with CORS requests.
 
 ## Authors
 
-* **Bluetab Solutions Group, SL** - *Initial work* - [Bluetab](http://www.bluetab.net)
+- **Bluetab Solutions Group, SL** - _Initial work_ - [Bluetab](http://www.bluetab.net)
 
 See also the list of [contributors](https://github.com/bluetab/td-lm) who participated in this project.
 
