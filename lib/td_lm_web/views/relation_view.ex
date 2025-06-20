@@ -32,6 +32,7 @@ defmodule TdLmWeb.RelationView do
       :source_type,
       :target_id,
       :target_type,
+      :origin,
       :updated_at
     ])
     |> Map.put(:tags, tags)
