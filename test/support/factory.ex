@@ -24,6 +24,7 @@ defmodule TdLm.Factory do
           "ingest"
         ]),
       target_id: sequence(:target_id, & &1),
+      origin: nil,
       tags: []
     }
   end
