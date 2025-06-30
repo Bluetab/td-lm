@@ -1,6 +1,9 @@
 defmodule TdLmWeb.RelationControllerTest do
   use TdLmWeb.ConnCase
 
+  alias TdLm.Repo
+  alias TdLm.Resources.Relation
+
   setup %{conn: conn} do
     start_supervised!(TdLm.Cache.LinkLoader)
     [conn: put_req_header(conn, "accept", "application/json")]
@@ -19,15 +22,38 @@ defmodule TdLmWeb.RelationControllerTest do
     test "includes updated_at in response", %{conn: conn} do
       %{updated_at: updated_at} = insert(:relation)
 
-      params = %{}
-
       assert %{"data" => data} =
                conn
-               |> post(Routes.relation_path(conn, :search, params))
+               |> post(Routes.relation_path(conn, :search, %{}))
                |> json_response(:ok)
 
       assert [%{"updated_at" => ts}] = data
       assert ts == DateTime.to_iso8601(updated_at)
+    end
+
+    @tag authentication: [role: "admin"]
+    test "includes nil origin in response", %{conn: conn} do
+      insert(:relation)
+
+      assert %{"data" => data} =
+               conn
+               |> post(Routes.relation_path(conn, :search, %{}))
+               |> json_response(:ok)
+
+      assert [%{"origin" => nil}] = data
+    end
+
+    @tag authentication: [role: "admin"]
+    test "includes origin with value in response", %{conn: conn} do
+      origin = "test_origin"
+      insert(:relation, origin: origin)
+
+      assert %{"data" => data} =
+               conn
+               |> post(Routes.relation_path(conn, :search, %{}))
+               |> json_response(:ok)
+
+      assert [%{"origin" => ^origin}] = data
     end
   end
 
@@ -202,6 +228,18 @@ defmodule TdLmWeb.RelationControllerTest do
   describe "index" do
     @tag authentication: [role: "admin"]
     test "lists all relations", %{conn: conn} do
+      Enum.each(1..3, fn _ -> insert(:relation) end)
+
+      assert %{"data" => relations} =
+               conn
+               |> get(Routes.relation_path(conn, :index))
+               |> json_response(:ok)
+
+      assert Enum.count(relations) == 3
+    end
+
+    @tag authentication: [role: "admin"]
+    test "lists empty relations", %{conn: conn} do
       assert %{"data" => []} =
                conn
                |> get(Routes.relation_path(conn, :index))
@@ -283,6 +321,41 @@ defmodule TdLmWeb.RelationControllerTest do
                "context" => ^context,
                "tags" => []
              } = data
+    end
+
+    @tag authentication: [role: "admin"]
+    test "creates relation with default null origin as default", %{conn: conn} do
+      params = %{
+        "context" => %{},
+        "source_id" => 123,
+        "source_type" => "business_concept",
+        "target_id" => 321,
+        "target_type" => "data_structure"
+      }
+
+      conn
+      |> post(Routes.relation_path(conn, :create), relation: params)
+      |> json_response(:created)
+
+      assert [%{origin: nil}] = Repo.all(Relation)
+    end
+
+    @tag authentication: [role: "admin"]
+    test "creates relation with origin value", %{conn: conn} do
+      params = %{
+        "context" => %{},
+        "source_id" => 123,
+        "source_type" => "business_concept",
+        "target_id" => 321,
+        "target_type" => "data_structure",
+        "origin" => "test_origin"
+      }
+
+      conn
+      |> post(Routes.relation_path(conn, :create), relation: params)
+      |> json_response(:created)
+
+      assert [%{origin: "test_origin"}] = Repo.all(Relation)
     end
 
     @tag authentication: [permissions: ["manage_business_concept_links"]]

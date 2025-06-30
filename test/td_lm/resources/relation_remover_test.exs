@@ -27,7 +27,6 @@ defmodule TdLm.RelationRemoverTest do
     }
 
     on_exit(fn -> Redix.del!(@stream) end)
-    on_exit(fn -> Redix.del!("link:commands") end)
 
     on_exit(fn ->
       ImplementationCache.delete(implementation_id)
