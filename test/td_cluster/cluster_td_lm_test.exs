@@ -50,4 +50,27 @@ defmodule TdCluster.ClusterTdLmTest do
              ) == 4
     end
   end
+
+  test "clone_relations copy relations to new implementation with tag", %{claims: claims} do
+    original_id = 7777
+    cloned_id = 5555
+    source_type = "implementation_ref"
+    target_type = "business_concept"
+    %{id: tag_id} = tag = insert(:tag, value: %{"type" => "bar", "target_type" => "foo"})
+
+    insert(:relation,
+      source_id: original_id,
+      source_type: source_type,
+      target_type: target_type,
+      tag: tag
+    )
+
+    Cluster.TdLm.clone_relations(original_id, cloned_id, target_type, claims)
+
+    assert [%{tag_id: ^tag_id}] =
+             Resources.list_relations(%{
+               "target_type" => target_type,
+               "source_id" => cloned_id
+             })
+  end
 end

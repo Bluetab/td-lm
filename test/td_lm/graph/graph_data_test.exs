@@ -4,7 +4,7 @@ defmodule TdLm.Graph.DataTest do
   alias TdLm.Graph.Data
 
   setup do
-    tags = Enum.map(1..5, fn _ -> insert(:tag) end)
+    tag = insert(:tag)
 
     relations =
       Enum.map(1..10, fn id ->
@@ -13,11 +13,11 @@ defmodule TdLm.Graph.DataTest do
           target_type: "business_concept",
           source_id: id,
           target_id: id + 1,
-          tags: tags
+          tag: tag
         )
       end)
 
-    [relations: relations, tags: tags]
+    [relations: relations, tag: tag]
   end
 
   describe "Graph.Data" do

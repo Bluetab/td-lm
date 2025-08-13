@@ -21,8 +21,6 @@ defmodule TdLmWeb.RelationView do
   end
 
   defp relation_json(relation) do
-    tags = relation_tags(relation)
-
     relation
     |> Map.take([
       :context,
@@ -33,16 +31,10 @@ defmodule TdLmWeb.RelationView do
       :target_id,
       :target_type,
       :origin,
-      :updated_at
+      :updated_at,
+      :tag_id,
+      :tag,
+      :tags
     ])
-    |> Map.put(:tags, tags)
-  end
-
-  defp relation_tags(%{tags: tags}) do
-    if Ecto.assoc_loaded?(tags) do
-      Enum.map(tags, &Map.take(&1, [:id, :value]))
-    else
-      []
-    end
   end
 end

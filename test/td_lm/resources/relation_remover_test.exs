@@ -48,8 +48,7 @@ defmodule TdLm.RelationRemoverTest do
         source_type: "implementation_ref",
         source_id: implementation_id,
         target_type: "business_concept",
-        target_id: 1,
-        tags: []
+        target_id: 1
       }
       |> Repo.insert()
 
@@ -61,7 +60,7 @@ defmodule TdLm.RelationRemoverTest do
         source_id: 2,
         target_type: "business_concept",
         target_id: 2,
-        tags: []
+        tag_id: nil
       }
       |> Repo.insert()
 

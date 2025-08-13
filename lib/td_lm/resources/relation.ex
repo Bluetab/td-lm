@@ -8,7 +8,6 @@ defmodule TdLm.Resources.Relation do
   import Ecto.Changeset
 
   alias TdDfLib.Validation
-  alias TdLm.Resources
   alias TdLm.Resources.Tag
 
   @valid_types [
@@ -27,12 +26,8 @@ defmodule TdLm.Resources.Relation do
     field(:context, :map, default: %{})
     field(:origin, :string, default: nil)
     field(:deleted_at, :utc_datetime_usec)
-
-    many_to_many(:tags, Tag,
-      join_through: "relations_tags",
-      on_delete: :delete_all,
-      on_replace: :delete
-    )
+    field(:tags, {:array, :map}, virtual: true, default: [])
+    belongs_to(:tag, Tag)
 
     timestamps(type: :utc_datetime_usec)
   end
@@ -50,24 +45,13 @@ defmodule TdLm.Resources.Relation do
       :target_type,
       :context,
       :origin,
-      :deleted_at
+      :deleted_at,
+      :tag_id
     ])
     |> validate_required([:source_id, :source_type, :target_id, :target_type, :context])
     |> validate_inclusion(:source_type, @valid_types)
     |> validate_inclusion(:target_type, @valid_types)
+    |> assoc_constraint(:tag)
     |> validate_change(:context, &Validation.validate_safe/2)
-    |> put_tags()
   end
-
-  defp put_tags(%{valid?: true, params: %{"tags" => tags}} = changeset) when length(tags) > 0 do
-    put_assoc(changeset, :tags, tags)
-  end
-
-  defp put_tags(%{valid?: true, params: %{"tag_ids" => tag_ids}} = changeset)
-       when length(tag_ids) > 0 do
-    tags = Resources.find_tags(id: {:in, tag_ids})
-    put_assoc(changeset, :tags, tags)
-  end
-
-  defp put_tags(changeset), do: changeset
 end
