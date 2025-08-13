@@ -19,7 +19,12 @@ defmodule TdLm.Audit do
   @doc """
   Publishes a `:relation_created` event. Should be called using `Ecto.Multi.run/5`.
   """
-  def relation_created(_repo, %{relation: relation}, %{changes: changes}, user_id) do
+  def relation_created(
+        _repo,
+        %{relation_with_optional_tag: relation},
+        %{changes: changes},
+        user_id
+      ) do
     do_relation_created(relation, changes, user_id)
   end
 
@@ -95,24 +100,27 @@ defmodule TdLm.Audit do
   end
 
   defp do_relation_created(
-         %{id: id, source_type: source_type, source_id: source_id} = relation,
+         %{id: id, source_type: source_type, source_id: source_id, tags: tags} =
+           relation,
          changes,
          user_id
        ) do
     changes =
-      case tags_from_changes(changes) do
-        [] ->
-          Map.delete(changes, :tags)
+      changes
+      |> maybe_put_relation_types(tags)
+      |> Map.put(:id, id)
+      |> put_subscribable_fields(relation)
+      |> put_domain_ids(relation)
 
-        tags ->
-          changes
-          |> Map.delete(:tags)
-          |> Map.put(:relation_types, tags)
-          |> Map.put(:id, id)
-      end
-
-    changes = changes |> put_subscribable_fields(relation) |> put_domain_ids(relation)
     publish("relation_created", source_type, source_id, user_id, changes)
+  end
+
+  defp maybe_put_relation_types(changes, []), do: changes
+
+  defp maybe_put_relation_types(changes, tags) do
+    [%{value: %{"target_type" => value}}] = tags
+
+    Map.put(changes, :relation_types, [value])
   end
 
   defp do_tag_created(%{id: id, value: _value} = tag, user_id) do
@@ -128,19 +136,6 @@ defmodule TdLm.Audit do
   defp do_tag_deleted(%{id: id}, user_id) do
     publish("tag_deleted", "tag", id, user_id)
   end
-
-  defp tags_from_changes(%{tags: tags}) do
-    tags
-    |> Enum.filter(&(&1.action == :update))
-    |> Enum.flat_map(fn
-      %{data: %{value: %{"type" => type}}} -> [type]
-      _ -> []
-    end)
-    |> Enum.sort()
-    |> Enum.uniq()
-  end
-
-  defp tags_from_changes(_), do: []
 
   defp put_domain_ids(payload, %{source_type: "business_concept", source_id: source_id}) do
     case ConceptCache.get(source_id, :domain_ids) do

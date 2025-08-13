@@ -18,7 +18,7 @@ defmodule TdLm.Graph.Data do
            source_type: source_type,
            target_id: target_id,
            target_type: target_type,
-           tags: tags
+           tag: tag
          },
          %Graph{} = g
        ) do
@@ -31,7 +31,7 @@ defmodule TdLm.Graph.Data do
       resource_type: target_type,
       resource_id: target_id
     )
-    |> Graph.add_edge(id, id(source_type, source_id), id(target_type, target_id), tags: tags)
+    |> Graph.add_edge(id, id(source_type, source_id), id(target_type, target_id), tag: tag)
   end
 
   def reachable(%Graph{} = g, ids) when is_list(ids), do: Traversal.reachable(ids, g)

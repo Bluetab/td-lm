@@ -28,12 +28,12 @@ defmodule TdLm.Resources do
       {"value", %{} = value}, q -> where_relation_value(q, value)
     end)
     |> order_by([:updated_at, :id])
-    |> preload(:tags)
+    |> preload(:tag)
     |> Repo.all()
   end
 
   defp where_relation_value(q, %{} = value) do
-    q = join(q, :left, [r], _ in assoc(r, :tags))
+    q = join(q, :left, [r], _ in assoc(r, :tag))
 
     Enum.reduce(value, q, fn {k, v}, q ->
       where(q, [_, rt], rt.value[^k] in ^List.wrap(v))
@@ -63,7 +63,7 @@ defmodule TdLm.Resources do
   def get_relation!(id) do
     Relation
     |> Repo.get!(id)
-    |> Repo.preload(:tags)
+    |> Repo.preload(:tag)
   end
 
   def get_relation(id), do: Repo.get(Relation, id)
@@ -81,14 +81,14 @@ defmodule TdLm.Resources do
                      source_type: source_type,
                      target_id: target_id,
                      target_type: target_type,
-                     tags: tags
+                     tag_id: tag_id
                    } ->
       %{
         "source_id" => new_source_id,
         "source_type" => source_type,
         "target_id" => target_id,
         "target_type" => target_type,
-        "tags" => tags
+        "tag_id" => tag_id
       }
     end)
     |> Enum.map(&create_relation(&1, %Claims{user_id: user_id}))
@@ -99,9 +99,32 @@ defmodule TdLm.Resources do
 
     Multi.new()
     |> Multi.insert(:relation, changeset)
+    |> Multi.run(:relation_with_optional_tag, fn _, changes -> maybe_preload_tag(changes) end)
     |> Multi.run(:audit, Audit, :relation_created, [changeset, user_id])
     |> Repo.transaction()
-    |> on_create()
+    |> tap(&on_create/1)
+    |> then(fn
+      {:ok, %{relation_with_optional_tag: relation_with_optional_tag} = response} ->
+        {:ok, %{response | relation: relation_with_optional_tag}}
+
+      error ->
+        error
+    end)
+  end
+
+  defp maybe_preload_tag(%{relation: %{tag_id: nil} = relation}),
+    do: {:ok, Map.put(relation, :tag, nil)}
+
+  defp maybe_preload_tag(%{relation: relation}) do
+    relation_with_tag = Repo.preload(relation, :tag)
+
+    legacy_relation =
+      relation_with_tag
+      |> Map.get(:tag)
+      |> List.wrap()
+      |> then(&%Relation{relation_with_tag | tags: &1})
+
+    {:ok, legacy_relation}
   end
 
   defp on_create(res) do
@@ -152,9 +175,7 @@ defmodule TdLm.Resources do
   Raises `Ecto.NoResultsError` if the Tag does not exist.
   """
   def get_tag!(id) do
-    Tag
-    |> Repo.get!(id)
-    |> Repo.preload(:relations)
+    Repo.get!(Tag, id)
   end
 
   @doc """
@@ -201,14 +222,10 @@ defmodule TdLm.Resources do
   Deletes a tag and publishes an audit event.
   """
   def delete_tag(%Tag{id: id} = tag, %Claims{user_id: user_id}) do
-    relation_id_query =
-      Relation
-      |> join(:inner, [r], t in assoc(r, :tags))
-      |> where([_r, t], t.id == ^id)
-      |> select([r], r.id)
-
     Multi.new()
-    |> Multi.update_all(:relations, relation_id_query, set: [updated_at: DateTime.utc_now()])
+    |> Multi.update_all(:relations, Relation |> where([r], r.tag_id == ^id) |> select([r], r.id),
+      set: [updated_at: DateTime.utc_now()]
+    )
     |> Multi.delete(:tag, tag)
     |> Multi.run(:audit, Audit, :tag_deleted, [user_id])
     |> Repo.transaction()
@@ -344,13 +361,13 @@ defmodule TdLm.Resources do
     graph
     |> Graph.get_edges()
     |> Enum.map(fn %{id: id, label: label, v1: v1, v2: v2} ->
-      tags = Map.get(label, :tags)
+      tag = Map.get(label, :tag)
 
       Map.new()
       |> Map.put(:id, id)
       |> Map.put(:source_id, v1)
       |> Map.put(:target_id, v2)
-      |> Map.put(:tags, tags)
+      |> Map.put(:tag, tag)
     end)
   end
 end

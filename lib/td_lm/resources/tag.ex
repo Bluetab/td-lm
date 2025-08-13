@@ -10,13 +10,10 @@ defmodule TdLm.Resources.Tag do
   alias TdDfLib.Validation
   alias TdLm.Resources.Relation
 
+  @derive {Jason.Encoder, only: [:id, :value]}
   schema "tags" do
     field(:value, :map, default: %{})
-
-    many_to_many(:relations, Relation,
-      join_through: "relations_tags",
-      on_delete: :delete_all
-    )
+    has_many(:relations, Relation)
 
     timestamps()
   end
