@@ -1,6 +1,13 @@
 # Changelog
 
-## [Unreleased]
+## [7.7.0] 2025-06-30
+
+### Added
+
+- [TD-7299] Refactor gitlab-ci pipeline and add Trivy check
+- [TD-7300] Add Relation origin
+
+## [7.5.0] 2025-04-30
 
 ### Changed
 

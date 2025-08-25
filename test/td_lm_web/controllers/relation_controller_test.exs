@@ -19,6 +19,7 @@ defmodule TdLmWeb.RelationControllerTest do
     end
 
     @tag authentication: [role: "admin"]
+
     test "includes tag and tags (legacy) in response", %{conn: conn} do
       %{id: tag_id, value: tag_value} = tag = insert(:tag)
       tag_id_value = %{"id" => tag_id, "value" => tag_value}
