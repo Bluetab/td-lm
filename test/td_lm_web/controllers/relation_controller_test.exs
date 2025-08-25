@@ -19,6 +19,22 @@ defmodule TdLmWeb.RelationControllerTest do
     end
 
     @tag authentication: [role: "admin"]
+
+    test "includes tag and tags (legacy) in response", %{conn: conn} do
+      %{id: tag_id, value: tag_value} = tag = insert(:tag)
+      tag_id_value = %{"id" => tag_id, "value" => tag_value}
+      insert(:relation, tag: tag)
+
+      assert %{"data" => data} =
+               conn
+               |> post(Routes.relation_path(conn, :search, %{}))
+               |> json_response(:ok)
+
+      assert [%{"tags" => [^tag_id_value], "tag" => ^tag_id_value, "tag_id" => ^tag_id}] =
+               data
+    end
+
+    @tag authentication: [role: "admin"]
     test "includes updated_at in response", %{conn: conn} do
       %{updated_at: updated_at} = insert(:relation)
 
@@ -71,6 +87,7 @@ defmodule TdLmWeb.RelationControllerTest do
 
   describe "search relations with source/target of type business concept" do
     setup do
+      tag = insert(:tag)
       source = %{"id" => "141", "name" => "src_en", "version" => "2", "business_concept_id" => 14}
       target = %{"id" => "131", "name" => "tgt_en", "version" => "1", "business_concept_id" => 13}
       context = %{"source" => source, "target" => target}
@@ -94,13 +111,14 @@ defmodule TdLmWeb.RelationControllerTest do
         source_id: source["business_concept_id"],
         target_type: "business_concept",
         target_id: target["business_concept_id"],
-        context: context
+        context: context,
+        tag: tag
       )
 
       put_concept_cache(Map.put(source, "i18n", source_i8n))
       put_concept_cache(Map.put(target, "i18n", target_i8n))
 
-      [source: source, target: target]
+      [source: source, target: target, tag: tag]
     end
 
     @tag authentication: [role: "admin"]
@@ -128,6 +146,26 @@ defmodule TdLmWeb.RelationControllerTest do
                  }
                }
              ] = data
+    end
+
+    @tag authentication: [role: "admin"]
+    test "includes tag and tags (legacy) in response with resource params",
+         %{conn: conn, target: target, tag: %{id: tag_id, value: tag_value}} do
+      tag_id_value = %{"id" => tag_id, "value" => tag_value}
+
+      params = %{
+        "resource_id" => target["business_concept_id"],
+        "resource_type" => "business_concept",
+        "related_to_type" => "business_concept"
+      }
+
+      assert %{"data" => data} =
+               conn
+               |> post(Routes.relation_path(conn, :search, params))
+               |> json_response(:ok)
+
+      assert [%{"tags" => [^tag_id_value], "tag" => ^tag_id_value, "tag_id" => ^tag_id}] =
+               data
     end
 
     @tag authentication: [role: "admin"]
@@ -239,6 +277,23 @@ defmodule TdLmWeb.RelationControllerTest do
     end
 
     @tag authentication: [role: "admin"]
+    test "list all relations includes tag and tags (legacy) in response", %{conn: conn} do
+      %{id: tag_id} = tag = insert(:tag)
+      tag_id_value = %{"id" => tag_id, "value" => tag.value}
+      insert(:relation, tag: tag)
+
+      assert %{"data" => relations} =
+               conn
+               |> get(Routes.relation_path(conn, :index))
+               |> json_response(:ok)
+
+      assert Enum.count(relations) == 1
+
+      assert [%{"tags" => [^tag_id_value], "tag" => ^tag_id_value, "tag_id" => ^tag_id}] =
+               relations
+    end
+
+    @tag authentication: [role: "admin"]
     test "lists empty relations", %{conn: conn} do
       assert %{"data" => []} =
                conn
@@ -260,6 +315,30 @@ defmodule TdLmWeb.RelationControllerTest do
       %{id: id} = insert(:relation, source_id: concept.id, source_type: "business_concept")
 
       assert %{"data" => %{"id" => ^id}} =
+               conn
+               |> get(Routes.relation_path(conn, :show, id))
+               |> json_response(:ok)
+    end
+
+    @tag authentication: [role: "admin"]
+    test "relation with tag and tags (legacy) in response", %{
+      conn: conn,
+      concept: concept
+    } do
+      %{id: tag_id} = tag = insert(:tag)
+      tag_id_value = %{"id" => tag_id, "value" => tag.value}
+
+      %{id: id} =
+        insert(:relation, source_id: concept.id, source_type: "business_concept", tag: tag)
+
+      assert %{
+               "data" => %{
+                 "id" => ^id,
+                 "tags" => [^tag_id_value],
+                 "tag" => ^tag_id_value,
+                 "tag_id" => ^tag_id
+               }
+             } =
                conn
                |> get(Routes.relation_path(conn, :show, id))
                |> json_response(:ok)
@@ -320,6 +399,28 @@ defmodule TdLmWeb.RelationControllerTest do
                "target_type" => ^target_type,
                "context" => ^context,
                "tags" => []
+             } = data
+    end
+
+    @tag authentication: [role: "admin"]
+    test "renders relation when data is valid with tag and tags (legacy)", %{conn: conn} do
+      %{id: tag_id} = tag = insert(:tag)
+      tag_id_value = %{"id" => tag_id, "value" => tag.value}
+
+      params =
+        :relation
+        |> string_params_for()
+        |> Map.put(:tag_ids, [tag_id])
+
+      assert %{"data" => data} =
+               conn
+               |> post(Routes.relation_path(conn, :create), relation: params)
+               |> json_response(:created)
+
+      assert %{
+               "tags" => [^tag_id_value],
+               "tag" => ^tag_id_value,
+               "tag_id" => ^tag_id
              } = data
     end
 

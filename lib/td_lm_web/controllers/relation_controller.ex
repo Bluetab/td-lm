@@ -35,6 +35,7 @@ defmodule TdLmWeb.RelationController do
       ]
       |> Enum.flat_map(&Resources.list_relations/1)
       |> Enum.filter(&can?(claims, show(&1)))
+      |> Enum.map(&maybe_add_tags/1)
       |> Enum.map(&refresh_attributes(&1, "target", :target_id, related_to_type, lang: lang))
       |> Enum.map(&refresh_attributes(&1, "source", :source_id, related_to_type, lang: lang))
 
@@ -56,6 +57,7 @@ defmodule TdLmWeb.RelationController do
     relations =
       params
       |> Resources.list_relations()
+      |> Enum.map(&maybe_add_tags/1)
       |> Enum.filter(&can?(claims, show(&1)))
 
     resource_key = %{
@@ -77,12 +79,15 @@ defmodule TdLmWeb.RelationController do
     relations =
       Resources.list_relations()
       |> Enum.filter(&can?(claims, show(&1)))
+      |> Enum.map(&maybe_add_tags/1)
 
     render(conn, "index.json", relations: relations)
   end
 
-  def create(conn, %{"relation" => relation_params}) do
+  def create(conn, %{"relation" => params}) do
     claims = conn.assigns[:current_resource]
+
+    relation_params = add_tag_id(params)
 
     with {:params, %{"source_id" => source_id, "source_type" => source_type}} <-
            {:params, relation_params},
@@ -98,7 +103,11 @@ defmodule TdLmWeb.RelationController do
 
   def show(conn, %{"id" => id}) do
     claims = conn.assigns[:current_resource]
-    relation = Resources.get_relation!(id)
+
+    relation =
+      id
+      |> Resources.get_relation!()
+      |> maybe_add_tags()
 
     with {:can, true} <- {:can, can?(claims, show(relation))} do
       render(conn, "show.json", relation: relation)
@@ -176,4 +185,13 @@ defmodule TdLmWeb.RelationController do
   end
 
   defp fetch_attributes(_entity_id, _target_type, _opts), do: %{}
+
+  defp maybe_add_tags(%{tag: nil} = relation), do: relation
+
+  defp maybe_add_tags(%{tag: tag} = relation),
+    do: Map.put(relation, :tags, [%{id: tag.id, value: tag.value}])
+
+  defp add_tag_id(%{"tag_ids" => []} = params), do: Map.put(params, "tag_id", nil)
+  defp add_tag_id(%{"tag_ids" => [tag_id]} = params), do: Map.put(params, "tag_id", tag_id)
+  defp add_tag_id(params), do: params
 end

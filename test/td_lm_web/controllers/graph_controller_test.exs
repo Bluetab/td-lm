@@ -9,8 +9,13 @@ defmodule TdLmWeb.GraphControllerTest do
   end
 
   describe "graph" do
-    setup do
-      tags = Enum.map(1..5, fn _ -> insert(:tag) end)
+    setup context do
+      tag =
+        if context[:without_tag] do
+          nil
+        else
+          insert(:tag)
+        end
 
       relations =
         Enum.map(1..10, fn id ->
@@ -19,15 +24,39 @@ defmodule TdLmWeb.GraphControllerTest do
             target_type: "business_concept",
             source_id: id,
             target_id: id + 1,
-            tags: tags
+            tag: tag
           )
         end)
 
-      [relations: relations, tags: tags]
+      [relations: relations, tag: tag]
     end
 
     @tag authentication: [role: "admin"]
-    test "get all relations", %{conn: conn} do
+    test "get all relations with tag", %{conn: conn, tag: tag} do
+      id = "11"
+      type = "business_concept"
+
+      edge_tag = %{"id" => tag.id, "value" => tag.value}
+
+      assert %{"data" => %{"nodes" => [_ | _] = nds, "edges" => [_ | _] = eds}} =
+               conn
+               |> get(Routes.graph_path(conn, :graph, id), %{"type" => type})
+               |> json_response(:ok)
+
+      assert Enum.all?(1..11, &Enum.find(nds, fn n -> Map.get(n, "id") == "#{type}:#{&1}" end))
+
+      assert Enum.all?(
+               1..10,
+               &Enum.find(eds, fn n ->
+                 Map.get(n, "source_id") == "#{type}:#{&1}" and
+                   Map.get(n, "target_id") == "#{type}:#{&1 + 1}" and
+                   Map.get(n, "tag") == edge_tag and Map.get(n, "tags") == [edge_tag]
+               end)
+             )
+    end
+
+    @tag authentication: [role: "admin"], without_tag: true
+    test "get all relations without tag", %{conn: conn} do
       id = "11"
       type = "business_concept"
 
@@ -42,7 +71,8 @@ defmodule TdLmWeb.GraphControllerTest do
                1..10,
                &Enum.find(eds, fn n ->
                  Map.get(n, "source_id") == "#{type}:#{&1}" and
-                   Map.get(n, "target_id") == "#{type}:#{&1 + 1}"
+                   Map.get(n, "target_id") == "#{type}:#{&1 + 1}" and
+                   Enum.empty?(Map.get(n, "tags")) and is_nil(Map.get(n, "tag"))
                end)
              )
     end

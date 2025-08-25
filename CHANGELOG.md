@@ -1,5 +1,11 @@
 # Changelog
 
+## [7.9.0] 2025-08-25
+
+### Changed
+
+- [TD-7420] Remove relations_tags table and add tag_id to table relations
+
 ## [7.7.0] 2025-06-30
 
 ### Added

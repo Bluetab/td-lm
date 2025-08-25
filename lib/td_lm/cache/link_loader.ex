@@ -7,6 +7,7 @@ defmodule TdLm.Cache.LinkLoader do
 
   alias TdCache.ImplementationCache
   alias TdCache.LinkCache
+  alias TdCache.Redix
   alias TdCache.StructureCache
   alias TdCache.TagCache
   alias TdLm.Resources
@@ -68,6 +69,8 @@ defmodule TdLm.Cache.LinkLoader do
 
   @impl true
   def handle_cast(:load, state) do
+    may_be_clean_cache()
+
     {:ok, _count} =
       Resources.list_relations()
       |> load_links()
@@ -233,13 +236,22 @@ defmodule TdLm.Cache.LinkLoader do
     {:ok, count}
   end
 
-  defp with_tags(%{tags: tags} = link) do
-    types = Enum.flat_map(tags, &tag_types/1)
-    Map.put(link, :tags, types)
+  defp with_tags(%{tag_id: nil} = link), do: Map.put(link, :tags, [])
+
+  defp with_tags(%{tag: %{value: %{"type" => type}}} = link) do
+    Map.put(link, :tags, [type])
   end
 
   defp with_tags(link), do: Map.put(link, :tags, [])
 
-  defp tag_types(%{value: %{"type" => type}}), do: [type]
-  defp tag_types(_), do: []
+  defp may_be_clean_cache do
+    if acquire_lock?("TdLM.Cache.Migration:TD-7420") do
+      response = Redix.del!(["link:keys", "link:*", "*:links", "*:links:*"])
+      Logger.info("Deleted #{response} keys from migration TD-7420")
+    end
+  end
+
+  defp acquire_lock?(key) do
+    Redix.command!(["SET", key, node(), "NX"])
+  end
 end

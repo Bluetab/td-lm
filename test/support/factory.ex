@@ -25,7 +25,7 @@ defmodule TdLm.Factory do
         ]),
       target_id: sequence(:target_id, & &1),
       origin: nil,
-      tags: []
+      tag: build(:tag)
     }
   end
 

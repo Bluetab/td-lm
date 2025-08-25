@@ -23,7 +23,7 @@ defmodule TdLm.ResourcesTest do
   describe "create_relation/2" do
     setup [:put_template, :put_concept]
 
-    test "creates a relation without tags", %{claims: claims} do
+    test "creates a relation without tag", %{claims: claims} do
       %{
         "source_id" => source_id,
         "source_type" => source_type,
@@ -38,23 +38,23 @@ defmodule TdLm.ResourcesTest do
                source_type: ^source_type,
                target_id: ^target_id,
                target_type: ^target_type,
-               context: context
-             } = relation
+               context: context,
+               tag_id: nil,
+               tag: nil,
+               tags: []
+             } =
+               relation
 
       assert context == %{}
     end
 
-    test "creates a relation with the specified tags", %{claims: claims} do
-      tag_ids =
-        1..3
-        |> Enum.map(fn _ -> insert(:tag) end)
-        |> Enum.map(& &1.id)
+    test "creates a relation with the specified tag", %{claims: claims} do
+      tag_id = insert(:tag).id
 
-      params = string_params_for(:relation) |> Map.put("tag_ids", tag_ids)
+      params = string_params_for(:relation) |> Map.put("tag_id", tag_id)
       assert {:ok, %{relation: relation}} = Resources.create_relation(params, claims)
-      assert %{tags: tags} = relation
-      assert length(tags) == 3
-      assert Enum.all?(tags, &(&1.id in tag_ids))
+      assert %{tags: [tag]} = relation
+      assert tag.id == tag_id
     end
 
     test "publishes an audit event", %{claims: claims, concept: concept} do
@@ -79,6 +79,37 @@ defmodule TdLm.ResourcesTest do
       assert resource_id == "#{source_id}"
 
       assert %{"subscribable_fields" => %{"foo" => "bar"}, "domain_ids" => ^domain_ids} =
+               Jason.decode!(payload)
+    end
+
+    test "publishes an audit event with tag", %{claims: claims, concept: concept} do
+      tag = insert(:tag, value: %{"target_type" => "foo"})
+      source_id = concept.id
+      target_id = System.unique_integer([:positive])
+      domain_ids = [concept.domain_id]
+
+      params = %{
+        source_id: source_id,
+        source_type: "business_concept",
+        target_id: target_id,
+        target_type: "business_concept",
+        context: %{},
+        tag_id: tag.id
+      }
+
+      {:ok, %{audit: event_id, relation: %Relation{source_id: ^source_id, target_id: ^target_id}}} =
+        Resources.create_relation(params, claims)
+
+      {:ok, [%{id: ^event_id, resource_id: resource_id, payload: payload}]} =
+        Stream.read(:redix, @stream, transform: true)
+
+      assert resource_id == "#{source_id}"
+
+      assert %{
+               "subscribable_fields" => %{"foo" => "bar"},
+               "domain_ids" => ^domain_ids,
+               "relation_types" => ["foo"]
+             } =
                Jason.decode!(payload)
     end
 
@@ -123,9 +154,9 @@ defmodule TdLm.ResourcesTest do
     tag_2 = insert(:tag, value: %{"type" => "Second type"})
     tag_3 = insert(:tag, value: %{"type" => "Third type"})
 
-    relation_1 = insert(:relation, tags: [tag_1], source_type: "new type")
-    relation_2 = insert(:relation, tags: [tag_2])
-    relation_3 = insert(:relation, tags: [tag_3])
+    relation_1 = insert(:relation, tag: tag_1, source_type: "new type")
+    relation_2 = insert(:relation, tag: tag_2)
+    relation_3 = insert(:relation, tag: tag_3)
 
     relations = Resources.list_relations(%{"value" => %{"type" => ["First type", "Second type"]}})
     assert_lists_equal(relations, [relation_1, relation_2])
@@ -166,6 +197,12 @@ defmodule TdLm.ResourcesTest do
 
   test "get_relation!/1 returns the relation with given id" do
     relation = insert(:relation)
+    assert Resources.get_relation!(relation.id) == relation
+  end
+
+  test "get_relation!/1 returns the relation with given id with tag" do
+    tag = insert(:tag)
+    relation = insert(:relation, tag: tag)
     assert Resources.get_relation!(relation.id) == relation
   end
 
@@ -221,15 +258,46 @@ defmodule TdLm.ResourcesTest do
            ) == 4
   end
 
+  test "clone_relations copy relations to new implementation with tag", %{claims: claims} do
+    original_id = 7777
+    cloned_id = 5555
+    source_type = "implementation_ref"
+    target_type = "business_concept"
+    %{id: tag_id} = tag = insert(:tag)
+
+    insert(:relation,
+      source_id: original_id,
+      source_type: source_type,
+      target_type: target_type,
+      tag: tag
+    )
+
+    Resources.clone_relations(original_id, cloned_id, target_type, claims)
+
+    assert [%{tag_id: ^tag_id}] =
+             Resources.list_relations(%{
+               "target_type" => target_type,
+               "source_id" => cloned_id
+             })
+  end
+
   describe "delete_tag/2" do
     test "deletes the tag and updates it's relations", %{claims: claims} do
-      relations = Enum.map(1..5, fn _ -> insert(:relation) end)
-      tag = insert(:tag, relations: relations)
+      tag = insert(:tag)
 
-      assert {:ok, %{tag: tag, relations: rels}} = Resources.delete_tag(tag, claims)
+      relations =
+        Enum.map(1..5, fn _ ->
+          insert(:relation, tag: tag, updated_at: DateTime.add(DateTime.utc_now(), -1, :hour))
+        end)
+
+      assert {:ok, %{tag: tag}} = Resources.delete_tag(tag, claims)
       assert %{__meta__: %{state: :deleted}} = tag
-      assert {5, updated_ids} = rels
-      assert Enum.all?(relations, &(&1.id in updated_ids))
+
+      for relation <- Repo.all(Relation) do
+        refute relation.tag_id
+        source_relation = Enum.find(relations, &(&1.id == relation.id))
+        DateTime.compare(source_relation.updated_at, relation.updated_at) == :lt
+      end
     end
 
     test "publishes an audit event", %{claims: claims} do
@@ -248,8 +316,8 @@ defmodule TdLm.ResourcesTest do
     tag_2 = insert(:tag, value: %{"type" => "Second type"})
     insert(:tag, value: %{"type" => "Third type"})
 
-    insert(:relation, tags: [tag_1])
-    insert(:relation, tags: [tag_2])
+    insert(:relation, tag: tag_1)
+    insert(:relation, tag: tag_2)
 
     result_tags = Resources.list_tags(%{"value" => %{"type" => "First type"}})
 
@@ -257,12 +325,12 @@ defmodule TdLm.ResourcesTest do
   end
 
   test "get_tag!/1 returns the tag with given id" do
-    tag = insert(:tag, relations: [])
+    tag = insert(:tag)
     assert Resources.get_tag!(tag.id) == tag
   end
 
-  test "graph/3 gets edges and nodes" do
-    tags = Enum.map(1..5, fn _ -> insert(:tag) end)
+  test "graph/3 gets edges and nodes with tag" do
+    tag = insert(:tag)
     claims = %Claims{user_id: 1, role: "admin"}
 
     relations =
@@ -272,7 +340,7 @@ defmodule TdLm.ResourcesTest do
           target_type: "business_concept",
           source_id: id,
           target_id: id + 1,
-          tags: tags
+          tag: tag
         )
       end)
 
@@ -283,18 +351,20 @@ defmodule TdLm.ResourcesTest do
                                      source_id: source_id,
                                      source_type: source_type,
                                      target_id: target_id,
-                                     target_type: target_type
+                                     target_type: target_type,
+                                     tag: tag
                                    } ->
              Enum.find(
                edges,
                &(&1.source_id == "#{source_type}:#{source_id}" and
-                   &1.target_id == "#{target_type}:#{target_id}")
+                   &1.target_id == "#{target_type}:#{target_id}" and
+                   &1.tag == tag)
              )
            end)
   end
 
   test "graph/3 gets empty edges and nodes when we query an non existing node" do
-    tags = Enum.map(1..5, fn _ -> insert(:tag) end)
+    tag = insert(:tag)
     claims = %Claims{user_id: 1, role: "admin"}
 
     Enum.map(1..10, fn id ->
@@ -303,7 +373,7 @@ defmodule TdLm.ResourcesTest do
         target_type: "business_concept",
         source_id: id,
         target_id: id + 1,
-        tags: tags
+        tag: tag
       )
     end)
 

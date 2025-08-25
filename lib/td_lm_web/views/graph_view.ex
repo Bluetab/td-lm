@@ -25,12 +25,20 @@ defmodule TdLmWeb.GraphView do
   end
 
   defp edge_json(edge) do
+    tag = tag_json(edge)
+    tags = if is_nil(tag), do: [], else: [tag]
+
     edge
     |> Map.take([:id, :source_id, :target_id])
-    |> Map.put(:tags, tags_json(edge))
+    |> Map.put(:tags, tags)
+    |> Map.put(:tag, tag)
   end
 
-  defp tags_json(%{tags: tags}) do
-    Enum.map(tags, &Map.take(&1, [:id, :value]))
+  defp tag_json(%{tag: nil}) do
+    nil
+  end
+
+  defp tag_json(%{tag: tag}) do
+    Map.take(tag, [:id, :value])
   end
 end
