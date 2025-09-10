@@ -3,6 +3,9 @@ defmodule TdCluster.ClusterTdLmTest do
   alias TdCache.Redix
   alias TdCluster.Cluster, as: Cluster
   alias TdLm.Resources
+
+  import Mox
+
   @stream TdCache.Audit.stream()
 
   setup_all do
@@ -16,8 +19,11 @@ defmodule TdCluster.ClusterTdLmTest do
     :ok
   end
 
+  setup :verify_on_exit!
+
   describe "test Cluster.TdLm functions" do
     test "clone_relations copy relations to new implementation", %{claims: claims} do
+      Application.put_env(:td_cluster, TdCluster.ClusterHandler, TdCluster.ClusterHandlerImpl)
       original_id = 7777
       cloned_id = 5555
       source_type = "implementation_ref"
@@ -48,10 +54,13 @@ defmodule TdCluster.ClusterTdLmTest do
                  "source_id" => cloned_id
                })
              ) == 4
+
+      Application.put_env(:td_cluster, TdCluster.ClusterHandler, MockClusterHandler)
     end
   end
 
   test "clone_relations copy relations to new implementation with tag", %{claims: claims} do
+    Application.put_env(:td_cluster, TdCluster.ClusterHandler, TdCluster.ClusterHandlerImpl)
     original_id = 7777
     cloned_id = 5555
     source_type = "implementation_ref"
@@ -72,5 +81,7 @@ defmodule TdCluster.ClusterTdLmTest do
                "target_type" => target_type,
                "source_id" => cloned_id
              })
+
+    Application.put_env(:td_cluster, TdCluster.ClusterHandler, MockClusterHandler)
   end
 end

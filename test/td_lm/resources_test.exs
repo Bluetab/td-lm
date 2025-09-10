@@ -3,11 +3,17 @@ defmodule TdLm.ResourcesTest do
 
   alias TdCache.Redix
   alias TdCache.Redix.Stream
+  alias TdCluster.TestHelpers.TdBgMock
+  alias TdCluster.TestHelpers.TdDdMock
   alias TdLm.Auth.Claims
   alias TdLm.Resources
   alias TdLm.Resources.Relation
 
+  import Mox
+
   @stream TdCache.Audit.stream()
+
+  setup :verify_on_exit!
 
   setup_all do
     Redix.del!(@stream)
@@ -179,19 +185,16 @@ defmodule TdLm.ResourcesTest do
     relations =
       Enum.map(10..1//-1, fn i -> insert(:relation, updated_at: DateTime.add(ts, -i, :second)) end)
 
-    # min_id
     {%{id: min_id}, %{id: max_id}} = Enum.min_max_by(relations, & &1.id)
     assert_lists_equal(relations, Resources.list_relations(%{"min_id" => min_id}))
     assert [%{id: ^max_id}] = Resources.list_relations(%{"min_id" => max_id})
 
-    # since
     {%{updated_at: min_ts}, %{updated_at: max_ts}} =
       Enum.min_max_by(relations, & &1.updated_at, DateTime)
 
     assert_lists_equal(relations, Resources.list_relations(%{"since" => min_ts}))
     assert [%{updated_at: ^max_ts}] = Resources.list_relations(%{"since" => max_ts})
 
-    # limit
     assert_lists_equal(Enum.take(relations, 5), Resources.list_relations(%{"limit" => 5}))
   end
 
@@ -220,8 +223,10 @@ defmodule TdLm.ResourcesTest do
     end
 
     test "returns error and changeset if validations fail", %{claims: claims} do
-      params = %{"value" => nil}
-      assert {:error, :tag, %Ecto.Changeset{}, _} = Resources.create_tag(params, claims)
+      params = %{value: nil}
+
+      assert {:error, :tag, %Ecto.Changeset{valid?: false}, _} =
+               Resources.create_tag(params, claims)
     end
   end
 
@@ -489,6 +494,1071 @@ defmodule TdLm.ResourcesTest do
     end
   end
 
+  describe "bulk_create_relations/1" do
+    test "Create relation with valid data" do
+      %{
+        claims: claims,
+        domain: %{id: domain_id},
+        bulk_insert_params: bulk_insert_params,
+        concept: %{id: concept_id, name: concept_name} = concept,
+        data_structure:
+          %{id: data_structure_id, external_id: data_structure_external_id} = data_structure,
+        tag: %{id: tag_id}
+      } =
+        create_mock_data(
+          claims: [role: "admin"],
+          domain: [external_id: "domain_external_id_1"],
+          tag: [value: %{"type" => "foo", "target_type" => "data_field"}],
+          concept: [name: "foo_bc"],
+          structure: [external_id: "bar_ds_external_id"]
+        )
+
+      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      data_structure_mock(data_structure_external_id, {:ok, data_structure})
+
+      assert {:ok, %{"created" => [first] = created, "updated" => [], "errors" => []}} =
+               Resources.bulk_create_relations(bulk_insert_params, claims)
+
+      assert length(created) == length(bulk_insert_params)
+
+      assert %{source_id: ^concept_id, target_id: ^data_structure_id, tag_id: ^tag_id} =
+               Resources.get_relation!(first)
+    end
+
+    test "user can not create relation if business concepts is confidential" do
+      %{
+        claims: claims,
+        domain: %{id: domain_id},
+        bulk_insert_params: bulk_insert_params,
+        concept: %{name: concept_name} = concept,
+        data_structure: %{external_id: data_structure_external_id} = data_structure
+      } =
+        create_mock_data(
+          claims: [role: "user"],
+          domain: [external_id: "domain_external_id_1"],
+          concept: [name: "foo_bc", confidential: true],
+          structure: [external_id: "bar_ds_external_id"]
+        )
+
+      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      data_structure_mock(data_structure_external_id, {:ok, data_structure})
+
+      CacheHelpers.put_session_permissions(claims, domain_id, [
+        :manage_business_concept_links,
+        :link_data_structure
+      ])
+
+      assert {:ok, %{"created" => [], "updated" => [], "errors" => [error]}} =
+               Resources.bulk_create_relations(bulk_insert_params, claims)
+
+      assert error["error_type"] == "without_permissions"
+
+      assert error["body"]["context"]["error"] == "domain_external_id_1"
+
+      assert error["body"]["message"] == "bulk_creation_link.upload.failed.without_permissions"
+    end
+
+    test "Create relation with valid data without tag" do
+      %{
+        claims: claims,
+        domain: %{id: domain_id},
+        bulk_insert_params: [params],
+        concept: %{id: concept_id, name: concept_name} = concept,
+        data_structure:
+          %{id: data_structure_id, external_id: data_structure_external_id} = data_structure
+      } =
+        create_mock_data(
+          claims: [role: "admin"],
+          domain: [external_id: "domain_external_id_1"],
+          concept: [name: "foo_bc"],
+          structure: [external_id: "bar_ds_external_id"]
+        )
+
+      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      data_structure_mock(data_structure_external_id, {:ok, data_structure})
+
+      bulk_insert_params = [Map.put(params, "tag", "")]
+
+      assert {:ok, %{"created" => [first] = created, "updated" => [], "errors" => []}} =
+               Resources.bulk_create_relations(bulk_insert_params, claims)
+
+      assert length(created) == length(bulk_insert_params)
+
+      assert %{source_id: ^concept_id, target_id: ^data_structure_id, tag_id: tag_id} =
+               Resources.get_relation!(first)
+
+      assert is_nil(tag_id)
+    end
+
+    test "user non-admin can not create relations without permissions" do
+      %{
+        claims: claims,
+        domain: %{id: domain_id},
+        bulk_insert_params: bulk_insert_params,
+        concept: %{name: concept_name} = concept,
+        data_structure: %{external_id: data_structure_external_id} = data_structure
+      } =
+        create_mock_data(
+          claims: [role: "user"],
+          domain: [external_id: "domain_external_id_1"],
+          concept: [name: "foo_bc"],
+          tag: [value: %{"type" => "foo", "target_type" => "data_field"}],
+          structure: [external_id: "bar_ds_external_id"]
+        )
+
+      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      data_structure_mock(data_structure_external_id, {:ok, data_structure})
+
+      assert {:ok, %{"created" => [], "updated" => [], "errors" => [error]}} =
+               Resources.bulk_create_relations(bulk_insert_params, claims)
+
+      assert error["error_type"] == "without_permissions"
+
+      assert error["body"]["context"]["error"] == "domain_external_id_1"
+
+      assert error["body"]["message"] == "bulk_creation_link.upload.failed.without_permissions"
+    end
+
+    test "user can not create relations without structure permissions" do
+      %{
+        claims: claims,
+        domain: %{id: domain_id},
+        bulk_insert_params: bulk_insert_params,
+        concept: %{name: concept_name} = concept,
+        data_structure: %{external_id: data_structure_external_id} = data_structure
+      } =
+        create_mock_data(
+          claims: [role: "user"],
+          domain: [external_id: "domain_external_id_1"],
+          concept: [name: "foo_bc"],
+          structure: [external_id: "bar_ds_external_id"]
+        )
+
+      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      data_structure_mock(data_structure_external_id, {:ok, data_structure})
+
+      CacheHelpers.put_session_permissions(claims, domain_id, [
+        :manage_confidential_business_concepts,
+        :manage_business_concept_links
+      ])
+
+      assert {:ok, %{"created" => [], "updated" => [], "errors" => [error]}} =
+               Resources.bulk_create_relations(bulk_insert_params, claims)
+
+      assert error["error_type"] == "without_permissions"
+
+      assert error["body"]["context"]["error"] == "data_structure"
+
+      assert error["body"]["message"] == "bulk_creation_link.upload.failed.without_permissions"
+    end
+
+    test "user can create relations with permissions" do
+      %{
+        claims: claims,
+        domain: %{id: domain_id},
+        bulk_insert_params: bulk_insert_params,
+        concept: %{id: concept_id, name: concept_name} = concept,
+        data_structure:
+          %{id: data_structure_id, external_id: data_structure_external_id} = data_structure
+      } =
+        create_mock_data(
+          claims: [role: "user"],
+          domain: [external_id: "domain_external_id_1"],
+          concept: [name: "foo_bc"],
+          structure: [external_id: "bar_ds_external_id"]
+        )
+
+      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      data_structure_mock(data_structure_external_id, {:ok, data_structure})
+
+      CacheHelpers.put_session_permissions(claims, domain_id, [
+        :manage_confidential_business_concepts,
+        :manage_business_concept_links,
+        :link_data_structure,
+        :view_data_structure
+      ])
+
+      assert {:ok, %{"created" => [first] = created, "updated" => [], "errors" => []}} =
+               Resources.bulk_create_relations(bulk_insert_params, claims)
+
+      assert length(created) == length(bulk_insert_params)
+
+      assert %{source_id: ^concept_id, target_id: ^data_structure_id, tag_id: tag_id} =
+               Resources.get_relation!(first)
+
+      assert is_nil(tag_id)
+    end
+
+    test "user can create relations with permissions on shared domain" do
+      %{id: spd_id} =
+        CacheHelpers.put_domain(external_id: "shared_parent_domain_1")
+
+      %{id: spd_child_id} =
+        CacheHelpers.put_domain(external_id: "shared_child_domain_1", parent_id: spd_id)
+
+      %{
+        claims: claims,
+        domain: %{id: domain_id},
+        bulk_insert_params: bulk_insert_params,
+        concept: %{id: concept_id, name: concept_name} = concept,
+        data_structure:
+          %{id: data_structure_id, external_id: data_structure_external_id} = data_structure
+      } =
+        create_mock_data(
+          claims: [role: "user"],
+          domain: [external_id: "domain_external_id_1"],
+          concept: [name: "foo_bc", shared_to: [%{id: spd_child_id}]],
+          structure: [external_id: "bar_ds_external_id"]
+        )
+
+      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      data_structure_mock(data_structure_external_id, {:ok, data_structure})
+
+      CacheHelpers.put_session_permissions(claims, %{
+        "link_data_structure" => [domain_id],
+        "view_data_structure" => [domain_id],
+        "manage_business_concept_links" => [spd_id]
+      })
+
+      assert {:ok, %{"created" => [first] = created, "updated" => [], "errors" => []}} =
+               Resources.bulk_create_relations(bulk_insert_params, claims)
+
+      assert length(created) == length(bulk_insert_params)
+
+      assert %{source_id: ^concept_id, target_id: ^data_structure_id, tag_id: tag_id} =
+               Resources.get_relation!(first)
+
+      assert is_nil(tag_id)
+    end
+
+    test "user can create relations with permissions to manage confidential concepts on shared domain" do
+      %{id: spd_id} =
+        CacheHelpers.put_domain(external_id: "shared_parent_domain_1")
+
+      %{id: spd_child_id} =
+        CacheHelpers.put_domain(external_id: "shared_child_domain_1", parent_id: spd_id)
+
+      %{
+        claims: claims,
+        domain: %{id: domain_id},
+        bulk_insert_params: bulk_insert_params,
+        concept: %{id: concept_id, name: concept_name} = concept,
+        data_structure:
+          %{id: data_structure_id, external_id: data_structure_external_id} = data_structure
+      } =
+        create_mock_data(
+          claims: [role: "user"],
+          domain: [external_id: "domain_external_id_1"],
+          concept: [name: "foo_bc", shared_to: [%{id: spd_child_id}], confidential: true],
+          structure: [external_id: "bar_ds_external_id"]
+        )
+
+      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      data_structure_mock(data_structure_external_id, {:ok, data_structure})
+
+      CacheHelpers.put_session_permissions(claims, %{
+        "link_data_structure" => [domain_id],
+        "view_data_structure" => [domain_id],
+        "manage_confidential_business_concept" => [spd_id],
+        "manage_business_concept_links" => [spd_id]
+      })
+
+      assert {:ok, %{"created" => [first] = created, "updated" => [], "errors" => []}} =
+               Resources.bulk_create_relations(bulk_insert_params, claims)
+
+      assert length(created) == length(bulk_insert_params)
+
+      assert %{source_id: ^concept_id, target_id: ^data_structure_id, tag_id: tag_id} =
+               Resources.get_relation!(first)
+
+      assert is_nil(tag_id)
+    end
+
+    test "user can't create relations without permissions to manage confidential concepts on shared domain" do
+      %{id: spd_id} =
+        CacheHelpers.put_domain(external_id: "shared_parent_domain_1")
+
+      %{id: spd_child_id} =
+        CacheHelpers.put_domain(external_id: "shared_child_domain_1", parent_id: spd_id)
+
+      %{
+        claims: claims,
+        domain: %{id: domain_id},
+        bulk_insert_params: bulk_insert_params,
+        concept: %{name: concept_name} = concept,
+        data_structure: %{external_id: data_structure_external_id} = data_structure
+      } =
+        create_mock_data(
+          claims: [role: "user"],
+          domain: [external_id: "domain_external_id_1"],
+          concept: [name: "foo_bc", shared_to: [%{id: spd_child_id}], confidential: true],
+          structure: [external_id: "bar_ds_external_id"]
+        )
+
+      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      data_structure_mock(data_structure_external_id, {:ok, data_structure})
+
+      CacheHelpers.put_session_permissions(claims, %{
+        "link_data_structure" => [domain_id],
+        "view_data_structure" => [domain_id],
+        "manage_business_concept_links" => [spd_id]
+      })
+
+      assert {:ok, %{"created" => [], "updated" => [], "errors" => [error]}} =
+               Resources.bulk_create_relations(bulk_insert_params, claims)
+
+      assert error["error_type"] == "without_permissions"
+
+      assert error["body"]["context"]["error"] == "domain_external_id_1"
+
+      assert error["body"]["message"] == "bulk_creation_link.upload.failed.without_permissions"
+    end
+
+    test "can not create relations if already exists with tag" do
+      %{
+        claims: claims,
+        domain: %{id: domain_id},
+        bulk_insert_params: bulk_insert_params,
+        concept: %{id: concept_id, name: concept_name} = concept,
+        data_structure:
+          %{id: data_structure_id, external_id: data_structure_external_id} = data_structure,
+        tag: tag
+      } =
+        create_mock_data(
+          claims: [role: "admin"],
+          domain: [external_id: "domain_external_id_1"],
+          tag: [value: %{"type" => "foo", "target_type" => "data_field"}],
+          concept: [name: "foo_bc"],
+          structure: [external_id: "bar_ds_external_id"]
+        )
+
+      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      data_structure_mock(data_structure_external_id, {:ok, data_structure})
+
+      insert(:relation,
+        source_type: "business_concept",
+        source_id: concept_id,
+        target_type: "data_structure",
+        target_id: data_structure_id,
+        tag: tag
+      )
+
+      assert {:ok, %{"created" => [], "updated" => [], "errors" => [error]}} =
+               Resources.bulk_create_relations(bulk_insert_params, claims)
+
+      assert error["error_type"] == "already_exists"
+
+      assert error["body"]["context"]["error"] == ""
+
+      assert error["body"]["message"] == "bulk_creation_link.upload.failed.already_exists"
+    end
+
+    test "can not create relations if already exists without tag" do
+      %{
+        claims: claims,
+        domain: %{id: domain_id},
+        bulk_insert_params: bulk_insert_params,
+        concept: %{id: concept_id, name: concept_name} = concept,
+        data_structure:
+          %{id: data_structure_id, external_id: data_structure_external_id} = data_structure
+      } =
+        create_mock_data(
+          claims: [role: "admin"],
+          domain: [external_id: "domain_external_id_1"],
+          concept: [name: "foo_bc"],
+          structure: [external_id: "bar_ds_external_id"]
+        )
+
+      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      data_structure_mock(data_structure_external_id, {:ok, data_structure})
+
+      insert(:relation,
+        source_type: "business_concept",
+        source_id: concept_id,
+        target_type: "data_structure",
+        target_id: data_structure_id,
+        tag: nil
+      )
+
+      assert {:ok, %{"created" => [], "updated" => [], "errors" => [error]}} =
+               Resources.bulk_create_relations(bulk_insert_params, claims)
+
+      assert error["error_type"] == "already_exists"
+
+      assert error["body"]["context"]["error"] == ""
+
+      assert error["body"]["message"] == "bulk_creation_link.upload.failed.already_exists"
+    end
+
+    test "can not create relation without params" do
+      claims = build(:claims, role: "admin")
+
+      bulk_insert_params = [
+        %{
+          "row_number" => 1,
+          "source_param" => "",
+          "target_type" => "",
+          "target_param" => "",
+          "domain_external_id" => ""
+        }
+      ]
+
+      assert {:ok, %{"created" => [], "updated" => [], "errors" => [error]}} =
+               Resources.bulk_create_relations(bulk_insert_params, claims)
+
+      assert error["error_type"] == "missing_params"
+
+      assert error["body"]["context"]["error"] ==
+               "source_param, source_type, target_param, target_type, domain_external_id"
+
+      assert error["body"]["message"] == "bulk_creation_link.upload.failed.missing_params"
+    end
+
+    test "can not create relation without source_type" do
+      claims = build(:claims, role: "admin")
+
+      domain_external_id = "domain_external_id_1"
+
+      bulk_insert_params = [
+        %{
+          "row_number" => 1,
+          "source_param" => "foo_bc",
+          "source_type" => "",
+          "target_type" => "data_structure",
+          "target_param" => "bar_ds_external_id",
+          "domain_external_id" => domain_external_id
+        }
+      ]
+
+      assert {:ok, %{"created" => [], "updated" => [], "errors" => [error]}} =
+               Resources.bulk_create_relations(bulk_insert_params, claims)
+
+      assert error["error_type"] == "missing_params"
+
+      assert error["body"]["context"]["error"] == "source_type"
+
+      assert error["body"]["message"] == "bulk_creation_link.upload.failed.missing_params"
+    end
+
+    test "can not create relation without source_param" do
+      claims = build(:claims, role: "admin")
+
+      domain_external_id = "domain_external_id_1"
+
+      bulk_insert_params = [
+        %{
+          "row_number" => 1,
+          "source_param" => "",
+          "source_type" => "business_concept",
+          "target_type" => "data_structure",
+          "target_param" => "bar_ds_external_id",
+          "domain_external_id" => domain_external_id
+        }
+      ]
+
+      assert {:ok, %{"created" => [], "updated" => [], "errors" => [error]}} =
+               Resources.bulk_create_relations(bulk_insert_params, claims)
+
+      assert error["error_type"] == "missing_params"
+
+      assert error["body"]["context"]["error"] == "source_param"
+
+      assert error["body"]["message"] == "bulk_creation_link.upload.failed.missing_params"
+    end
+
+    test "can not create relation without target_type" do
+      claims = build(:claims, role: "admin")
+
+      domain_external_id = "domain_external_id_1"
+
+      bulk_insert_params = [
+        %{
+          "row_number" => 1,
+          "source_type" => "business_concept",
+          "source_param" => "foo_bc",
+          "target_type" => "",
+          "target_param" => "bar_ds_external_id",
+          "domain_external_id" => domain_external_id
+        }
+      ]
+
+      assert {:ok, %{"created" => [], "updated" => [], "errors" => [error]}} =
+               Resources.bulk_create_relations(bulk_insert_params, claims)
+
+      assert error["error_type"] == "missing_params"
+
+      assert error["body"]["context"]["error"] == "target_type"
+
+      assert error["body"]["message"] == "bulk_creation_link.upload.failed.missing_params"
+    end
+
+    test "can not create relation without target_param" do
+      claims = build(:claims, role: "admin")
+
+      domain_external_id = "domain_external_id_1"
+
+      bulk_insert_params = [
+        %{
+          "row_number" => 1,
+          "source_type" => "business_concept",
+          "source_param" => "foo_bc",
+          "target_type" => "data_structure",
+          "target_param" => "",
+          "domain_external_id" => domain_external_id
+        }
+      ]
+
+      assert {:ok, %{"created" => [], "updated" => [], "errors" => [error]}} =
+               Resources.bulk_create_relations(bulk_insert_params, claims)
+
+      assert error["error_type"] == "missing_params"
+
+      assert error["body"]["context"]["error"] == "target_param"
+
+      assert error["body"]["message"] == "bulk_creation_link.upload.failed.missing_params"
+    end
+
+    test "can not create relation without domain_external_id" do
+      claims = build(:claims, role: "admin")
+
+      bulk_insert_params = [
+        %{
+          "row_number" => 1,
+          "source_type" => "business_concept",
+          "source_param" => "foo_bc",
+          "target_type" => "data_structure",
+          "target_param" => "bar_ds_external_id",
+          "domain_external_id" => ""
+        }
+      ]
+
+      assert {:ok, %{"created" => [], "updated" => [], "errors" => [error]}} =
+               Resources.bulk_create_relations(bulk_insert_params, claims)
+
+      assert error["error_type"] == "missing_params"
+
+      assert error["body"]["context"]["error"] == "domain_external_id"
+
+      assert error["body"]["message"] == "bulk_creation_link.upload.failed.missing_params"
+    end
+
+    test "can not create relation if domain not exists" do
+      claims = build(:claims, role: "admin")
+
+      domain = CacheHelpers.put_domain(external_id: "domain_external_id_1")
+
+      data_structure =
+        build(:data_structure,
+          external_id: "bar_ds_external_id",
+          domain: domain
+        )
+
+      bulk_insert_params = [
+        %{
+          "row_number" => 1,
+          "source_type" => "business_concept",
+          "source_param" => "foo_bc",
+          "target_type" => "data_structure",
+          "target_param" => "bar_ds_external_id",
+          "domain_external_id" => "foo"
+        }
+      ]
+
+      data_structure_mock("bar_ds_external_id", {:ok, data_structure})
+
+      assert {:ok, %{"created" => [], "updated" => [], "errors" => [error]}} =
+               Resources.bulk_create_relations(bulk_insert_params, claims)
+
+      assert error["error_type"] == "not_available"
+
+      assert error["body"]["context"]["error"] == "business_concept"
+
+      assert error["body"]["message"] ==
+               "bulk_creation_link.upload.failed.not_available.not_exists"
+    end
+
+    test "can not create relation if concept is deprecated" do
+      %{
+        claims: claims,
+        domain: %{id: domain_id},
+        bulk_insert_params: bulk_insert_params,
+        concept: %{name: concept_name} = concept,
+        data_structure: %{external_id: data_structure_external_id} = data_structure
+      } =
+        create_mock_data(
+          claims: [role: "admin"],
+          domain: [external_id: "domain_external_id_1"],
+          concept: [
+            name: "foo_bc",
+            versions: [%{status: "deprecated", version: 2}, %{status: "published", version: 1}]
+          ],
+          structure: [external_id: "bar_ds_external_id"]
+        )
+
+      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      data_structure_mock(data_structure_external_id, {:ok, data_structure})
+
+      assert {:ok, %{"created" => [], "updated" => [], "errors" => [error]}} =
+               Resources.bulk_create_relations(bulk_insert_params, claims)
+
+      assert error["error_type"] == "not_available"
+
+      assert error["body"]["context"]["error"] == "business_concept"
+
+      assert error["body"]["message"] ==
+               "bulk_creation_link.upload.failed.not_available.deprecated"
+    end
+
+    test "can not create relation if concept is deprecated and structure not exists" do
+      %{
+        claims: claims,
+        domain: %{id: domain_id},
+        bulk_insert_params: bulk_insert_params,
+        concept: %{name: concept_name} = concept,
+        data_structure: %{external_id: data_structure_external_id}
+      } =
+        create_mock_data(
+          claims: [role: "admin"],
+          domain: [external_id: "domain_external_id_1"],
+          concept: [
+            name: "foo_bc",
+            versions: [%{status: "deprecated", version: 2}, %{status: "published", version: 1}]
+          ],
+          structure: [external_id: "bar_ds_external_id"]
+        )
+
+      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      data_structure_mock(data_structure_external_id, {:ok, nil})
+
+      assert {:ok, %{"created" => [], "updated" => [], "errors" => [error]}} =
+               Resources.bulk_create_relations(bulk_insert_params, claims)
+
+      assert error["error_type"] == "not_available"
+
+      assert error["body"]["context"]["error"] == "business_concept && data_structure"
+
+      assert error["body"]["message"] ==
+               "bulk_creation_link.upload.failed.not_available.source.deprecated.target.not_exists"
+    end
+
+    test "can not create relation if concept is deprecated and structure is deleted" do
+      %{
+        claims: claims,
+        domain: %{id: domain_id},
+        bulk_insert_params: bulk_insert_params,
+        concept: %{name: concept_name} = concept,
+        data_structure: %{external_id: data_structure_external_id} = data_structure
+      } =
+        create_mock_data(
+          claims: [role: "admin"],
+          domain: [external_id: "domain_external_id_1"],
+          concept: [
+            name: "foo_bc",
+            versions: [%{status: "deprecated", version: 2}, %{status: "published", version: 1}]
+          ],
+          structure: [
+            external_id: "bar_ds_external_id",
+            latest_version: %{deleted_at: DateTime.utc_now()}
+          ]
+        )
+
+      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      data_structure_mock(data_structure_external_id, {:ok, data_structure})
+
+      assert {:ok, %{"created" => [], "updated" => [], "errors" => [error]}} =
+               Resources.bulk_create_relations(bulk_insert_params, claims)
+
+      assert error["error_type"] == "not_available"
+
+      assert error["body"]["context"]["error"] == "business_concept && data_structure"
+
+      assert error["body"]["message"] ==
+               "bulk_creation_link.upload.failed.not_available.source.deprecated.target.deleted"
+    end
+
+    test "can not create relation if concept not exists" do
+      %{
+        claims: claims,
+        domain: %{id: domain_id},
+        bulk_insert_params: params,
+        data_structure: %{external_id: data_structure_external_id} = data_structure
+      } =
+        create_mock_data(
+          claims: [role: "admin"],
+          domain: [external_id: "domain_external_id_1"],
+          structure: [
+            external_id: "bar_ds_external_id",
+            latest_version: %{deleted_at: nil}
+          ]
+        )
+
+      bulk_insert_params =
+        Map.put(hd(params), "source_param", "foo_bc")
+
+      business_concept_mock("foo_bc", domain_id, {:ok, nil})
+      data_structure_mock(data_structure_external_id, {:ok, data_structure})
+
+      assert {:ok, %{"created" => [], "updated" => [], "errors" => [error]}} =
+               Resources.bulk_create_relations([bulk_insert_params], claims)
+
+      assert error["error_type"] == "not_available"
+      assert error["body"]["context"]["error"] == "business_concept"
+
+      assert error["body"]["message"] ==
+               "bulk_creation_link.upload.failed.not_available.not_exists"
+    end
+
+    test "can not create relation if concept not exists and structure is deleted" do
+      %{
+        claims: claims,
+        domain: %{id: domain_id},
+        bulk_insert_params: params,
+        data_structure: %{external_id: data_structure_external_id} = data_structure
+      } =
+        create_mock_data(
+          claims: [role: "admin"],
+          domain: [external_id: "domain_external_id_1"],
+          structure: [
+            external_id: "bar_ds_external_id",
+            latest_version: %{deleted_at: DateTime.utc_now()}
+          ]
+        )
+
+      bulk_insert_params =
+        Map.put(hd(params), "source_param", "foo_bc")
+
+      business_concept_mock("foo_bc", domain_id, {:ok, nil})
+      data_structure_mock(data_structure_external_id, {:ok, data_structure})
+
+      assert {:ok, %{"created" => [], "updated" => [], "errors" => [error]}} =
+               Resources.bulk_create_relations([bulk_insert_params], claims)
+
+      assert error["error_type"] == "not_available"
+      assert error["body"]["context"]["error"] == "business_concept && data_structure"
+
+      assert error["body"]["message"] ==
+               "bulk_creation_link.upload.failed.not_available.source.not_exists.target.deleted"
+    end
+
+    test "can not create relation if concept not exists and structure not exists" do
+      %{
+        claims: claims,
+        domain: %{id: domain_id},
+        bulk_insert_params: params,
+        data_structure: %{external_id: data_structure_external_id}
+      } =
+        create_mock_data(
+          claims: [role: "admin"],
+          domain: [external_id: "domain_external_id_1"],
+          structure: [external_id: "bar_ds_external_id"]
+        )
+
+      bulk_insert_params =
+        Map.put(hd(params), "source_param", "foo_bc")
+
+      business_concept_mock("foo_bc", domain_id, {:ok, nil})
+      data_structure_mock(data_structure_external_id, {:ok, nil})
+
+      assert {:ok, %{"created" => [], "updated" => [], "errors" => [error]}} =
+               Resources.bulk_create_relations([bulk_insert_params], claims)
+
+      assert error["error_type"] == "not_available"
+      assert error["body"]["context"]["error"] == "business_concept && data_structure"
+
+      assert error["body"]["message"] ==
+               "bulk_creation_link.upload.failed.not_available.source.not_exists.target.not_exists"
+    end
+
+    test "can not create relation if data structure not exists" do
+      %{
+        claims: claims,
+        domain: %{id: domain_id},
+        bulk_insert_params: params,
+        concept: %{name: concept_name} = concept
+      } =
+        create_mock_data(
+          claims: [role: "admin"],
+          domain: [external_id: "domain_external_id_1"],
+          concept: [
+            name: "foo_bc",
+            versions: [%{status: "published", version: 1}]
+          ]
+        )
+
+      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      data_structure_mock("bar_ds_external_id", {:ok, nil})
+
+      bulk_insert_params =
+        Map.put(hd(params), "target_param", "bar_ds_external_id")
+
+      assert {:ok, %{"created" => [], "updated" => [], "errors" => [error]}} =
+               Resources.bulk_create_relations([bulk_insert_params], claims)
+
+      assert error["error_type"] == "not_available"
+      assert error["body"]["context"]["error"] == "data_structure"
+
+      assert error["body"]["message"] ==
+               "bulk_creation_link.upload.failed.not_available.not_exists"
+    end
+
+    test "can not create relation if data structure is deleted" do
+      %{
+        claims: claims,
+        domain: %{id: domain_id},
+        bulk_insert_params: bulk_insert_params,
+        concept: %{name: concept_name} = concept,
+        data_structure: %{external_id: data_structure_external_id} = data_structure
+      } =
+        create_mock_data(
+          claims: [role: "admin"],
+          domain: [external_id: "domain_external_id_1"],
+          concept: [
+            name: "foo_bc",
+            versions: [%{status: "published", version: 1}]
+          ],
+          structure: [
+            external_id: "bar_ds_external_id",
+            latest_version: %{deleted_at: DateTime.utc_now()}
+          ]
+        )
+
+      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      data_structure_mock(data_structure_external_id, {:ok, data_structure})
+
+      assert {:ok, %{"created" => [], "updated" => [], "errors" => [error]}} =
+               Resources.bulk_create_relations(bulk_insert_params, claims)
+
+      assert error["error_type"] == "not_available"
+      assert error["body"]["context"]["error"] == "data_structure"
+      assert error["body"]["message"] == "bulk_creation_link.upload.failed.not_available.deleted"
+    end
+
+    test "Validate duplicates params with tag" do
+      %{
+        claims: claims,
+        domain: %{id: domain_id},
+        bulk_insert_params: [params],
+        concept: %{name: concept_name} = concept,
+        data_structure: %{external_id: data_structure_external_id} = data_structure
+      } =
+        create_mock_data(
+          claims: [role: "admin"],
+          domain: [external_id: "domain_external_id_1"],
+          tag: [value: %{"type" => "foo", "target_type" => "data_structure"}],
+          concept: [name: "foo_bc"],
+          structure: [external_id: "bar_ds_external_id"]
+        )
+
+      bulk_insert_params = [params, %{params | "row_number" => 2}]
+
+      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      data_structure_mock(data_structure_external_id, {:ok, data_structure})
+
+      assert {:ok, %{"created" => [_created], "updated" => [], "errors" => [error]}} =
+               Resources.bulk_create_relations(bulk_insert_params, claims)
+
+      assert error["error_type"] == "duplicate_in_file"
+      assert error["body"]["context"]["error"] == ""
+      assert error["body"]["context"]["row"] == 2
+      assert error["body"]["message"] == "bulk_creation_link.upload.failed.duplicate_in_file"
+    end
+
+    test "Validate duplicates params without tag" do
+      %{
+        claims: claims,
+        domain: %{id: domain_id},
+        bulk_insert_params: [params],
+        concept: %{name: concept_name} = concept,
+        data_structure: %{external_id: data_structure_external_id} = data_structure
+      } =
+        create_mock_data(
+          claims: [role: "admin"],
+          domain: [external_id: "domain_external_id_1"],
+          concept: [name: "foo_bc"],
+          structure: [external_id: "bar_ds_external_id"]
+        )
+
+      bulk_insert_params =
+        [params, %{params | "row_number" => 2}, %{params | "row_number" => 3}]
+
+      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      data_structure_mock(data_structure_external_id, {:ok, data_structure})
+
+      assert {:ok, %{"created" => [_created], "updated" => [], "errors" => [error, error2]}} =
+               Resources.bulk_create_relations(bulk_insert_params, claims)
+
+      assert error["error_type"] == "duplicate_in_file"
+      assert error["body"]["context"]["error"] == ""
+      assert error["body"]["context"]["row"] == 2
+      assert error["body"]["message"] == "bulk_creation_link.upload.failed.duplicate_in_file"
+      assert error2["error_type"] == "duplicate_in_file"
+      assert error2["body"]["context"]["error"] == ""
+      assert error2["body"]["context"]["row"] == 3
+      assert error2["body"]["message"] == "bulk_creation_link.upload.failed.duplicate_in_file"
+    end
+
+    test "publish audit events" do
+      put_template(nil)
+
+      %{
+        claims: claims,
+        domain: %{id: domain_id},
+        bulk_insert_params: [params],
+        concept: %{id: concept_id, name: concept_name} = concept,
+        data_structure:
+          %{id: data_structure_id, external_id: data_structure_external_id} = data_structure,
+        tag: %{id: tag_id}
+      } =
+        create_mock_data(
+          claims: [role: "admin"],
+          domain: [external_id: "domain_external_id_1"],
+          concept: [name: "foo_bc", type: "foo", content: %{"foo" => "bar"}],
+          structure: [external_id: "bar_ds_external_id"],
+          tag: [value: %{"type" => "foo", "target_type" => "data_field"}]
+        )
+
+      CacheHelpers.put_concept(concept)
+
+      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      data_structure_mock(data_structure_external_id, {:ok, data_structure})
+
+      bulk_insert_params = [Map.put(params, "tag", "")]
+
+      assert {:ok, %{"created" => [first], "updated" => [], "errors" => []}} =
+               Resources.bulk_create_relations(bulk_insert_params, claims)
+
+      assert %{source_id: ^concept_id, target_id: ^data_structure_id} =
+               Resources.get_relation!(first)
+
+      assert {:ok, [%{id: _, resource_id: resource_id, payload: payload}]} =
+               Stream.read(:redix, @stream, transform: true)
+
+      assert resource_id == "#{concept_id}"
+
+      assert %{
+               "tag_id" => ^tag_id,
+               "subscribable_fields" => %{"foo" => "bar"},
+               "domain_ids" => [^domain_id]
+             } =
+               Jason.decode!(payload)
+    end
+  end
+
+  def create_mock_data(opts \\ []) do
+    opts_map = Enum.into(opts, %{})
+
+    %{
+      opts: opts_map
+    }
+    |> maybe_create_claims()
+    |> maybe_create_domain()
+    |> maybe_create_tag()
+    |> maybe_create_concept()
+    |> maybe_create_data_structure()
+    |> build_bulk_insert_params()
+  end
+
+  defp maybe_create_claims(%{opts: %{claims: claims_params}} = acc) do
+    claims = build(:claims, claims_params)
+    Map.put(acc, :claims, claims)
+  end
+
+  defp maybe_create_claims(acc), do: acc
+
+  defp maybe_create_domain(%{opts: %{domain: domain_params}} = acc) do
+    domain = CacheHelpers.put_domain(domain_params)
+    Map.put(acc, :domain, domain)
+  end
+
+  defp maybe_create_domain(acc), do: acc
+
+  defp maybe_create_tag(%{opts: %{tag: tag_params}} = acc) do
+    tag = insert(:tag, tag_params)
+
+    Map.put(acc, :tag, tag)
+  end
+
+  defp maybe_create_tag(acc), do: acc
+
+  defp maybe_create_concept(
+         %{opts: %{concept: concept_params}, domain: %{id: domain_id} = domain} = acc
+       ) do
+    params = concept_params ++ [domain_id: domain_id, domain: domain]
+
+    concept = CacheHelpers.put_concept(params)
+
+    Map.put(acc, :concept, concept)
+  end
+
+  defp maybe_create_concept(acc), do: acc
+
+  defp maybe_create_data_structure(
+         %{opts: %{structure: structure_params}, domain: %{id: domain_id} = domain} = acc
+       ) do
+    params = structure_params ++ [domain_id: domain_id, domain: domain, domain_ids: [domain_id]]
+
+    ds = build(:data_structure, params)
+
+    Map.put(acc, :data_structure, ds)
+  end
+
+  defp maybe_create_data_structure(acc), do: acc
+
+  defp build_bulk_insert_params(
+         %{
+           domain: %{external_id: domain_external_id}
+         } = acc
+       ) do
+    tag_type =
+      acc
+      |> Map.get(:tag)
+      |> then(&(&1 && Map.get(&1.value, "type")))
+
+    concept_name =
+      acc
+      |> Map.get(:concept, %{})
+      |> Map.get(:name, "")
+
+    ds_external_id =
+      acc
+      |> Map.get(:data_structure, %{})
+      |> Map.get(:external_id, "")
+
+    tag_target_type = if is_nil(tag_type), do: nil, else: "data_field"
+
+    bulk_insert_params =
+      %{
+        "row_number" => 1,
+        "source_type" => "business_concept",
+        "target_type" => "data_structure",
+        "domain_external_id" => domain_external_id
+      }
+      |> maybe_put("source_param", concept_name)
+      |> maybe_put("target_param", ds_external_id)
+      |> maybe_put("link_type", tag_type)
+      |> Map.put("tag_target_type", tag_target_type)
+
+    Map.put(acc, :bulk_insert_params, [bulk_insert_params])
+  end
+
+  defp build_bulk_insert_params(acc), do: acc
+
+  defp maybe_put(map, _k, nil), do: map
+  defp maybe_put(map, k, v), do: Map.put(map, k, v)
+
+  defp business_concept_mock(name, domain_id, result) do
+    TdBgMock.get_concept_by_name_in_domain(&Mox.expect/4, name, domain_id, result)
+  end
+
+  defp data_structure_mock(external_id, result) do
+    TdDdMock.get_data_structure_by_external_id(
+      &Mox.expect/4,
+      external_id,
+      :latest_version,
+      result
+    )
+  end
+
   defp put_template(_) do
     template =
       CacheHelpers.put_template(
@@ -523,7 +1593,12 @@ defmodule TdLm.ResourcesTest do
     %{id: domain_id} = CacheHelpers.put_domain()
 
     concept =
-      CacheHelpers.put_concept(domain_id: domain_id, type: "foo", content: %{"foo" => "bar"})
+      CacheHelpers.put_concept(
+        domain_id: domain_id,
+        name: "domain_name",
+        type: "foo",
+        content: %{"foo" => "bar"}
+      )
 
     [concept: concept]
   end

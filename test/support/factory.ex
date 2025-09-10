@@ -6,7 +6,7 @@ defmodule TdLm.Factory do
   use ExMachina.Ecto, repo: TdLm.Repo
   use TdDfLib.TemplateFactory
 
-  def relation_factory do
+  def relation_factory(attrs) do
     %TdLm.Resources.Relation{
       source_type:
         sequence(:source_or_target_type, [
@@ -27,6 +27,7 @@ defmodule TdLm.Factory do
       origin: nil,
       tag: build(:tag)
     }
+    |> merge_attributes(attrs)
   end
 
   def tag_factory do
@@ -36,6 +37,7 @@ defmodule TdLm.Factory do
           sequence(:source_or_target_type, [
             "business_concept",
             "data_field",
+            "implementation",
             "data_structure",
             "ingest"
           ]),
@@ -43,6 +45,7 @@ defmodule TdLm.Factory do
           sequence(:source_or_target_type, [
             "business_concept",
             "data_field",
+            "implementation",
             "data_structure",
             "ingest"
           ])
@@ -61,20 +64,71 @@ defmodule TdLm.Factory do
     |> merge_attributes(attrs)
   end
 
-  def domain_factory do
+  def domain_factory(attrs) do
     %{
       name: sequence("domain_name"),
       id: System.unique_integer([:positive]),
       external_id: sequence("domain_external_id"),
       updated_at: DateTime.utc_now()
     }
+    |> merge_attributes(attrs)
   end
 
-  def concept_factory(attrs) do
+  def business_concept_factory(attrs) do
     %{
       id: System.unique_integer([:positive]),
-      name: sequence("concept_name"),
-      content: %{}
+      versions: [
+        %{
+          name: sequence("concept_name"),
+          status: "published",
+          version: 1,
+          content: %{}
+        }
+      ]
+    }
+    |> merge_attributes(attrs)
+  end
+
+  def business_concept_version_factory(attrs) do
+    %{
+      id: System.unique_integer([:positive]),
+      business_concept: %{
+        id: System.unique_integer([:positive]),
+        versions: [
+          %{
+            name: sequence("concept_name"),
+            status: "published",
+            version: 1,
+            content: %{}
+          }
+        ]
+      }
+    }
+    |> merge_attributes(attrs)
+  end
+
+  def data_structure_factory(attrs) do
+    %{
+      id: System.unique_integer([:positive]),
+      name: sequence("structure_name"),
+      content: %{},
+      external_id: sequence("ds_external_id"),
+      latest_version: %{
+        deleted_at: nil
+      }
+    }
+    |> merge_attributes(attrs)
+  end
+
+  def implementation_factory(attrs) do
+    implementation_ref = System.unique_integer([:positive])
+
+    %{
+      id: implementation_ref,
+      name: sequence("implementation_name"),
+      content: %{},
+      implementation_ref: implementation_ref,
+      deleted_at: nil
     }
     |> merge_attributes(attrs)
   end
