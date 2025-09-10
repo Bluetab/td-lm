@@ -4,7 +4,6 @@ defmodule TdLm.Audit do
   designed to be called using `Ecto.Multi.run/5`, although the first argument
   (`repo`) is not currently used.
   """
-
   alias TdCache.ConceptCache
   alias TdCache.IngestCache
   alias TdDfLib.Templates
@@ -159,5 +158,29 @@ defmodule TdLm.Audit do
       user_id: user_id,
       payload: payload
     )
+  end
+
+  @doc """
+  Inserts multiple relation created audits into the multi.
+  """
+  def bulk_relation_creation(_repo, data, user_id) do
+    result =
+      Enum.map(data, fn {_, relation} ->
+        payload =
+          %{
+            id: relation.id,
+            source_id: relation.source_id,
+            source_type: relation.source_type,
+            target_id: relation.target_id,
+            target_types: [relation.target_type],
+            tag_id: relation.tag_id
+          }
+          |> put_subscribable_fields(relation)
+          |> put_domain_ids(relation)
+
+        publish("relation_created", relation.source_type, relation.source_id, user_id, payload)
+      end)
+
+    {:ok, result}
   end
 end

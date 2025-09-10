@@ -11,6 +11,15 @@ config :td_lm, :env, Mix.env()
 config :td_cluster, :env, Mix.env()
 config :td_cluster, groups: [:lm]
 
+# Oban configuration
+config :td_lm, Oban,
+  prefix: "private",
+  plugins: [{Oban.Plugins.Pruner, max_age: 2 * 24 * 60 * 60}],
+  engine: Oban.Engines.Basic,
+  notifier: Oban.Notifiers.Postgres,
+  queues: [xlsx_upload_queue: 10, delete_units: 10],
+  repo: TdLm.Repo
+
 # General application configuration
 config :td_lm, ecto_repos: [TdLm.Repo]
 config :td_lm, TdLm.Repo, pool_size: 4
@@ -92,6 +101,11 @@ config :td_lm, TdLm.Scheduler,
       run_strategy: Quantum.RunStrategy.Local
     ]
   ]
+
+## oban
+config :td_lm, :oban,
+  attempts: 5,
+  uploads_tmp_folder: "tmp/xlsx_uploads"
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

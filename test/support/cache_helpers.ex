@@ -36,7 +36,7 @@ defmodule CacheHelpers do
   end
 
   def put_concept(params) do
-    :concept
+    :business_concept
     |> build(params)
     |> put_concept()
   end

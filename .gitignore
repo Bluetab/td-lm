@@ -12,3 +12,5 @@ erl_crash.dump
 /priv/plts/*.plt.hash
 
 .tool-versions
+
+*.DS_Store

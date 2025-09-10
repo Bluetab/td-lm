@@ -1,7 +1,10 @@
-defmodule TdBg.Canada.Abilities do
+defmodule TdLm.Canada.Abilities do
   @moduledoc false
+
+  alias TdCache.Permissions
   alias TdLm.Auth.Claims
   alias TdLm.Canada.BusinessConceptAbilities
+  alias TdLm.Canada.DataStructureAbilities
   alias TdLm.Canada.ImplementationAbilities
   alias TdLm.Canada.IngestAbilities
   alias TdLm.Resources.Relation
@@ -10,6 +13,10 @@ defmodule TdBg.Canada.Abilities do
     # administrator is superpowerful for Domain
     def can?(%Claims{role: "admin"}, _permission, _params) do
       true
+    end
+
+    def can?(%Claims{jti: jti}, :create, Relation) do
+      Permissions.has_any_permission?(jti, [:manage_business_concept_links, :link_data_structure])
     end
 
     def can?(%Claims{} = claims, action, %Relation{} = relation) do
@@ -63,6 +70,10 @@ defmodule TdBg.Canada.Abilities do
 
     def can?(%Claims{} = claims, :delete, %{resource_type: "implementation_ref"} = params) do
       ImplementationAbilities.can?(claims, :delete, params)
+    end
+
+    def can?(%Claims{} = claims, :create, %{target_type: "data_structure"} = params) do
+      DataStructureAbilities.can?(claims, :create, params)
     end
 
     def can?(%Claims{}, _permission, _params) do

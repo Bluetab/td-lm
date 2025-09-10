@@ -67,4 +67,10 @@ if config_env() == :prod do
     redis_host: System.fetch_env!("REDIS_HOST"),
     port: System.get_env("REDIS_PORT", "6379") |> String.to_integer(),
     password: System.get_env("REDIS_PASSWORD")
+
+  config :td_lm, :oban, attempts: System.get_env("OBAN_FILE_ATTEMPTS", "5") |> String.to_integer()
 end
+
+config :td_lm, Oban, prefix: System.get_env("OBAN_DB_SCHEMA", "private")
+
+config :td_lm, oban_create_schema: System.get_env("OBAN_CREATE_SCHEMA", "true") == "true"
