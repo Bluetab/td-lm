@@ -34,6 +34,27 @@ Run all aplication tests with `mix test`
 - DB_SSL_CLIENT_KEY: Path to the client SSL private key file.
 - DB_SSL_VERIFY: This option specifies whether certificates are to be verified.
 
+### Oban configuration
+
+- OBAN_DB_SCHEMA:
+  Purpose: Defines the database schema where Oban will create its tables
+  Default value: "private"
+  Usage: Configures the schema prefix for Oban tables (jobs, peers, etc.)
+  Example: If set to "oban_schema", tables will be created in the schema oban_schema.jobs, oban_schema.peers, etc.
+
+- OBAN_CREATE_SCHEMA:
+  Purpose: Controls whether Oban should automatically create the database schema
+  Default value: "true"
+  Usage: Determines if the Oban migration should create the schema specified in OBAN_DB_SCHEMA
+  Valid values:
+  "true": Automatically creates the schema
+  "false": Does not create the schema (must exist beforehand)
+
+- OBAN_FILE_ATTEMPTS
+  Purpose: Define how many attempts Oban may try to process the file
+  Default value: 5
+  Valid values: positive integers
+
 ## Deployment
 
 Ready to run in production? Please [check deployment guides](http://www.phoenixframework.org/docs/deployment).

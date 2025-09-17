@@ -30,6 +30,10 @@ defmodule TdLmWeb.ConnCase do
 
       # The default endpoint for testing
       @endpoint TdLmWeb.Endpoint
+
+      def upload(path) do
+        %Plug.Upload{path: path, filename: Path.basename(path)}
+      end
     end
   end
 

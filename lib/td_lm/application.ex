@@ -11,7 +11,8 @@ defmodule TdLm.Application do
     children =
       [
         TdLm.Repo,
-        TdLmWeb.Endpoint
+        TdLmWeb.Endpoint,
+        {Oban, Application.fetch_env!(:td_lm, Oban)}
       ] ++ children(env)
 
     # See https://hexdocs.pm/elixir/Supervisor.html

@@ -2,6 +2,7 @@ defmodule TdLm.Canada.BusinessConceptAbilities do
   @moduledoc false
 
   alias TdCache.ConceptCache
+  alias TdCache.TaxonomyCache
   alias TdLm.Auth.Claims
   alias TdLm.Permissions
 
@@ -30,6 +31,25 @@ defmodule TdLm.Canada.BusinessConceptAbilities do
       when action in [:update, :create, :delete] do
     Permissions.authorized?(claims, :manage_business_concept_links, "business_concept", id) and
       can_manage_confidential?(claims, id)
+  end
+
+  def can?(%Claims{} = claims, :create, %{
+        resource_type: "business_concept",
+        business_concept: %{confidential: true, shared_to: shared_to_ids, domain_id: domain_id}
+      }) do
+    domain_ids = get_reaching_domains(domain_id, shared_to_ids)
+
+    Permissions.authorized?(claims, :manage_business_concept_links, "domain", domain_ids) and
+      Permissions.authorized?(claims, :manage_confidential_business_concept, "domain", domain_ids)
+  end
+
+  def can?(%Claims{} = claims, :create, %{
+        resource_type: "business_concept",
+        business_concept: %{shared_to: shared_to_ids, domain_id: domain_id}
+      }) do
+    domain_ids = get_reaching_domains(domain_id, shared_to_ids)
+
+    Permissions.authorized?(claims, :manage_business_concept_links, "domain", domain_ids)
   end
 
   def can?(%Claims{} = claims, action, %{resource_id: id, resource_type: "business_concept"})
@@ -97,5 +117,13 @@ defmodule TdLm.Canada.BusinessConceptAbilities do
       _ ->
         []
     end
+  end
+
+  defp get_reaching_domains(domain_id, shared_to_ids) do
+    shared_to_ids
+    |> Enum.map(& &1.id)
+    |> TaxonomyCache.reaching_domain_ids()
+    |> Enum.concat([domain_id])
+    |> Enum.uniq()
   end
 end

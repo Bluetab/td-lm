@@ -1,5 +1,11 @@
 # Changelog
 
+## [7.10.0] 2025-09-16
+
+### Added
+
+- [TD-7175] Xlsx support and upload relations feature
+
 ## [7.9.0] 2025-08-25
 
 ### Changed

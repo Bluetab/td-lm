@@ -83,10 +83,10 @@ defmodule TdLmWeb.GraphControllerTest do
       relations: [%{source_id: source_id, target_id: target_id} | _]
     } do
       concept_source =
-        build(:concept, id: source_id, name: "source_en", content: %{"foo" => "foo_en"})
+        build(:business_concept, id: source_id, name: "source_en", content: %{"foo" => "foo_en"})
 
       concept_target =
-        build(:concept, id: target_id, name: "target_en", content: %{"bar" => "bar_en"})
+        build(:business_concept, id: target_id, name: "target_en", content: %{"bar" => "bar_en"})
 
       concept_source_es_name = "source_es"
       concept_source_es_value = "foo_es"

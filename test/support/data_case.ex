@@ -19,6 +19,7 @@ defmodule TdLm.DataCase do
 
   using do
     quote do
+      use Oban.Testing, repo: TdLm.Repo, prefix: Application.get_env(:td_lm, Oban)[:prefix]
       alias TdLm.Repo
 
       import Assertions
