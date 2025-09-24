@@ -1128,10 +1128,13 @@ defmodule TdLm.Resources do
   end
 
   def get_data("business_concept", id, %{business_concepts: business_concepts}) do
-    %{domain_id: domain_id, shared_to_ids: shared_to_ids} =
-      concept = Map.get(business_concepts, id, %{})
+    case Map.get(business_concepts, id) do
+      nil ->
+        %{}
 
-    Map.put(concept, :domain_ids, [domain_id | shared_to_ids])
+      %{domain_id: domain_id, shared_to_ids: shared_to_ids} = concept ->
+        Map.put(concept, :domain_ids, [domain_id | shared_to_ids])
+    end
   end
 
   def get_data("data_structure", id, %{data_structures: data_structures}) do
