@@ -10,6 +10,7 @@ config :td_lm, :env, Mix.env()
 
 config :td_cluster, :env, Mix.env()
 config :td_cluster, groups: [:lm]
+config :td_core, :env, Mix.env()
 
 # Oban configuration
 config :td_lm, Oban,
@@ -102,10 +103,15 @@ config :td_lm, TdLm.Scheduler,
     ]
   ]
 
+
+# Import Elasticsearch config
+import_config "elastic.exs"
+
 ## oban
 config :td_lm, :oban,
   attempts: 5,
   uploads_tmp_folder: "tmp/xlsx_uploads"
+
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

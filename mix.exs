@@ -31,7 +31,7 @@ defmodule TdLm.Mixfile do
   def application do
     [
       mod: {TdLm.Application, []},
-      extra_applications: [:logger, :runtime_tools, :td_cache]
+      extra_applications: [:logger, :runtime_tools, :td_cache, :td_core]
     ]
   end
 
@@ -58,7 +58,8 @@ defmodule TdLm.Mixfile do
       {:guardian, "~> 2.3.2"},
       {:canada, "~> 2.0"},
       {:quantum, "~> 3.5.3"},
-      {:td_core, git: "https://github.com/Bluetab/td-core.git", tag: "7.10.0"},
+      {:mox, "~> 1.2", only: :test},
+      {:td_core, git: "https://github.com/Bluetab/td-core.git", tag: "7.11.0"},
       {:td_hypermedia, git: "https://github.com/Bluetab/td-hypermedia.git", tag: "7.4.0"},
       {:credo, "~> 1.7.11", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4.5", only: :dev, runtime: false},
@@ -67,7 +68,6 @@ defmodule TdLm.Mixfile do
       {:sobelow, "~> 0.13", only: [:dev, :test]},
       {:xlsx_reader, "~> 0.8.7"},
       {:codepagex, "~> 0.1.9"},
-      {:mox, "~> 1.1", only: :test},
       {:oban, "~> 2.19"},
       {:elixlsx, "~> 0.4.2"}
     ]

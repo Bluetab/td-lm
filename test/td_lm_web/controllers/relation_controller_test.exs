@@ -1,6 +1,8 @@
 defmodule TdLmWeb.RelationControllerTest do
   use TdLmWeb.ConnCase
 
+  import TdLm.TestOperators
+
   alias TdLm.Repo
   alias TdLm.Resources.Relation
 
@@ -19,7 +21,46 @@ defmodule TdLmWeb.RelationControllerTest do
     end
 
     @tag authentication: [role: "admin"]
+    test "search all relations with status approved or nil", %{conn: conn} do
+      %{source_id: approved_source_id} =
+        insert(:relation,
+          source_type: "business_concept",
+          target_type: "data_field",
+          status: "approved"
+        )
 
+      %{source_id: nil_source_id} =
+        insert(:relation,
+          source_type: "business_concept",
+          target_type: "data_field",
+          status: nil
+        )
+
+      insert(:relation,
+        source_type: "business_concept",
+        target_type: "data_field",
+        status: "rejected"
+      )
+
+      insert(:relation,
+        source_type: "business_concept",
+        target_type: "data_field",
+        status: "pending"
+      )
+
+      assert %{"data" => relations} =
+               conn
+               |> post(Routes.relation_path(conn, :search, %{}))
+               |> json_response(:ok)
+
+      assert relations |||
+               [
+                 %{"source_id" => approved_source_id},
+                 %{"source_id" => nil_source_id}
+               ]
+    end
+
+    @tag authentication: [role: "admin"]
     test "includes tag and tags (legacy) in response", %{conn: conn} do
       %{id: tag_id, value: tag_value} = tag = insert(:tag)
       tag_id_value = %{"id" => tag_id, "value" => tag_value}
@@ -197,6 +238,60 @@ defmodule TdLmWeb.RelationControllerTest do
     end
   end
 
+  describe "search relations with status" do
+    for status <- ["approved", nil] do
+      @tag authentication: [role: "admin"]
+      @tag status: status
+      test "search relations with status #{if is_nil(status), do: "nil", else: status}",
+           %{conn: conn, status: status} do
+        %{source_id: source_id} =
+          insert(:relation,
+            source_type: "business_concept",
+            target_type: "data_field",
+            status: status
+          )
+
+        params = %{
+          "resource_id" => source_id,
+          "resource_type" => "business_concept",
+          "related_to_type" => "data_field"
+        }
+
+        assert %{"data" => [link]} =
+                 conn
+                 |> post(Routes.relation_path(conn, :search, params))
+                 |> json_response(:ok)
+
+        assert link["source_id"] == source_id
+      end
+    end
+
+    for status <- ["rejected", "pending"] do
+      @tag authentication: [role: "admin"]
+      @tag status: status
+      test "return empty response relations with status #{status}",
+           %{conn: conn, status: status} do
+        %{source_id: source_id} =
+          insert(:relation,
+            source_type: "business_concept",
+            target_type: "data_field",
+            status: status
+          )
+
+        params = %{
+          "resource_id" => source_id,
+          "resource_type" => "business_concept",
+          "related_to_type" => "data_field"
+        }
+
+        assert %{"data" => []} =
+                 conn
+                 |> post(Routes.relation_path(conn, :search, params))
+                 |> json_response(:ok)
+      end
+    end
+  end
+
   describe "search data_field linked to business concept" do
     setup do
       [
@@ -299,6 +394,70 @@ defmodule TdLmWeb.RelationControllerTest do
                conn
                |> get(Routes.relation_path(conn, :index))
                |> json_response(:ok)
+    end
+
+    @tag authentication: [role: "admin"]
+    test "always return list relations with status approved or nil", %{conn: conn} do
+      %{id: approved_id} =
+        insert(:relation,
+          source_type: "business_concept",
+          target_type: "data_field",
+          status: "approved"
+        )
+
+      insert(:relation,
+        target_type: "data_field",
+        source_type: "business_concept",
+        status: "pending"
+      )
+
+      insert(:relation,
+        target_type: "data_field",
+        source_type: "business_concept",
+        status: "rejected"
+      )
+
+      %{id: nil_id} =
+        insert(:relation, target_type: "data_field", source_type: "business_concept", status: nil)
+
+      assert %{"data" => relations} =
+               conn
+               |> get(Routes.relation_path(conn, :index))
+               |> json_response(:ok)
+
+      assert relations ||| [%{"id" => approved_id}, %{"id" => nil_id}]
+    end
+
+    @tag authentication: [role: "admin"]
+    test "list relations with specific status", %{conn: conn} do
+      insert(:relation,
+        source_type: "business_concept",
+        target_type: "data_field",
+        status: "approved"
+      )
+
+      %{id: pending_id_1} =
+        insert(:relation,
+          target_type: "data_field",
+          source_type: "business_concept",
+          status: "pending"
+        )
+
+      %{id: pending_id_2} =
+        insert(:relation,
+          target_type: "data_field",
+          source_type: "business_concept",
+          status: "pending"
+        )
+
+      insert(:relation, target_type: "data_field", source_type: "business_concept", status: nil)
+
+      assert %{"data" => relations} =
+               conn
+               |> get(Routes.relation_path(conn, :index, %{"status" => "pending"}))
+               |> json_response(:ok)
+
+      assert relations ||| [%{"id" => pending_id_1}, %{"id" => pending_id_2}]
     end
   end
 
@@ -425,7 +584,7 @@ defmodule TdLmWeb.RelationControllerTest do
     end
 
     @tag authentication: [role: "admin"]
-    test "creates relation with default null origin as default", %{conn: conn} do
+    test "creates relation with default nil origin as default", %{conn: conn} do
       params = %{
         "context" => %{},
         "source_id" => 123,
@@ -434,11 +593,12 @@ defmodule TdLmWeb.RelationControllerTest do
         "target_type" => "data_structure"
       }
 
-      conn
-      |> post(Routes.relation_path(conn, :create), relation: params)
-      |> json_response(:created)
+      assert %{"data" => %{"id" => id}} =
+               conn
+               |> post(Routes.relation_path(conn, :create), relation: params)
+               |> json_response(:created)
 
-      assert [%{origin: nil}] = Repo.all(Relation)
+      assert %{origin: nil} = Repo.one(Relation, id: id)
     end
 
     @tag authentication: [role: "admin"]
@@ -452,11 +612,92 @@ defmodule TdLmWeb.RelationControllerTest do
         "origin" => "test_origin"
       }
 
-      conn
-      |> post(Routes.relation_path(conn, :create), relation: params)
-      |> json_response(:created)
+      assert %{"data" => %{"id" => id}} =
+               conn
+               |> post(Routes.relation_path(conn, :create), relation: params)
+               |> json_response(:created)
 
-      assert [%{origin: "test_origin"}] = Repo.all(Relation)
+      assert %{origin: "test_origin"} = Repo.one(Relation, id: id)
+    end
+
+    @tag authentication: [role: "admin"]
+    test "creates relation with status nil", %{conn: conn} do
+      params = %{
+        "context" => %{},
+        "source_id" => 123,
+        "source_type" => "business_concept",
+        "target_id" => 321,
+        "target_type" => "data_structure"
+      }
+
+      assert %{"data" => %{"id" => id}} =
+               conn
+               |> post(Routes.relation_path(conn, :create), relation: params)
+               |> json_response(:created)
+
+      assert %{status: nil} = Repo.one(Relation, id: id)
+    end
+
+    for status <- ["approved", "rejected"] do
+      @tag authentication: [role: "admin"], status: status
+      test "error on create relation with invalid #{status} status", %{conn: conn, status: status} do
+        params = %{
+          "context" => %{},
+          "source_id" => 123,
+          "source_type" => "business_concept",
+          "target_id" => 321,
+          "target_type" => "data_structure",
+          "status" => status
+        }
+
+        assert %{"errors" => errors} =
+                 conn
+                 |> post(Routes.relation_path(conn, :create), relation: params)
+                 |> json_response(:unprocessable_entity)
+
+        assert %{"status" => ["is invalid"]} == errors
+      end
+    end
+
+    for status <- ["pending", nil] do
+      @tag authentication: [role: "admin"], status: status
+      test "creates relation with valid #{if is_nil(status), do: "nil", else: status} status", %{
+        conn: conn,
+        status: status
+      } do
+        params = %{
+          "context" => %{},
+          "source_id" => 123,
+          "source_type" => "business_concept",
+          "target_id" => 321,
+          "target_type" => "data_structure",
+          "status" => status
+        }
+
+        assert %{"data" => %{"id" => id}} =
+                 conn
+                 |> post(Routes.relation_path(conn, :create), relation: params)
+                 |> json_response(:created)
+
+        assert %{status: ^status} = Repo.one(Relation, id: id)
+      end
+    end
+
+    @tag authentication: [role: "admin"]
+    test "error when creates relation with invalid status", %{conn: conn} do
+      params = %{
+        "context" => %{},
+        "source_id" => 123,
+        "source_type" => "business_concept",
+        "target_id" => 321,
+        "target_type" => "data_structure",
+        "status" => "invalid_status"
+      }
+
+      assert %{"errors" => %{"status" => ["is invalid"]}} =
+               conn
+               |> post(Routes.relation_path(conn, :create), relation: params)
+               |> json_response(:unprocessable_entity)
     end
 
     @tag authentication: [permissions: ["manage_business_concept_links"]]
@@ -478,7 +719,6 @@ defmodule TdLmWeb.RelationControllerTest do
                |> json_response(:created)
 
       assert %{
-               "id" => _id,
                "source_id" => ^source_id,
                "source_type" => ^source_type,
                "target_id" => ^target_id,

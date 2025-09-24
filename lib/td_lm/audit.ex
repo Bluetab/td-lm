@@ -27,6 +27,24 @@ defmodule TdLm.Audit do
     do_relation_created(relation, changes, user_id)
   end
 
+  def relations_status_updated(
+        _repo,
+        %{relations_updated: {_count, [_ | _] = relations}},
+        user_id
+      ) do
+    relations
+    |> Enum.map(&do_relation_status_updated(&1, user_id))
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+    |> case do
+      %{error: errors} -> {:error, errors}
+      %{ok: event_ids} -> {:ok, event_ids}
+    end
+  end
+
+  def relations_status_updated(_repo, _changes, _user_id) do
+    {:ok, []}
+  end
+
   @doc """
   Publishes `:relations_deprecated` events. Should be called using `Ecto.Multi.run/5`.
   """
@@ -63,6 +81,14 @@ defmodule TdLm.Audit do
     do_tag_updated(tag, user_id)
   end
 
+  defp do_relation_status_updated(
+         %{source_type: source_type, source_id: source_id} = relation,
+         user_id
+       ) do
+    payload = payload(relation)
+    publish("relation_status_updated", source_type, source_id, user_id, payload)
+  end
+
   defp do_relation_deleted(%{source_type: source_type, source_id: source_id} = relation, user_id) do
     payload = payload(relation)
     publish("relation_deleted", source_type, source_id, user_id, payload)
@@ -75,7 +101,7 @@ defmodule TdLm.Audit do
 
   defp payload(relation) do
     relation
-    |> Map.take([:id, :target_id, :target_type, :context, :subscribable_fields])
+    |> Map.take([:id, :target_id, :target_type, :context, :subscribable_fields, :status])
     |> put_subscribable_fields(relation)
     |> put_domain_ids(relation)
   end

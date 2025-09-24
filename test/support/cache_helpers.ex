@@ -9,6 +9,7 @@ defmodule CacheHelpers do
   alias TdCache.ConceptCache
   alias TdCache.Permissions
   alias TdCache.Redix
+  alias TdCache.StructureCache
   alias TdCache.TaxonomyCache
   alias TdCache.TemplateCache
   alias TdCache.UserCache
@@ -39,6 +40,20 @@ defmodule CacheHelpers do
     :business_concept
     |> build(params)
     |> put_concept()
+  end
+
+  def put_structure(params \\ %{})
+
+  def put_structure(%{id: id} = structure) do
+    on_exit(fn -> StructureCache.delete(id) end)
+    StructureCache.put(structure)
+    structure
+  end
+
+  def put_structure(params) do
+    :structure
+    |> build(params)
+    |> put_structure()
   end
 
   def put_domain(params \\ %{})
