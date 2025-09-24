@@ -24,6 +24,47 @@ defmodule TdLm.Resources.RelationTest do
       assert errors[:context] == {"invalid content", []}
     end
 
+    test "validate status rejects invalid value" do
+      assert %{valid?: false, errors: errors} =
+               :relation
+               |> params_for()
+               |> Map.put(:status, "invalid")
+               |> Relation.changeset()
+
+      assert errors[:status] ==
+               {"is invalid", [{:validation, :inclusion}, {:enum, ["pending"]}]}
+    end
+
+    test "validate status accepts status with nil" do
+      assert %{valid?: true} =
+               :relation
+               |> params_for()
+               |> Map.put(:status, nil)
+               |> Relation.changeset()
+    end
+
+    test "validate status accepts allowed statuses" do
+      assert %{valid?: true} =
+               :relation
+               |> params_for()
+               |> Map.put(:status, "pending")
+               |> Relation.changeset()
+    end
+
+    for status <- ["approved", "rejected"] do
+      @tag status: status
+      test "validate status rejects not allowed status #{status}", %{status: status} do
+        assert %{valid?: false, errors: errors} =
+                 :relation
+                 |> params_for()
+                 |> Map.put(:status, status)
+                 |> Relation.changeset()
+
+        assert errors[:status] ==
+                 {"is invalid", [{:validation, :inclusion}, {:enum, ["pending"]}]}
+      end
+    end
+
     test "is inserted successfully", %{tag: %{id: id_tag}} do
       assert {:ok, relation} =
                :relation
@@ -120,6 +161,46 @@ defmodule TdLm.Resources.RelationTest do
 
       assert %{tag_id: id_relation_tag} = relation
       assert id_relation_tag == tag_id
+    end
+  end
+
+  describe "status_changeset/1" do
+    for status <- ["approved", "rejected"] do
+      @tag status: status
+      test "allows pending status to #{status}", %{status: status} do
+        relation = insert(:relation, status: "pending")
+
+        assert {:ok, relation} =
+                 relation
+                 |> Relation.status_changeset(%{status: status})
+                 |> Repo.update()
+
+        assert relation.status == status
+      end
+    end
+
+    for status <- ["rejected", "approved", nil] do
+      @tag status: status
+      test "does not allow #{if is_nil(status), do: "nil", else: status} status to change", %{
+        status: status
+      } do
+        relation =
+          insert(:relation, status: status)
+
+        assert {:error, changeset} =
+                 relation
+                 |> Relation.status_changeset(%{status: "approved"})
+                 |> Repo.update()
+
+        assert changeset.valid? == false
+
+        status_key =
+          if is_nil(status), do: :status_nil, else: String.to_atom("status_#{status}")
+
+        assert changeset.errors[status_key] ==
+                 {"is not allowed to change #{if is_nil(status), do: "nil", else: status} status",
+                  []}
+      end
     end
   end
 end

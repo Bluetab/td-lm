@@ -12,25 +12,31 @@ defmodule TdLmWeb.RelationController do
 
   action_fallback(TdLmWeb.FallbackController)
 
-  def search(conn, %{
-        "resource_id" => resource_id,
-        "resource_type" => resource_type,
-        "related_to_type" => related_to_type
-      }) do
+  def search(
+        conn,
+        %{
+          "resource_id" => resource_id,
+          "resource_type" => resource_type,
+          "related_to_type" => related_to_type
+        } = params
+      ) do
     claims = conn.assigns[:current_resource]
     lang = conn.assigns[:locale]
+    status = Map.get(params, "status", "approved")
 
     relations =
       [
         %{
           "source_type" => resource_type,
           "source_id" => resource_id,
-          "target_type" => related_to_type
+          "target_type" => related_to_type,
+          "status" => status
         },
         %{
           "target_type" => resource_type,
           "target_id" => resource_id,
-          "source_type" => related_to_type
+          "source_type" => related_to_type,
+          "status" => status
         }
       ]
       |> Enum.flat_map(&Resources.list_relations/1)
@@ -56,6 +62,7 @@ defmodule TdLmWeb.RelationController do
 
     relations =
       params
+      |> Map.put_new("status", "approved")
       |> Resources.list_relations()
       |> Enum.map(&maybe_add_tags/1)
       |> Enum.filter(&can?(claims, show(&1)))
@@ -73,11 +80,13 @@ defmodule TdLmWeb.RelationController do
     )
   end
 
-  def index(conn, _params) do
+  def index(conn, params) do
     claims = conn.assigns[:current_resource]
+    status = Map.get(params, "status", "approved")
 
     relations =
-      Resources.list_relations()
+      %{"status" => status}
+      |> Resources.list_relations()
       |> Enum.filter(&can?(claims, show(&1)))
       |> Enum.map(&maybe_add_tags/1)
 
@@ -87,13 +96,14 @@ defmodule TdLmWeb.RelationController do
   def create(conn, %{"relation" => params}) do
     claims = conn.assigns[:current_resource]
 
-    relation_params = add_tag_id(params)
+    updated_relation_params = add_tag_id(params)
 
     with {:params, %{"source_id" => source_id, "source_type" => source_type}} <-
-           {:params, relation_params},
+           {:params, updated_relation_params},
          {:can, true} <-
            {:can, can?(claims, create(%{resource_id: source_id, resource_type: source_type}))},
-         {:ok, %{relation: relation}} <- Resources.create_relation(relation_params, claims) do
+         {:ok, %{relation: relation}} <-
+           Resources.create_relation(updated_relation_params, claims) do
       conn
       |> put_status(:created)
       |> put_resp_header("location", Routes.relation_path(conn, :show, relation))

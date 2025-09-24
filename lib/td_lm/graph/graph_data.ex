@@ -5,7 +5,8 @@ defmodule TdLm.Graph.Data do
   alias TdLm.Resources
 
   def graph do
-    Resources.list_relations()
+    %{"status" => "approved"}
+    |> Resources.list_relations()
     |> Enum.reduce(Graph.new([]), &reduce_relation/2)
   end
 

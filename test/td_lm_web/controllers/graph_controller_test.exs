@@ -24,6 +24,7 @@ defmodule TdLmWeb.GraphControllerTest do
             target_type: "business_concept",
             source_id: id,
             target_id: id + 1,
+            status: "approved",
             tag: tag
           )
         end)
@@ -65,6 +66,8 @@ defmodule TdLmWeb.GraphControllerTest do
                |> get(Routes.graph_path(conn, :graph, id), %{"type" => type})
                |> json_response(:ok)
 
+      assert Enum.count(nds) == 11
+
       assert Enum.all?(1..11, &Enum.find(nds, fn n -> Map.get(n, "id") == "#{type}:#{&1}" end))
 
       assert Enum.all?(
@@ -75,6 +78,46 @@ defmodule TdLmWeb.GraphControllerTest do
                    Enum.empty?(Map.get(n, "tags")) and is_nil(Map.get(n, "tag"))
                end)
              )
+    end
+
+    @tag authentication: [role: "admin"]
+    test "get all relations only with status approved or nil", %{conn: conn, tag: tag} do
+      id = "11"
+      type = "business_concept"
+
+      insert(:relation,
+        source_type: "business_concept",
+        target_type: "business_concept",
+        source_id: id,
+        target_id: 13,
+        tag: tag,
+        status: "pending"
+      )
+
+      insert(:relation,
+        source_type: "business_concept",
+        target_type: "business_concept",
+        source_id: id,
+        target_id: 14,
+        tag: tag,
+        status: "rejected"
+      )
+
+      insert(:relation,
+        source_type: "business_concept",
+        target_type: "business_concept",
+        source_id: id,
+        target_id: 16,
+        tag: tag,
+        status: nil
+      )
+
+      assert %{"data" => %{"nodes" => [_ | _] = nds, "edges" => [_ | _]}} =
+               conn
+               |> get(Routes.graph_path(conn, :graph, id), %{"type" => type})
+               |> json_response(:ok)
+
+      assert Enum.count(nds) == 12
     end
 
     @tag authentication: [role: "admin"]

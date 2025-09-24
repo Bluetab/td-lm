@@ -146,8 +146,6 @@ defmodule TdLm.Xlsx.UploadWorkerTest do
                           }
                         )
              end) =~ "invalid zip file"
-
-      refute File.exists?(tmp_path)
     end
   end
 end

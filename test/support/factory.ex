@@ -24,6 +24,7 @@ defmodule TdLm.Factory do
           "ingest"
         ]),
       target_id: sequence(:target_id, & &1),
+      status: nil,
       origin: nil,
       tag: build(:tag)
     }
@@ -129,6 +130,23 @@ defmodule TdLm.Factory do
       content: %{},
       implementation_ref: implementation_ref,
       deleted_at: nil
+    }
+    |> merge_attributes(attrs)
+  end
+
+  def structure_factory(attrs) do
+    %{
+      id: System.unique_integer([:positive]),
+      name: sequence("structure_name"),
+      external_id: sequence("ds_external_id"),
+      group: sequence("data_structure_version_group"),
+      type: "type",
+      path: ["foo", "bar"],
+      updated_at: DateTime.utc_now(),
+      metadata: %{"alias" => "source_alias"},
+      system_id: System.unique_integer([:positive]),
+      domain_ids: [1, 2],
+      deleted_at: DateTime.utc_now()
     }
     |> merge_attributes(attrs)
   end
