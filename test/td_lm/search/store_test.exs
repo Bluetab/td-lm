@@ -40,6 +40,26 @@ defmodule TdLm.Search.StoreTest do
              end)
     end
 
+    test "remove relations with missing source or target data over all relations" do
+      %{id: concept_id} = CacheHelpers.put_concept()
+      %{id: structure_id} = CacheHelpers.put_structure()
+
+      generate_relation(%{source_id: concept_id, target_id: structure_id})
+      generate_relation(%{source_id: concept_id + 100_000, target_id: structure_id + 100_000})
+
+      TdDdMock.log_start_stream(&Mox.expect/4, 2, :ok)
+      TdDdMock.log_progress(&Mox.expect/4, 2, :ok)
+
+      {:ok, to_index} =
+        Repo.transaction(fn ->
+          Relation
+          |> Store.stream()
+          |> Enum.to_list()
+        end)
+
+      assert Enum.count(to_index) == 1
+    end
+
     test "preload tags relations" do
       %{id: concept_id} = CacheHelpers.put_concept()
       %{id: structure_id} = CacheHelpers.put_structure()

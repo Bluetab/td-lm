@@ -70,15 +70,18 @@ defmodule TdLm.Search.Store do
 
   defp stream_relations_map(relations, cache_data) do
     Stream.map(relations, fn relation ->
-      relation
-      |> Map.put(
-        :source_data,
-        Resources.get_data(relation.source_type, relation.source_id, cache_data)
-      )
-      |> Map.put(
-        :target_data,
-        Resources.get_data(relation.target_type, relation.target_id, cache_data)
-      )
+      source_data = Resources.get_data(relation.source_type, relation.source_id, cache_data)
+
+      target_data = Resources.get_data(relation.target_type, relation.target_id, cache_data)
+
+      if map_size(source_data) > 0 or map_size(target_data) > 0 do
+        relation
+        |> Map.put(:source_data, source_data)
+        |> Map.put(:target_data, target_data)
+      else
+        nil
+      end
     end)
+    |> Stream.reject(&is_nil/1)
   end
 end
