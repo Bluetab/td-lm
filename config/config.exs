@@ -103,7 +103,6 @@ config :td_lm, TdLm.Scheduler,
     ]
   ]
 
-
 # Import Elasticsearch config
 import_config "elastic.exs"
 
@@ -111,7 +110,6 @@ import_config "elastic.exs"
 config :td_lm, :oban,
   attempts: 5,
   uploads_tmp_folder: "tmp/xlsx_uploads"
-
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

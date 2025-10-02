@@ -20,6 +20,10 @@ if System.get_env("PHX_SERVER") do
   config :td_lm, TdLmWeb.Endpoint, server: true
 end
 
+config :td_cache, :audit, maxlen: System.get_env("REDIS_AUDIT_STREAM_MAXLEN", "100")
+
+config :td_cache, :event_stream, maxlen: System.get_env("REDIS_STREAM_MAXLEN", "100")
+
 if config_env() == :prod do
   get_ssl_option = fn env_var, option_key ->
     if System.get_env("DB_SSL", "") |> String.downcase() == "true" do
