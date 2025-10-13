@@ -1,10 +1,12 @@
 defmodule TdLm.ResourcesTest do
   use TdLm.DataCase
 
+  alias TdCache.LinkCache
   alias TdCache.Redix
   alias TdCache.Redix.Stream
   alias TdCluster.TestHelpers.TdBgMock
   alias TdCluster.TestHelpers.TdDdMock
+  alias TdCore.Search.IndexWorkerMock
   alias TdLm.Auth.Claims
   alias TdLm.Resources
   alias TdLm.Resources.Relation
@@ -13,8 +15,6 @@ defmodule TdLm.ResourcesTest do
 
   @stream TdCache.Audit.stream()
 
-  setup :verify_on_exit!
-
   setup_all do
     Redix.del!(@stream)
     [claims: build(:claims)]
@@ -22,14 +22,23 @@ defmodule TdLm.ResourcesTest do
 
   setup do
     start_supervised!(TdLm.Cache.LinkLoader)
-    on_exit(fn -> Redix.del!(@stream) end)
+
+    on_exit(fn ->
+      Redix.del!(@stream)
+      IndexWorkerMock.clear()
+    end)
+
     :ok
   end
+
+  setup :verify_on_exit!
 
   describe "create_relation/2" do
     setup [:put_template, :put_concept]
 
     test "creates a relation without tag", %{claims: claims} do
+      IndexWorkerMock.clear()
+
       %{
         "source_id" => source_id,
         "source_type" => source_type,
@@ -40,6 +49,7 @@ defmodule TdLm.ResourcesTest do
       assert {:ok, %{relation: relation}} = Resources.create_relation(params, claims)
 
       assert %{
+               id: id,
                source_id: ^source_id,
                source_type: ^source_type,
                target_id: ^target_id,
@@ -52,6 +62,7 @@ defmodule TdLm.ResourcesTest do
                relation
 
       assert context == %{}
+      assert [{:reindex, :relations, [^id]}] = IndexWorkerMock.calls()
     end
 
     test "creates a relation with the specified tag", %{claims: claims} do
@@ -124,6 +135,353 @@ defmodule TdLm.ResourcesTest do
 
       assert {:error, :relation, %Ecto.Changeset{}, _} = Resources.create_relation(params, claims)
     end
+
+    test "insert relation in cache for nil status", %{claims: claims} do
+      params = string_params_for(:relation)
+
+      assert {:ok, %{relation: %{id: id}}} = Resources.create_relation(params, claims)
+
+      str_id = Integer.to_string(id)
+      assert {:ok, %TdCache.Link{id: ^str_id}} = LinkCache.get(id)
+    end
+
+    test "do not insert relation in cache for suggested origin", %{claims: claims} do
+      IndexWorkerMock.clear()
+
+      params =
+        :relation
+        |> string_params_for()
+        |> Map.put("origin", "suggested")
+        |> Map.put("status", "pending")
+
+      assert {:ok, %{relation: %{id: id}}} =
+               Resources.create_relation(params, claims)
+
+      assert {:ok, nil} == LinkCache.get(id)
+      assert [{:reindex, :relations, [^id]}] = IndexWorkerMock.calls()
+    end
+  end
+
+  describe "update_relations_status/2" do
+    setup %{claims: claims} do
+      %{id: domain_id} = CacheHelpers.put_domain()
+
+      CacheHelpers.put_session_permissions(claims, domain_id, [:manage_business_concept_links])
+
+      %{id: concept_id} =
+        CacheHelpers.put_concept(
+          domain_id: domain_id,
+          type: "business_concept",
+          name: "concept_name_1"
+        )
+
+      %{id: non_permission_concept_id} =
+        CacheHelpers.put_concept(
+          domain_id: domain_id + 1,
+          type: "business_concept",
+          name: "concept_name_2"
+        )
+
+      %{id: structure_id} = CacheHelpers.put_structure()
+
+      common_options = [
+        source_type: "business_concept",
+        source_id: concept_id,
+        target_type: "data_structure",
+        target_id: structure_id
+      ]
+
+      %{id: pending_status_id} =
+        insert(
+          :relation,
+          Keyword.merge(common_options, status: "pending", context: %{"status" => "pending"})
+        )
+
+      %{id: nil_status_id} =
+        insert(
+          :relation,
+          Keyword.merge(common_options, status: "nil", context: %{"status" => "nil"})
+        )
+
+      %{id: approved_status_id} =
+        insert(
+          :relation,
+          Keyword.merge(common_options, status: "approved", context: %{"status" => "approved"})
+        )
+
+      %{id: rejected_status_id} =
+        insert(
+          :relation,
+          Keyword.merge(common_options, status: "rejected", context: %{"status" => "rejected"})
+        )
+
+      %{id: not_allowed_id} =
+        insert(:relation,
+          source_type: "business_concept",
+          source_id: non_permission_concept_id,
+          target_type: "data_structure",
+          target_id: structure_id,
+          status: "pending",
+          context: %{"permission" => "not_allowed"}
+        )
+
+      %{id: useless_id} =
+        insert(
+          :relation,
+          Keyword.merge(common_options, status: "pending", context: %{"avoid" => "no update"})
+        )
+
+      non_existing_id = useless_id + 1
+
+      {:ok,
+       claims: claims,
+       relation_ids: [
+         pending_status_id,
+         nil_status_id,
+         approved_status_id,
+         rejected_status_id,
+         not_allowed_id,
+         non_existing_id
+       ]}
+    end
+
+    test "returns empty for non existing relations", %{
+      claims: claims,
+      relation_ids: relations_ids
+    } do
+      IndexWorkerMock.clear()
+
+      [
+        _pending_status_id,
+        _nil_status_id,
+        _approved_status_id,
+        _relation_id4,
+        _relation_id5,
+        not_existing_id
+      ] = relations_ids
+
+      params = %{
+        "relation_ids" => [not_existing_id],
+        "status" => "approved"
+      }
+
+      assert {:ok, %{errors: [], relations_updated: [], audit: []}} =
+               Resources.update_relations_status(params, claims)
+
+      assert [{:reindex, :relations, []}] = IndexWorkerMock.calls()
+    end
+
+    test "returns errors for not allowed relations", %{
+      claims: claims,
+      relation_ids: relations_ids
+    } do
+      IndexWorkerMock.clear()
+
+      [
+        _pending_status_id,
+        _nil_status_id,
+        _approved_status_id,
+        _relation_id4,
+        not_allowed_id,
+        _non_existing_id
+      ] = relations_ids
+
+      params = %{
+        "relation_ids" => [not_allowed_id],
+        "status" => "approved"
+      }
+
+      assert {:ok, %{errors: errors, relations_updated: [], audit: []}} =
+               Resources.update_relations_status(params, claims)
+
+      assert [{%{id: ^not_allowed_id}, [permissions: {"forbidden", []}]}] = errors
+      assert [{:reindex, :relations, []}] = IndexWorkerMock.calls()
+    end
+
+    test "returns errors for not updatable relations", %{
+      claims: claims,
+      relation_ids: relations_ids
+    } do
+      IndexWorkerMock.clear()
+
+      [
+        _pending_status_id,
+        nil_status_id,
+        approved_status_id,
+        rejected_status_id,
+        _relation_id5,
+        _non_existing_id
+      ] = relations_ids
+
+      params = %{
+        "relation_ids" => [nil_status_id, approved_status_id, rejected_status_id],
+        "status" => "approved"
+      }
+
+      assert {:ok, %{errors: errors, relations_updated: [], audit: []}} =
+               Resources.update_relations_status(params, claims)
+
+      assert [
+               {%{id: ^nil_status_id}, [status_nil: {"is not allowed to change nil status", []}]},
+               {%{id: ^approved_status_id},
+                [status_approved: {"is not allowed to change approved status", []}]},
+               {%{id: ^rejected_status_id},
+                [status_rejected: {"is not allowed to change rejected status", []}]}
+             ] = errors
+
+      assert [{:reindex, :relations, []}] = IndexWorkerMock.calls()
+    end
+
+    for status <- ["approved", "rejected"] do
+      @tag status: status
+      test "updates relation status to #{status}", %{
+        claims: claims,
+        relation_ids: relations_ids,
+        status: status
+      } do
+        IndexWorkerMock.clear()
+
+        [
+          pending_status_id,
+          _nil_status_id,
+          _approved_status_id,
+          _relation_id4,
+          _relation_id5,
+          _non_existing_id
+        ] = relations_ids
+
+        params = %{
+          "relation_ids" => [pending_status_id],
+          "status" => status
+        }
+
+        assert {:ok, %{errors: [], relations_updated: [updated_relation], audit: [_]}} =
+                 Resources.update_relations_status(params, claims)
+
+        assert %{
+                 id: ^pending_status_id,
+                 status: ^status
+               } = updated_relation
+
+        assert [{:reindex, :relations, [^pending_status_id]}] = IndexWorkerMock.calls()
+      end
+    end
+
+    test "audit relation update", %{
+      claims: %{user_id: user_id} = claims,
+      relation_ids: relations_ids
+    } do
+      IndexWorkerMock.clear()
+
+      [
+        pending_status_id,
+        _nil_status_id,
+        _approved_status_id,
+        _relation_id4,
+        _relation_id5,
+        _non_existing_id
+      ] = relations_ids
+
+      params = %{
+        "relation_ids" => [pending_status_id],
+        "status" => "approved"
+      }
+
+      assert {:ok, %{errors: [], relations_updated: [_], audit: [audit_event]}} =
+               Resources.update_relations_status(params, claims)
+
+      str_user_id = Integer.to_string(user_id)
+
+      assert {
+               :ok,
+               [
+                 %{
+                   id: ^audit_event,
+                   payload: payload,
+                   event: "relation_status_updated",
+                   user_id: ^str_user_id
+                 }
+               ]
+             } =
+               Stream.read(:redix, @stream, transform: true)
+
+      assert %{
+               "id" => ^pending_status_id,
+               "status" => "approved"
+             } =
+               Jason.decode!(payload)
+    end
+
+    test "insert relation in cache on approved", %{
+      claims: claims,
+      relation_ids: relations_ids
+    } do
+      IndexWorkerMock.clear()
+
+      [
+        pending_status_id,
+        _nil_status_id,
+        _approved_status_id,
+        _relation_id4,
+        _relation_id5,
+        _non_existing_id
+      ] = relations_ids
+
+      params = %{
+        "relation_ids" => [pending_status_id],
+        "status" => "approved"
+      }
+
+      assert {:ok,
+              %{
+                errors: [],
+                relations_updated: [
+                  %{
+                    id: id,
+                    source_type: source_type,
+                    source_id: source_id,
+                    target_type: target_type,
+                    target_id: target_id
+                  }
+                ],
+                audit: [_]
+              }} =
+               Resources.update_relations_status(params, claims)
+
+      str_id = Integer.to_string(id)
+      source_key = "#{source_type}:#{source_id}"
+      target_key = "#{target_type}:#{target_id}"
+
+      assert {:ok, %{id: ^str_id, source: ^source_key, target: ^target_key}} = LinkCache.get(id)
+      assert [{:reindex, :relations, [^id]}] = IndexWorkerMock.calls()
+    end
+
+    test "do not insert relation in cache on rejection", %{
+      claims: claims,
+      relation_ids: relations_ids
+    } do
+      IndexWorkerMock.clear()
+
+      [
+        pending_status_id,
+        _nil_status_id,
+        _approved_status_id,
+        _relation_id4,
+        _relation_id5,
+        _non_existing_id
+      ] = relations_ids
+
+      params = %{
+        "relation_ids" => [pending_status_id],
+        "status" => "rejected"
+      }
+
+      assert {:ok, %{errors: [], relations_updated: [%{id: id}], audit: [_]}} =
+               Resources.update_relations_status(params, claims)
+
+      assert {:ok, nil} = LinkCache.get(id)
+      assert [{:reindex, :relations, [^id]}] = IndexWorkerMock.calls()
+    end
   end
 
   describe "delete_relation/2" do
@@ -131,8 +489,12 @@ defmodule TdLm.ResourcesTest do
 
     test "delete_relation/2 deletes", %{claims: claims} do
       relation = insert(:relation)
-      assert {:ok, %{relation: relation}} = Resources.delete_relation(relation, claims)
+
+      assert {:ok, %{relation: %{id: id} = relation}} =
+               Resources.delete_relation(relation, claims)
+
       assert %{__meta__: %{state: :deleted}} = relation
+      assert [{:delete, :relations, [^id]}] = IndexWorkerMock.calls()
     end
 
     test "publishes an audit event", %{
@@ -389,6 +751,8 @@ defmodule TdLm.ResourcesTest do
     setup [:put_template, :put_concept]
 
     test "logically deletes relations" do
+      IndexWorkerMock.clear()
+
       %{id: id1, target_id: tid1} = insert(:relation, target_type: "data_structure")
       %{id: id2, target_id: tid2} = insert(:relation, target_type: "data_structure")
 
@@ -399,6 +763,8 @@ defmodule TdLm.ResourcesTest do
                Resources.deprecate("data_structure", [tid1, tid2, tid3])
 
       assert {2, [%{id: ^id1}, %{id: ^id2}]} = deprecated
+
+      assert [{:delete, :relations, [^id1, ^id2]}] = IndexWorkerMock.calls()
     end
 
     test "publishes audit events", %{concept: %{id: concept_id, domain_id: domain_id}} do
@@ -1595,7 +1961,7 @@ defmodule TdLm.ResourcesTest do
     concept =
       CacheHelpers.put_concept(
         domain_id: domain_id,
-        name: "domain_name",
+        name: "concept_name",
         type: "foo",
         content: %{"foo" => "bar"}
       )

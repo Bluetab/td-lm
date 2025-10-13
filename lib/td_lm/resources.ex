@@ -9,7 +9,10 @@ defmodule TdLm.Resources do
   require Logger
 
   alias Ecto.Multi
+
+  alias TdCache.ConceptCache
   alias TdCache.DomainCache
+  alias TdCache.StructureCache
   alias TdCluster.Cluster.TdBg
   alias TdCluster.Cluster.TdDd
   alias TdLm.Audit
@@ -19,6 +22,7 @@ defmodule TdLm.Resources do
   alias TdLm.Repo
   alias TdLm.Resources.Relation
   alias TdLm.Resources.Tag
+  alias TdLm.Search.Indexer
 
   @relations_keys [
     "source_param",
@@ -39,6 +43,8 @@ defmodule TdLm.Resources do
       {"source_type", t}, q -> where(q, [r], r.source_type == ^t)
       {"target_id", id}, q -> where(q, [r], r.target_id == ^id)
       {"target_type", t}, q -> where(q, [r], r.target_type == ^t)
+      {"status", "approved" = status}, q -> where(q, [r], r.status == ^status or is_nil(r.status))
+      {"status", status}, q -> where(q, [r], r.status == ^status)
       {"tag_id", t}, q -> where(q, [r], r.tag_id == ^t)
       {"value", %{} = value}, q -> where_relation_value(q, value)
     end)
@@ -96,6 +102,7 @@ defmodule TdLm.Resources do
                      source_type: source_type,
                      target_id: target_id,
                      target_type: target_type,
+                     status: status,
                      tag_id: tag_id
                    } ->
       %{
@@ -103,6 +110,7 @@ defmodule TdLm.Resources do
         "source_type" => source_type,
         "target_id" => target_id,
         "target_type" => target_type,
+        "status" => status,
         "tag_id" => tag_id
       }
     end)
@@ -148,11 +156,133 @@ defmodule TdLm.Resources do
     {:ok, res}
   end
 
-  defp on_create(res) do
-    with {:ok, %{relation: %{id: id}}} <- res do
-      LinkLoader.refresh(id)
-      res
+  defp on_create({:ok, %{relation: %{id: id, status: nil}}} = res) do
+    LinkLoader.refresh(id)
+    Indexer.reindex([id])
+    res
+  end
+
+  defp on_create({:ok, %{relation: %{id: id}}} = res) do
+    Indexer.reindex([id])
+    res
+  end
+
+  defp on_create(res), do: res
+
+  def update_relations_status(
+        %{"relation_ids" => [_ | _] = relation_ids, "status" => status},
+        claims
+      ) do
+    %Claims{user_id: user_id} = claims
+    ts = DateTime.utc_now()
+
+    Multi.new()
+    |> Multi.all(:relations, fn _changes ->
+      from(r in Relation, where: r.id in ^relation_ids)
+      |> preload(:tag)
+    end)
+    |> Multi.run(:cache_data, fn _repo, %{relations: relations} ->
+      {:ok, get_cache_data(relations)}
+    end)
+    |> Multi.run(:allowed_relations, fn _repo, %{relations: relations} ->
+      permission_check(relations, claims)
+    end)
+    |> Multi.run(:relations_validation, fn _repo, %{allowed_relations: %{allowed: relations}} ->
+      changeset_check(relations, status)
+    end)
+    |> Multi.update_all(:relations_updated, &update_valid_relations/1,
+      set: [updated_at: ts, status: status]
+    )
+    |> Multi.run(:audit, Audit, :relations_status_updated, [user_id])
+    |> Multi.run(:relations_preload, fn repo, %{relations_updated: {count, relations}} ->
+      relation_ids = Enum.map(relations, & &1.id)
+
+      preloaded_relations =
+        Relation
+        |> where([r], r.id in ^relation_ids)
+        |> preload(:tag)
+        |> repo.all()
+
+      {:ok, {count, preloaded_relations}}
+    end)
+    |> Repo.transaction()
+    |> on_update(status)
+  end
+
+  defp permission_check(relations, claims) do
+    relations
+    |> Enum.reduce(
+      %{allowed: [], errors: []},
+      fn relation, acc ->
+        if can?(claims, update(relation)) do
+          %{acc | allowed: acc.allowed ++ [relation]}
+        else
+          error = {relation, [permissions: {"forbidden", []}]}
+          %{acc | errors: acc.errors ++ [error]}
+        end
+      end
+    )
+    |> then(&{:ok, &1})
+  end
+
+  defp changeset_check(relations, status) do
+    relations
+    |> Enum.reduce(
+      %{valid: [], errors: []},
+      fn relation, acc ->
+        case Relation.status_changeset(relation, %{status: status}) do
+          %{valid?: true} ->
+            %{acc | valid: acc.valid ++ [relation]}
+
+          %{errors: changeset_errors} ->
+            error = {relation, changeset_errors}
+            %{acc | errors: acc.errors ++ [error]}
+        end
+      end
+    )
+    |> then(&{:ok, &1})
+  end
+
+  defp update_valid_relations(%{relations_validation: %{valid: relations}}) do
+    relation_ids =
+      Enum.map(relations, fn %{id: relation_id} -> relation_id end)
+
+    Relation
+    |> where([r], r.id in ^relation_ids)
+    |> select([r], r)
+  end
+
+  defp on_update(
+         {:ok,
+          %{
+            allowed_relations: %{errors: allowed_errors},
+            relations_validation: %{errors: validation_errors},
+            relations_preload: {_, relations_updated},
+            audit: audit_events,
+            cache_data: cache_data
+          }},
+         status
+       ) do
+    updated_relation_ids = Enum.map(relations_updated, & &1.id)
+
+    if status == "approved" do
+      LinkLoader.refresh(updated_relation_ids)
     end
+
+    Indexer.reindex(updated_relation_ids)
+
+    errors =
+      (allowed_errors ++ validation_errors)
+      |> Enum.map(fn {relation, errors} ->
+        {relations_map(relation, cache_data), errors}
+      end)
+
+    {:ok,
+     %{
+       relations_updated: relations_map(relations_updated, cache_data),
+       errors: errors,
+       audit: audit_events
+     }}
   end
 
   defp on_bulk_create({:ok, %{:relation_ids => [_ | _] = relation_ids}} = res) do
@@ -687,11 +817,10 @@ defmodule TdLm.Resources do
     |> on_delete_relation()
   end
 
-  defp on_delete_relation(res) do
-    with {:ok, %{relation: %{id: id}}} <- res do
-      LinkLoader.delete(id)
-      res
-    end
+  defp on_delete_relation({:ok, %{relation: %{id: id}}} = res) do
+    LinkLoader.delete(id)
+    Indexer.delete([id])
+    res
   end
 
   @doc """
@@ -824,9 +953,18 @@ defmodule TdLm.Resources do
     |> Multi.update_all(:deprecated, query, set: [deleted_at: ts])
     |> Multi.run(:audit, Audit, :relations_deprecated, [])
     |> Repo.transaction()
+    |> on_deprecate()
   end
 
   def deprecate(_resource_type, []), do: {:ok, %{deprecated: {0, []}}}
+
+  defp on_deprecate({:ok, %{deprecated: {_count, relations}}} = res) do
+    ids = Enum.map(relations, & &1.id)
+    Indexer.delete(ids)
+    res
+  end
+
+  defp on_deprecate(res), do: res
 
   def migrate_impl_id_to_impl_ref([]), do: []
 
@@ -929,5 +1067,77 @@ defmodule TdLm.Resources do
       |> Map.put(:target_id, v2)
       |> Map.put(:tag, tag)
     end)
+  end
+
+  def get_cache_data(relations) do
+    relations
+    |> Enum.reduce(
+      %{business_concept: [], data_structure: []},
+      fn relation, acc ->
+        %{
+          source_type: source_type,
+          source_id: source_id,
+          target_type: target_type,
+          target_id: target_id
+        } = relation
+
+        acc
+        |> Map.update(String.to_atom(source_type), [source_id], fn ids -> [source_id | ids] end)
+        |> Map.update(String.to_atom(target_type), [target_id], fn ids -> [target_id | ids] end)
+      end
+    )
+    |> then(fn %{business_concept: bc_ids, data_structure: ds_ids} ->
+      %{
+        business_concepts: get_concepts_from_cache(bc_ids),
+        data_structures: get_structures_from_cache(ds_ids)
+      }
+    end)
+  end
+
+  defp get_concepts_from_cache(ids) when is_list(ids) do
+    ids
+    |> ConceptCache.get_many()
+    |> case do
+      {:ok, []} ->
+        %{}
+
+      {:ok, concepts_cached} ->
+        Map.new(concepts_cached, fn concept -> {concept.id, concept} end)
+    end
+  end
+
+  defp get_structures_from_cache(ids) do
+    ids
+    |> StructureCache.get_many()
+    |> case do
+      {:ok, []} ->
+        %{}
+
+      {:ok, structures_cached} ->
+        Map.new(structures_cached, fn structure -> {structure.id, structure} end)
+    end
+  end
+
+  defp relations_map(relations, cache_data) when is_list(relations),
+    do: Enum.map(relations, &relations_map(&1, cache_data))
+
+  defp relations_map(relation, cache_data) do
+    relation
+    |> Map.put(:source_data, get_data(relation.source_type, relation.source_id, cache_data))
+    |> Map.put(:target_data, get_data(relation.target_type, relation.target_id, cache_data))
+  end
+
+  def get_data("business_concept", id, %{business_concepts: business_concepts}) do
+    case Map.get(business_concepts, id) do
+      nil ->
+        %{}
+
+      %{domain_id: domain_id, shared_to_ids: shared_to_ids} = concept ->
+        Map.put(concept, :domain_ids, [domain_id | shared_to_ids])
+    end
+  end
+
+  def get_data("data_structure", id, %{data_structures: data_structures}) do
+    Map.get(data_structures, id, %{})
   end
 end

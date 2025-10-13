@@ -30,6 +30,7 @@ defmodule TdLmWeb.RelationView do
       :source_type,
       :target_id,
       :target_type,
+      :status,
       :origin,
       :updated_at,
       :tag_id,

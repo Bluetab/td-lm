@@ -1,5 +1,15 @@
 # Changelog
 
+## [7.11.0] 2025-10-13
+
+### Added
+
+- [TD-7301] Add Relation approval workflow
+
+### Changed
+
+- [TD-7401] Update `td-core` version
+
 ## [7.10.0] 2025-09-16
 
 ### Added

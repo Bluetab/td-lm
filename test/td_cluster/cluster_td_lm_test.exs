@@ -24,6 +24,7 @@ defmodule TdCluster.ClusterTdLmTest do
   describe "test Cluster.TdLm functions" do
     test "clone_relations copy relations to new implementation", %{claims: claims} do
       Application.put_env(:td_cluster, TdCluster.ClusterHandler, TdCluster.ClusterHandlerImpl)
+
       original_id = 7777
       cloned_id = 5555
       source_type = "implementation_ref"
@@ -56,6 +57,33 @@ defmodule TdCluster.ClusterTdLmTest do
              ) == 4
 
       Application.put_env(:td_cluster, TdCluster.ClusterHandler, MockClusterHandler)
+    end
+
+    test "clone_relations copy relations to new implementation with the same status", %{
+      claims: claims
+    } do
+      Application.put_env(:td_cluster, TdCluster.ClusterHandler, TdCluster.ClusterHandlerImpl)
+      original_id = 7777
+      cloned_id = 5555
+      source_type = "implementation_ref"
+      target_type = "business_concept"
+
+      insert(:relation,
+        source_id: original_id,
+        source_type: source_type,
+        target_type: target_type,
+        target_id: 1
+      )
+
+      Cluster.TdLm.clone_relations(original_id, cloned_id, target_type, claims)
+
+      cloned_relations =
+        Resources.list_relations(%{
+          "target_type" => target_type,
+          "source_id" => cloned_id
+        })
+
+      assert Enum.map(cloned_relations, & &1.status) == [nil]
     end
   end
 

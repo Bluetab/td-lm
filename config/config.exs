@@ -10,6 +10,7 @@ config :td_lm, :env, Mix.env()
 
 config :td_cluster, :env, Mix.env()
 config :td_cluster, groups: [:lm]
+config :td_core, :env, Mix.env()
 
 # Oban configuration
 config :td_lm, Oban,
@@ -101,6 +102,9 @@ config :td_lm, TdLm.Scheduler,
       run_strategy: Quantum.RunStrategy.Local
     ]
   ]
+
+# Import Elasticsearch config
+import_config "elastic.exs"
 
 ## oban
 config :td_lm, :oban,

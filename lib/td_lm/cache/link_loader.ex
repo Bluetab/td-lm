@@ -72,7 +72,8 @@ defmodule TdLm.Cache.LinkLoader do
     may_be_clean_cache()
 
     {:ok, _count} =
-      Resources.list_relations()
+      %{"status" => "approved"}
+      |> Resources.list_relations()
       |> load_links()
 
     {:ok, _count} =

@@ -1,7 +1,8 @@
 defmodule TdLm.Canada.Abilities do
   @moduledoc false
 
-  alias TdCache.Permissions
+  import TdCache.Permissions, only: [has_any_permission?: 2]
+
   alias TdLm.Auth.Claims
   alias TdLm.Canada.BusinessConceptAbilities
   alias TdLm.Canada.DataStructureAbilities
@@ -15,8 +16,12 @@ defmodule TdLm.Canada.Abilities do
       true
     end
 
+    def can?(%Claims{role: "service"}, type, _params) when type in [:search, :reindex] do
+      true
+    end
+
     def can?(%Claims{jti: jti}, :create, Relation) do
-      Permissions.has_any_permission?(jti, [:manage_business_concept_links, :link_data_structure])
+      has_any_permission?(jti, [:manage_business_concept_links, :link_data_structure])
     end
 
     def can?(%Claims{} = claims, action, %Relation{} = relation) do
@@ -30,6 +35,10 @@ defmodule TdLm.Canada.Abilities do
 
     def can?(%Claims{} = claims, :create, %{resource_type: "business_concept"} = params) do
       BusinessConceptAbilities.can?(claims, :create, params)
+    end
+
+    def can?(%{jti: jti}, action, Relation) when action in [:update_status, :search] do
+      has_any_permission?(jti, [:manage_business_concept_links])
     end
 
     def can?(%Claims{} = claims, :show, %{resource_type: "business_concept"} = params) do
