@@ -182,8 +182,13 @@ defmodule TdLm.Audit do
       resource_type: resource_type,
       resource_id: resource_id,
       user_id: user_id,
-      payload: payload
+      payload: add_event_via(payload)
     )
+  end
+
+  defp add_event_via(payload) do
+    event_via = Process.get(:event_via)
+    Map.put(payload, :event_via, event_via)
   end
 
   @doc """
@@ -203,6 +208,7 @@ defmodule TdLm.Audit do
           }
           |> put_subscribable_fields(relation)
           |> put_domain_ids(relation)
+          |> add_event_via()
 
         publish("relation_created", relation.source_type, relation.source_id, user_id, payload)
       end)
