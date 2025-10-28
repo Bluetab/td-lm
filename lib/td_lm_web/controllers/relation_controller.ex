@@ -96,6 +96,8 @@ defmodule TdLmWeb.RelationController do
   def create(conn, %{"relation" => params}) do
     claims = conn.assigns[:current_resource]
 
+    Process.put(:event_via, "single_update")
+
     updated_relation_params = add_tag_id(params)
 
     with {:params, %{"source_id" => source_id, "source_type" => source_type}} <-
@@ -126,6 +128,7 @@ defmodule TdLmWeb.RelationController do
 
   def delete(conn, %{"id" => id}) do
     claims = conn.assigns[:current_resource]
+    Process.put(:event_via, "single_update")
     relation = Resources.get_relation!(id)
 
     with {:can, true} <- {:can, can?(claims, delete(relation))},

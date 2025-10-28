@@ -3,11 +3,16 @@ defmodule TdLmWeb.RelationControllerTest do
 
   import TdLm.TestOperators
 
+  alias TdCache.Redix
+  alias TdCache.Redix.Stream
   alias TdLm.Repo
   alias TdLm.Resources.Relation
 
+  @stream TdCache.Audit.stream()
+
   setup %{conn: conn} do
     start_supervised!(TdLm.Cache.LinkLoader)
+    on_exit(fn -> Redix.del!(@stream) end)
     [conn: put_req_header(conn, "accept", "application/json")]
   end
 
@@ -833,6 +838,33 @@ defmodule TdLmWeb.RelationControllerTest do
                |> post(Routes.relation_path(conn, :create), relation: params)
                |> json_response(:unprocessable_entity)
     end
+
+    @tag authentication: [role: "admin"]
+    test "publishes audit event with event_via set to single_update", %{
+      conn: conn,
+      concept: %{id: source_id}
+    } do
+      target_id = System.unique_integer([:positive])
+
+      params =
+        string_params_for(:relation,
+          source_id: source_id,
+          source_type: "business_concept",
+          target_id: target_id,
+          target_type: "business_concept"
+        )
+
+      assert %{"data" => %{"id" => relation_id}} =
+               conn
+               |> post(Routes.relation_path(conn, :create), relation: params)
+               |> json_response(:created)
+
+      assert {:ok, [%{event: event, payload: payload}]} =
+               Stream.read(:redix, @stream, transform: true)
+
+      assert event == "relation_created"
+      assert %{"event_via" => "single_update", "id" => ^relation_id} = Jason.decode!(payload)
+    end
   end
 
   describe "delete relation" do
@@ -856,6 +888,24 @@ defmodule TdLmWeb.RelationControllerTest do
       assert conn
              |> delete(Routes.relation_path(conn, :delete, relation))
              |> response(:no_content)
+    end
+
+    @tag authentication: [role: "admin"]
+    test "publishes audit event with event_via set to single_update", %{
+      conn: conn,
+      relation: %{id: relation_id, target_id: target_id} = relation
+    } do
+      assert conn
+             |> delete(Routes.relation_path(conn, :delete, relation))
+             |> response(:no_content)
+
+      assert {:ok, [%{event: event, payload: payload}]} =
+               Stream.read(:redix, @stream, transform: true)
+
+      assert event == "relation_deleted"
+
+      assert %{"event_via" => "single_update", "id" => ^relation_id, "target_id" => ^target_id} =
+               Jason.decode!(payload)
     end
   end
 

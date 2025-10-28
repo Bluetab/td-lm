@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- [TD-7298] Add `target_name` and `event_via` to relation creation and deletion audit events
+
 ## [7.11.0] 2025-10-13
 
 ### Added
