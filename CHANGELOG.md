@@ -1,5 +1,14 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- [TD-7711]:
+  - Ensure consistent use of the default analyzer across all services
+  - Support for quoted (exact match) search queries
+  - Phrase prefix search to highlight stricter text matches
+
 ## [7.13.0] 2025-11-18
 
 ### Added

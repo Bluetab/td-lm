@@ -52,7 +52,7 @@ defmodule TdLmWeb.SearchControllerTest do
             query: query
           },
           _ ->
-            assert %{bool: %{must: %{match_all: %{}}}} = query
+            assert %{bool: %{filter: %{match_all: %{}}}} = query
             SearchHelpers.hits_response([relation])
         end)
 
@@ -80,6 +80,101 @@ defmodule TdLmWeb.SearchControllerTest do
                  }
                ] = data
       end
+    end
+
+    @tag authentication: [role: "admin"]
+    test "can search relations with query string search", %{conn: conn, relation: relation} do
+      expect(ElasticsearchMock, :request, fn _,
+                                             :post,
+                                             "/relations/_search",
+                                             %{
+                                               size: 20,
+                                               sort: ["_score", "updated_at"],
+                                               from: 0,
+                                               query: query
+                                             },
+                                             _ ->
+        assert query == %{
+                 bool: %{
+                   filter: %{match_all: %{}},
+                   should: [
+                     %{
+                       multi_match: %{
+                         type: "phrase_prefix",
+                         fields: ["source_name", "target_name"],
+                         query: "foo",
+                         lenient: true,
+                         boost: 4.0
+                       }
+                     },
+                     %{
+                       simple_query_string: %{
+                         fields: ["source_name", "target_name"],
+                         query: "\"foo\"",
+                         quote_field_suffix: ".exact",
+                         boost: 4.0
+                       }
+                     }
+                   ],
+                   must: %{
+                     multi_match: %{
+                       type: "bool_prefix",
+                       fields: ["ngram_source_name", "ngram_target_name"],
+                       query: "foo",
+                       lenient: true
+                     }
+                   }
+                 }
+               }
+
+        SearchHelpers.hits_response([relation])
+      end)
+
+      assert %{"data" => data} =
+               conn
+               |> post(Routes.search_path(conn, :create, %{"query" => "foo"}))
+               |> json_response(:ok)
+
+      assert [_] = data
+    end
+
+    @tag authentication: [role: "admin"]
+    test "can search relations with query string search in strict mode", %{
+      conn: conn,
+      relation: relation
+    } do
+      expect(ElasticsearchMock, :request, fn _,
+                                             :post,
+                                             "/relations/_search",
+                                             %{
+                                               size: 20,
+                                               sort: ["_score", "updated_at"],
+                                               from: 0,
+                                               query: query
+                                             },
+                                             _ ->
+        assert query == %{
+                 bool: %{
+                   filter: %{match_all: %{}},
+                   must: %{
+                     simple_query_string: %{
+                       fields: ["source_name", "target_name"],
+                       query: "\"foo\"",
+                       quote_field_suffix: ".exact"
+                     }
+                   }
+                 }
+               }
+
+        SearchHelpers.hits_response([relation])
+      end)
+
+      assert %{"data" => data} =
+               conn
+               |> post(Routes.search_path(conn, :create, %{"query" => "\"foo\""}))
+               |> json_response(:ok)
+
+      assert [_] = data
     end
 
     @tag authentication: [role: "user", permissions: @permissions]
@@ -115,7 +210,7 @@ defmodule TdLmWeb.SearchControllerTest do
           query: query
         },
         _ ->
-          assert %{bool: %{must: %{term: %{"domain_ids" => ^domain_id}}}} = query
+          assert %{bool: %{filter: %{term: %{"domain_ids" => ^domain_id}}}} = query
 
           SearchHelpers.hits_response([relation])
       end)
@@ -142,7 +237,7 @@ defmodule TdLmWeb.SearchControllerTest do
           query: query
         },
         _ ->
-          assert %{bool: %{must: %{match_none: %{}}}} = query
+          assert %{bool: %{filter: %{match_none: %{}}}} = query
           SearchHelpers.hits_response([])
       end)
 
@@ -228,7 +323,7 @@ defmodule TdLmWeb.SearchControllerTest do
           query: query
         },
         _ ->
-          assert %{bool: %{must: %{term: %{"status" => "pending"}}}} == query
+          assert %{bool: %{filter: %{term: %{"status" => "pending"}}}} == query
 
           SearchHelpers.hits_response([relation])
       end)
@@ -253,7 +348,7 @@ defmodule TdLmWeb.SearchControllerTest do
 
       ElasticsearchMock
       |> expect(:request, fn _, :post, "/relations/_search", %{query: query}, _ ->
-        assert query == %{bool: %{must: %{match_all: %{}}}}
+        assert query == %{bool: %{filter: %{match_all: %{}}}}
         SearchHelpers.aggs_response(aggs)
       end)
 

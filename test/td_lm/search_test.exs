@@ -22,7 +22,7 @@ defmodule TdLm.SearchTest do
         ElasticsearchMock
         |> expect(:request, fn
           _, :post, "/relations/_search", %{aggs: _, query: query, size: 0}, _ ->
-            assert %{bool: %{must: %{match_all: %{}}}} == query
+            assert %{bool: %{filter: %{match_all: %{}}}} == query
             SearchHelpers.aggs_response(@aggs)
         end)
 
@@ -39,7 +39,7 @@ defmodule TdLm.SearchTest do
       ElasticsearchMock
       |> expect(:request, fn
         _, :post, "/relations/_search", %{aggs: _, query: query, size: 0}, _ ->
-          assert %{bool: %{must: %{term: %{"domain_ids" => ^domain_id}}}} = query
+          assert %{bool: %{filter: %{term: %{"domain_ids" => ^domain_id}}}} = query
 
           SearchHelpers.aggs_response(@aggs)
       end)
@@ -59,7 +59,7 @@ defmodule TdLm.SearchTest do
         _, :post, "/relations/_search", %{aggs: _, query: query, size: 0}, _ ->
           assert %{
                    bool: %{
-                     must: [
+                     filter: [
                        %{term: %{"foo" => "bar"}},
                        %{term: %{"domain_ids" => ^domain_id}}
                      ]
@@ -100,7 +100,7 @@ defmodule TdLm.SearchTest do
             query: query
           },
           _ ->
-            assert %{bool: %{must: %{match_all: %{}}}} = query
+            assert %{bool: %{filter: %{match_all: %{}}}} = query
             SearchHelpers.hits_response(relations)
         end)
 
@@ -145,7 +145,7 @@ defmodule TdLm.SearchTest do
           query: query
         },
         _ ->
-          assert %{bool: %{must: %{term: %{"domain_ids" => ^user_domain_id}}}} = query
+          assert %{bool: %{filter: %{term: %{"domain_ids" => ^user_domain_id}}}} = query
 
           SearchHelpers.hits_response([relation])
       end)
@@ -186,7 +186,7 @@ defmodule TdLm.SearchTest do
           query: query
         },
         _ ->
-          assert %{bool: %{must: %{match_none: %{}}}} = query
+          assert %{bool: %{filter: %{match_none: %{}}}} = query
 
           SearchHelpers.hits_response([])
       end)
@@ -229,7 +229,7 @@ defmodule TdLm.SearchTest do
           query: query
         },
         _ ->
-          assert %{bool: %{must: %{term: %{"status" => "pending"}}}} == query
+          assert %{bool: %{filter: %{term: %{"status" => "pending"}}}} == query
 
           SearchHelpers.hits_response(relations)
       end)
@@ -255,7 +255,7 @@ defmodule TdLm.SearchTest do
           query: query
         },
         _ ->
-          assert %{bool: %{must: %{term: %{"domain_ids" => ^domain_id}}}} = query
+          assert %{bool: %{filter: %{term: %{"domain_ids" => ^domain_id}}}} = query
 
           SearchHelpers.hits_response([relation])
       end)
@@ -288,7 +288,7 @@ defmodule TdLm.SearchTest do
           query: query
         },
         _ ->
-          assert %{bool: %{must: %{term: %{"origin" => "suggested"}}}} = query
+          assert %{bool: %{filter: %{term: %{"origin" => "suggested"}}}} = query
 
           SearchHelpers.hits_response([relation])
       end)

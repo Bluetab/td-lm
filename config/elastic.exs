@@ -26,6 +26,11 @@ config :td_core, TdCore.Search.Cluster,
           analyzer: %{
             default: %{
               type: "custom",
+              tokenizer: "whitespace",
+              filter: ["lowercase", "word_delimiter", "asciifolding"]
+            },
+            exact_analyzer: %{
+              type: "custom",
               tokenizer: "split_on_non_word",
               filter: ["lowercase", "asciifolding"]
             }
@@ -36,7 +41,7 @@ config :td_core, TdCore.Search.Cluster,
           tokenizer: %{
             split_on_non_word: %{
               type: "pattern",
-              pattern: "\\W+|_"
+              pattern: "[\\s\\-_.:/]+"
             }
           },
           filter: %{
