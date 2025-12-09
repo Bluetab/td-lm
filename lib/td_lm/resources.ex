@@ -27,6 +27,7 @@ defmodule TdLm.Resources do
   @relations_keys [
     "source_param",
     "source_type",
+    "concept_type",
     "target_param",
     "target_type",
     "domain_external_id"
@@ -366,8 +367,9 @@ defmodule TdLm.Resources do
       end)
 
     errors
+    |> Enum.reverse()
     |> update_error("missing_params")
-    |> update_data(valids, data)
+    |> update_data(Enum.reverse(valids), data)
   end
 
   defp check_availability(%{"bulk_insert_params" => bulk_insert_params} = data) do
@@ -391,6 +393,7 @@ defmodule TdLm.Resources do
             "source_type" => source_type,
             "target_param" => target_param,
             "target_type" => target_type,
+            "concept_type" => concept_type,
             "domain_external_id" => domain_external_id
           } = params ->
             tag_target_type = Map.get(params, "tag_target_type", nil)
@@ -402,10 +405,10 @@ defmodule TdLm.Resources do
             tag_id = Map.get(tags, {tag_target_type, tag_type}, nil)
 
             {source_status, source_id, source_type, source_data} =
-              check_data(source_param, source_type, domain_id)
+              check_data(source_param, source_type, domain_id, concept_type)
 
             {target_status, target_id, target_type, target_data} =
-              check_data(target_param, target_type, domain_id)
+              check_data(target_param, target_type, domain_id, nil)
 
             %{
               "row_number" => row_number,
@@ -435,26 +438,26 @@ defmodule TdLm.Resources do
     |> update_data(valids, data)
   end
 
-  defp check_data(_search_param, "business_concept" = type, nil) do
+  defp check_data(_search_param, "business_concept" = type, nil, _concept_type) do
     {:not_exists, nil, type, nil}
   end
 
-  defp check_data(search_param, "business_concept" = type, domain_id) do
+  defp check_data(search_param, "business_concept" = type, domain_id, concept_type) do
     search_param
-    |> TdBg.get_concept_by_name_in_domain(domain_id)
+    |> TdBg.get_unique_concept(domain_id, concept_type)
     |> extract_and_check(
       :versions,
       type
     )
   end
 
-  defp check_data(search_param, "data_structure" = type, _domain) do
+  defp check_data(search_param, "data_structure" = type, _domain, _concept_type) do
     search_param
     |> TdDd.get_data_structure_by_external_id(:latest_version)
     |> extract_and_check(:latest_version, type)
   end
 
-  defp check_data(search_param, "implementation" = type, _domain) do
+  defp check_data(search_param, "implementation" = type, _domain, _concept_type) do
     search_param
     |> TdDd.get_implementations_by_ref()
     |> extract_and_check(:status, type)
@@ -490,31 +493,36 @@ defmodule TdLm.Resources do
   defp check_duplicates(%{"bulk_insert_params" => []} = data), do: data
 
   defp check_duplicates(%{"bulk_insert_params" => bulk_insert_params} = data) do
-    groups =
-      Enum.group_by(bulk_insert_params, fn map ->
-        {
-          map["source_param"],
-          map["source_type"],
-          map["target_param"],
-          map["target_type"],
-          map["domain_external_id"],
-          map["link_type"]
+    {valids, duplicates, _seen_keys} =
+      Enum.reduce(bulk_insert_params, {[], [], MapSet.new()}, fn map,
+                                                                 {valids_acc, duplicates_acc,
+                                                                  seen_keys} ->
+        link_type = Map.get(map, "link_type", nil)
+        normalized_link_type = if link_type == "" or is_nil(link_type), do: nil, else: link_type
+
+        key = {
+          Map.get(map, "source_param"),
+          Map.get(map, "source_type"),
+          Map.get(map, "concept_type"),
+          Map.get(map, "target_param"),
+          Map.get(map, "target_type"),
+          Map.get(map, "domain_external_id"),
+          normalized_link_type
         }
+
+        if MapSet.member?(seen_keys, key) do
+          {valids_acc, [map | duplicates_acc], seen_keys}
+        else
+          {[map | valids_acc], duplicates_acc, MapSet.put(seen_keys, key)}
+        end
       end)
 
-    {valids, duplicates} =
-      Enum.reduce(groups, {[], []}, fn {_key, items}, {u_acc, d_acc} ->
-        items
-        |> Enum.reverse()
-        |> then(fn
-          [first | rest] -> {[first | u_acc], rest ++ d_acc}
-          [] -> {u_acc, d_acc}
-        end)
-      end)
+    reversed_duplicates = Enum.reverse(duplicates)
+    reversed_valids = Enum.reverse(valids)
 
-    duplicates
+    reversed_duplicates
     |> update_error("duplicate_in_file")
-    |> update_data(valids, data)
+    |> update_data(reversed_valids, data)
   end
 
   defp check_permissions(%{"bulk_insert_params" => bulk_insert_params} = data, claims) do
@@ -642,7 +650,7 @@ defmodule TdLm.Resources do
           )
 
         if is_nil(tag_id) do
-          base
+          dynamic([r], ^base and is_nil(r.tag_id))
         else
           dynamic([r], ^base and r.tag_id == ^tag_id)
         end

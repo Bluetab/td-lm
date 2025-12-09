@@ -51,6 +51,7 @@ defmodule TdLmWeb.XlsxControllerTest do
         domain: [external_id: "foo_domain"],
         concept: [
           name: "foo",
+          type: "foo_type",
           versions: [%{status: "published", version: 1}]
         ],
         structure: [
@@ -60,22 +61,16 @@ defmodule TdLmWeb.XlsxControllerTest do
         tag: [value: %{"type" => "foo_bar_link", "target_type" => "data_field"}]
       )
 
-    MockHelper.event_mock(%{
-      user_id: claims.user_id,
-      status: "STARTED",
-      file_hash: hash,
-      filename: file
-    })
+    concept_type = Map.get(concept, :type) || nil
 
-    MockHelper.business_concept_mock(concept_name, domain_id, {:ok, concept})
-    MockHelper.data_structure_mock(data_structure_external_id, {:ok, data_structure})
-
-    MockHelper.event_mock(%{
-      user_id: claims.user_id,
-      status: "COMPLETED",
-      file_hash: hash,
-      filename: file
-    })
+    MockHelper.setup_cluster_stub(
+      concept_name: concept_name,
+      domain_id: domain_id,
+      concept_type: concept_type,
+      concept: concept,
+      data_structure_external_id: data_structure_external_id,
+      data_structure: data_structure
+    )
 
     assert %{"file_hash" => ^hash, "status" => "PENDING", "task_reference" => _} =
              conn
@@ -158,6 +153,7 @@ defmodule TdLmWeb.XlsxControllerTest do
         domain: [external_id: "foo_domain"],
         concept: [
           name: "foo",
+          type: "foo_type",
           versions: [%{status: "published", version: 1}]
         ],
         structure: [
@@ -173,22 +169,16 @@ defmodule TdLmWeb.XlsxControllerTest do
       :view_data_structure
     ])
 
-    MockHelper.event_mock(%{
-      user_id: claims.user_id,
-      status: "STARTED",
-      file_hash: hash,
-      filename: file
-    })
+    concept_type = Map.get(concept, :type) || nil
 
-    MockHelper.business_concept_mock(concept_name, domain_id, {:ok, concept})
-    MockHelper.data_structure_mock(data_structure_external_id, {:ok, data_structure})
-
-    MockHelper.event_mock(%{
-      user_id: claims.user_id,
-      status: "COMPLETED",
-      file_hash: hash,
-      filename: file
-    })
+    MockHelper.setup_cluster_stub(
+      concept_name: concept_name,
+      domain_id: domain_id,
+      concept_type: concept_type,
+      concept: concept,
+      data_structure_external_id: data_structure_external_id,
+      data_structure: data_structure
+    )
 
     assert %{"file_hash" => ^hash, "status" => "PENDING", "task_reference" => _} =
              conn
@@ -269,6 +259,8 @@ defmodule TdLmWeb.XlsxControllerTest do
 
     hash = FileHash.hash(file, :md5)
 
+    MockHelper.setup_cluster_stub([])
+
     MockHelper.event_mock(%{
       user_id: claims.user_id,
       status: "PENDING",
@@ -342,6 +334,8 @@ defmodule TdLmWeb.XlsxControllerTest do
     file = "test/fixtures/bulk_relations_empty_test.xlsx"
 
     hash = FileHash.hash(file, :md5)
+
+    MockHelper.setup_cluster_stub([])
 
     MockHelper.event_mock(%{
       user_id: claims.user_id,

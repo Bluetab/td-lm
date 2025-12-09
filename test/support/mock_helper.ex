@@ -14,8 +14,8 @@ defmodule TdLm.MockHelper do
   alias TdCluster.TestHelpers.TdBgMock
   alias TdCluster.TestHelpers.TdDdMock
 
-  def business_concept_mock(name, domain_id, result) do
-    TdBgMock.get_concept_by_name_in_domain(&Mox.expect/4, name, domain_id, result)
+  def business_concept_mock(name, domain_id, concept_type, result) do
+    TdBgMock.get_unique_concept(&Mox.expect/4, name, domain_id, concept_type, result)
   end
 
   def data_structure_mock(external_id, result) do
@@ -38,6 +38,117 @@ defmodule TdLm.MockHelper do
        }}
 
     TdBgMock.create_bulk_upload_event(&Mox.expect/4, params, {:ok, result})
+  end
+
+  def setup_cluster_stub(opts) do
+    concept_name = Keyword.get(opts, :concept_name)
+    domain_id = Keyword.get(opts, :domain_id)
+    concept_type = Keyword.get(opts, :concept_type)
+    concept = Keyword.get(opts, :concept)
+    data_structure_external_id = Keyword.get(opts, :data_structure_external_id)
+    data_structure = Keyword.get(opts, :data_structure)
+
+    Mox.stub(MockClusterHandler, :call, fn service, module, function, args ->
+      handle_cluster_call(
+        {service, module, function, args},
+        concept_name,
+        domain_id,
+        concept_type,
+        concept,
+        data_structure_external_id,
+        data_structure
+      )
+    end)
+  end
+
+  defp handle_cluster_call(
+         {:bg, TdBg.BusinessConcepts.BulkUploadEvents, :create_bulk_upload_event, [arg_event]},
+         _concept_name,
+         _domain_id,
+         _concept_type,
+         _concept,
+         _data_structure_external_id,
+         _data_structure
+       ) do
+    {:ok,
+     %{
+       status: arg_event.status,
+       user_id: arg_event.user_id,
+       file_hash: arg_event.file_hash,
+       task_reference: Map.get(arg_event, :task_reference)
+     }}
+  end
+
+  defp handle_cluster_call(
+         {:bg, TdBg.BusinessConcepts, :get_unique_concept, [arg_name, arg_domain_id, arg_concept_type]},
+         concept_name,
+         domain_id,
+         concept_type,
+         concept,
+         _data_structure_external_id,
+         _data_structure
+       )
+       when not is_nil(concept_name) do
+    handle_get_unique_concept(arg_name, arg_domain_id, arg_concept_type, concept_name, domain_id, concept_type, concept)
+  end
+
+  defp handle_cluster_call(
+         {:dd, TdDd.DataStructures, :get_data_structure_by_external_id, [arg_external_id, arg_preload]},
+         _concept_name,
+         _domain_id,
+         _concept_type,
+         _concept,
+         data_structure_external_id,
+         data_structure
+       )
+       when not is_nil(data_structure_external_id) do
+    handle_get_data_structure(arg_external_id, arg_preload, data_structure_external_id, data_structure)
+  end
+
+  defp handle_cluster_call(other, _concept_name, _domain_id, _concept_type, _concept, _data_structure_external_id, _data_structure) do
+    raise "Unexpected call: #{inspect(other)}"
+  end
+
+  defp handle_get_unique_concept(arg_name, arg_domain_id, arg_concept_type, concept_name, domain_id, concept_type, concept) do
+    if arg_name == concept_name and arg_domain_id == domain_id and arg_concept_type == concept_type do
+      {:ok, concept}
+    else
+      raise "Unexpected get_unique_concept call: name=#{arg_name}, domain_id=#{arg_domain_id}, concept_type=#{inspect(arg_concept_type)}"
+    end
+  end
+
+  defp handle_get_data_structure(arg_external_id, arg_preload, data_structure_external_id, data_structure) do
+    if arg_external_id == data_structure_external_id and arg_preload == :latest_version do
+      {:ok, data_structure}
+    else
+      raise "Unexpected get_data_structure_by_external_id call: external_id=#{arg_external_id}, preload=#{inspect(arg_preload)}"
+    end
+  end
+
+  def setup_cluster_stub_with_multiple_concept_types(opts) do
+    concept_name = Keyword.get(opts, :concept_name)
+    domain_id = Keyword.get(opts, :domain_id)
+    concept_type_fn = Keyword.get(opts, :concept_type_fn)
+    data_structure_external_id = Keyword.get(opts, :data_structure_external_id)
+    data_structure = Keyword.get(opts, :data_structure)
+
+    Mox.stub(MockClusterHandler, :call, fn service, module, function, args ->
+      case {service, module, function, args} do
+        {:bg, TdBg.BusinessConcepts, :get_unique_concept,
+         [arg_name, arg_domain_id, arg_concept_type]}
+        when arg_name == concept_name and arg_domain_id == domain_id ->
+          concept_type_fn.(arg_concept_type)
+
+        {:dd, TdDd.DataStructures, :get_data_structure_by_external_id,
+         [arg_external_id, arg_preload]}
+        when not is_nil(data_structure_external_id) and
+               arg_external_id == data_structure_external_id and arg_preload == :latest_version ->
+          {:ok, data_structure}
+
+        other ->
+          raise "Unexpected call: #{inspect(other)}"
+      end
+    end)
   end
 
   def load_excel(path, test_pid) do
