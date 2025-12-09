@@ -8,6 +8,7 @@ defmodule TdLm.ResourcesTest do
   alias TdCluster.TestHelpers.TdDdMock
   alias TdCore.Search.IndexWorkerMock
   alias TdLm.Auth.Claims
+  alias TdLm.MockHelper
   alias TdLm.Resources
   alias TdLm.Resources.Relation
 
@@ -875,11 +876,12 @@ defmodule TdLm.ResourcesTest do
           claims: [role: "admin"],
           domain: [external_id: "domain_external_id_1"],
           tag: [value: %{"type" => "foo", "target_type" => "data_field"}],
-          concept: [name: "foo_bc"],
+          concept: [name: "foo_bc", type: "type_bc"],
           structure: [external_id: "bar_ds_external_id"]
         )
 
-      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      concept_type = Map.get(concept, :type)
+      business_concept_mock(concept_name, domain_id, concept_type, {:ok, concept})
       data_structure_mock(data_structure_external_id, {:ok, data_structure})
 
       assert {:ok, %{"created" => [first] = created, "updated" => [], "errors" => []}} =
@@ -902,11 +904,12 @@ defmodule TdLm.ResourcesTest do
         create_mock_data(
           claims: [role: "user"],
           domain: [external_id: "domain_external_id_1"],
-          concept: [name: "foo_bc", confidential: true],
+          concept: [name: "foo_bc", type: "type_bc", confidential: true],
           structure: [external_id: "bar_ds_external_id"]
         )
 
-      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      concept_type = Map.get(concept, :type)
+      business_concept_mock(concept_name, domain_id, concept_type, {:ok, concept})
       data_structure_mock(data_structure_external_id, {:ok, data_structure})
 
       CacheHelpers.put_session_permissions(claims, domain_id, [
@@ -936,11 +939,12 @@ defmodule TdLm.ResourcesTest do
         create_mock_data(
           claims: [role: "admin"],
           domain: [external_id: "domain_external_id_1"],
-          concept: [name: "foo_bc"],
+          concept: [name: "foo_bc", type: "type_bc"],
           structure: [external_id: "bar_ds_external_id"]
         )
 
-      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      concept_type = Map.get(concept, :type)
+      business_concept_mock(concept_name, domain_id, concept_type, {:ok, concept})
       data_structure_mock(data_structure_external_id, {:ok, data_structure})
 
       bulk_insert_params = [Map.put(params, "tag", "")]
@@ -967,12 +971,13 @@ defmodule TdLm.ResourcesTest do
         create_mock_data(
           claims: [role: "user"],
           domain: [external_id: "domain_external_id_1"],
-          concept: [name: "foo_bc"],
+          concept: [name: "foo_bc", type: "type_bc"],
           tag: [value: %{"type" => "foo", "target_type" => "data_field"}],
           structure: [external_id: "bar_ds_external_id"]
         )
 
-      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      concept_type = Map.get(concept, :type)
+      business_concept_mock(concept_name, domain_id, concept_type, {:ok, concept})
       data_structure_mock(data_structure_external_id, {:ok, data_structure})
 
       assert {:ok, %{"created" => [], "updated" => [], "errors" => [error]}} =
@@ -996,11 +1001,12 @@ defmodule TdLm.ResourcesTest do
         create_mock_data(
           claims: [role: "user"],
           domain: [external_id: "domain_external_id_1"],
-          concept: [name: "foo_bc"],
+          concept: [name: "foo_bc", type: "type_bc"],
           structure: [external_id: "bar_ds_external_id"]
         )
 
-      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      concept_type = Map.get(concept, :type)
+      business_concept_mock(concept_name, domain_id, concept_type, {:ok, concept})
       data_structure_mock(data_structure_external_id, {:ok, data_structure})
 
       CacheHelpers.put_session_permissions(claims, domain_id, [
@@ -1030,11 +1036,12 @@ defmodule TdLm.ResourcesTest do
         create_mock_data(
           claims: [role: "user"],
           domain: [external_id: "domain_external_id_1"],
-          concept: [name: "foo_bc"],
+          concept: [name: "foo_bc", type: "type_bc"],
           structure: [external_id: "bar_ds_external_id"]
         )
 
-      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      concept_type = Map.get(concept, :type)
+      business_concept_mock(concept_name, domain_id, concept_type, {:ok, concept})
       data_structure_mock(data_structure_external_id, {:ok, data_structure})
 
       CacheHelpers.put_session_permissions(claims, domain_id, [
@@ -1073,11 +1080,12 @@ defmodule TdLm.ResourcesTest do
         create_mock_data(
           claims: [role: "user"],
           domain: [external_id: "domain_external_id_1"],
-          concept: [name: "foo_bc", shared_to: [%{id: spd_child_id}]],
+          concept: [name: "foo_bc", type: "type_bc", shared_to: [%{id: spd_child_id}]],
           structure: [external_id: "bar_ds_external_id"]
         )
 
-      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      concept_type = Map.get(concept, :type)
+      business_concept_mock(concept_name, domain_id, concept_type, {:ok, concept})
       data_structure_mock(data_structure_external_id, {:ok, data_structure})
 
       CacheHelpers.put_session_permissions(claims, %{
@@ -1115,11 +1123,17 @@ defmodule TdLm.ResourcesTest do
         create_mock_data(
           claims: [role: "user"],
           domain: [external_id: "domain_external_id_1"],
-          concept: [name: "foo_bc", shared_to: [%{id: spd_child_id}], confidential: true],
+          concept: [
+            name: "foo_bc",
+            type: "type_bc",
+            shared_to: [%{id: spd_child_id}],
+            confidential: true
+          ],
           structure: [external_id: "bar_ds_external_id"]
         )
 
-      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      concept_type = Map.get(concept, :type) || nil
+      business_concept_mock(concept_name, domain_id, concept_type, {:ok, concept})
       data_structure_mock(data_structure_external_id, {:ok, data_structure})
 
       CacheHelpers.put_session_permissions(claims, %{
@@ -1157,11 +1171,17 @@ defmodule TdLm.ResourcesTest do
         create_mock_data(
           claims: [role: "user"],
           domain: [external_id: "domain_external_id_1"],
-          concept: [name: "foo_bc", shared_to: [%{id: spd_child_id}], confidential: true],
+          concept: [
+            name: "foo_bc",
+            type: "type_bc",
+            shared_to: [%{id: spd_child_id}],
+            confidential: true
+          ],
           structure: [external_id: "bar_ds_external_id"]
         )
 
-      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      concept_type = Map.get(concept, :type)
+      business_concept_mock(concept_name, domain_id, concept_type, {:ok, concept})
       data_structure_mock(data_structure_external_id, {:ok, data_structure})
 
       CacheHelpers.put_session_permissions(claims, %{
@@ -1194,11 +1214,12 @@ defmodule TdLm.ResourcesTest do
           claims: [role: "admin"],
           domain: [external_id: "domain_external_id_1"],
           tag: [value: %{"type" => "foo", "target_type" => "data_field"}],
-          concept: [name: "foo_bc"],
+          concept: [name: "foo_bc", type: "type_bc"],
           structure: [external_id: "bar_ds_external_id"]
         )
 
-      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      concept_type = Map.get(concept, :type) || nil
+      business_concept_mock(concept_name, domain_id, concept_type, {:ok, concept})
       data_structure_mock(data_structure_external_id, {:ok, data_structure})
 
       insert(:relation,
@@ -1231,11 +1252,12 @@ defmodule TdLm.ResourcesTest do
         create_mock_data(
           claims: [role: "admin"],
           domain: [external_id: "domain_external_id_1"],
-          concept: [name: "foo_bc"],
+          concept: [name: "foo_bc", type: "type_bc"],
           structure: [external_id: "bar_ds_external_id"]
         )
 
-      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      concept_type = Map.get(concept, :type) || nil
+      business_concept_mock(concept_name, domain_id, concept_type, {:ok, concept})
       data_structure_mock(data_structure_external_id, {:ok, data_structure})
 
       insert(:relation,
@@ -1264,6 +1286,7 @@ defmodule TdLm.ResourcesTest do
           "row_number" => 1,
           "source_param" => "",
           "target_type" => "",
+          "concept_type" => "",
           "target_param" => "",
           "domain_external_id" => ""
         }
@@ -1275,7 +1298,7 @@ defmodule TdLm.ResourcesTest do
       assert error["error_type"] == "missing_params"
 
       assert error["body"]["context"]["error"] ==
-               "source_param, source_type, target_param, target_type, domain_external_id"
+               "source_param, source_type, concept_type, target_param, target_type, domain_external_id"
 
       assert error["body"]["message"] == "bulk_creation_link.upload.failed.missing_params"
     end
@@ -1290,6 +1313,7 @@ defmodule TdLm.ResourcesTest do
           "row_number" => 1,
           "source_param" => "foo_bc",
           "source_type" => "",
+          "concept_type" => "type_bc",
           "target_type" => "data_structure",
           "target_param" => "bar_ds_external_id",
           "domain_external_id" => domain_external_id
@@ -1317,6 +1341,7 @@ defmodule TdLm.ResourcesTest do
           "source_param" => "",
           "source_type" => "business_concept",
           "target_type" => "data_structure",
+          "concept_type" => "type_bc",
           "target_param" => "bar_ds_external_id",
           "domain_external_id" => domain_external_id
         }
@@ -1342,6 +1367,7 @@ defmodule TdLm.ResourcesTest do
           "row_number" => 1,
           "source_type" => "business_concept",
           "source_param" => "foo_bc",
+          "concept_type" => "type_bc",
           "target_type" => "",
           "target_param" => "bar_ds_external_id",
           "domain_external_id" => domain_external_id
@@ -1368,6 +1394,7 @@ defmodule TdLm.ResourcesTest do
           "row_number" => 1,
           "source_type" => "business_concept",
           "source_param" => "foo_bc",
+          "concept_type" => "type_bc",
           "target_type" => "data_structure",
           "target_param" => "",
           "domain_external_id" => domain_external_id
@@ -1392,6 +1419,7 @@ defmodule TdLm.ResourcesTest do
           "row_number" => 1,
           "source_type" => "business_concept",
           "source_param" => "foo_bc",
+          "concept_type" => "type_bc",
           "target_type" => "data_structure",
           "target_param" => "bar_ds_external_id",
           "domain_external_id" => ""
@@ -1425,6 +1453,7 @@ defmodule TdLm.ResourcesTest do
           "source_type" => "business_concept",
           "source_param" => "foo_bc",
           "target_type" => "data_structure",
+          "concept_type" => "type_bc",
           "target_param" => "bar_ds_external_id",
           "domain_external_id" => "foo"
         }
@@ -1456,12 +1485,14 @@ defmodule TdLm.ResourcesTest do
           domain: [external_id: "domain_external_id_1"],
           concept: [
             name: "foo_bc",
+            type: "type_bc",
             versions: [%{status: "deprecated", version: 2}, %{status: "published", version: 1}]
           ],
           structure: [external_id: "bar_ds_external_id"]
         )
 
-      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      concept_type = Map.get(concept, :type) || nil
+      business_concept_mock(concept_name, domain_id, concept_type, {:ok, concept})
       data_structure_mock(data_structure_external_id, {:ok, data_structure})
 
       assert {:ok, %{"created" => [], "updated" => [], "errors" => [error]}} =
@@ -1488,12 +1519,14 @@ defmodule TdLm.ResourcesTest do
           domain: [external_id: "domain_external_id_1"],
           concept: [
             name: "foo_bc",
+            type: "type_bc",
             versions: [%{status: "deprecated", version: 2}, %{status: "published", version: 1}]
           ],
           structure: [external_id: "bar_ds_external_id"]
         )
 
-      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      concept_type = Map.get(concept, :type) || nil
+      business_concept_mock(concept_name, domain_id, concept_type, {:ok, concept})
       data_structure_mock(data_structure_external_id, {:ok, nil})
 
       assert {:ok, %{"created" => [], "updated" => [], "errors" => [error]}} =
@@ -1520,6 +1553,7 @@ defmodule TdLm.ResourcesTest do
           domain: [external_id: "domain_external_id_1"],
           concept: [
             name: "foo_bc",
+            type: "type_bc",
             versions: [%{status: "deprecated", version: 2}, %{status: "published", version: 1}]
           ],
           structure: [
@@ -1528,7 +1562,8 @@ defmodule TdLm.ResourcesTest do
           ]
         )
 
-      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      concept_type = Map.get(concept, :type) || nil
+      business_concept_mock(concept_name, domain_id, concept_type, {:ok, concept})
       data_structure_mock(data_structure_external_id, {:ok, data_structure})
 
       assert {:ok, %{"created" => [], "updated" => [], "errors" => [error]}} =
@@ -1559,9 +1594,12 @@ defmodule TdLm.ResourcesTest do
         )
 
       bulk_insert_params =
-        Map.put(hd(params), "source_param", "foo_bc")
+        params
+        |> hd()
+        |> Map.put("source_param", "foo_bc")
+        |> Map.put("concept_type", "type_bc")
 
-      business_concept_mock("foo_bc", domain_id, {:ok, nil})
+      business_concept_mock("foo_bc", domain_id, "type_bc", {:ok, nil})
       data_structure_mock(data_structure_external_id, {:ok, data_structure})
 
       assert {:ok, %{"created" => [], "updated" => [], "errors" => [error]}} =
@@ -1591,9 +1629,12 @@ defmodule TdLm.ResourcesTest do
         )
 
       bulk_insert_params =
-        Map.put(hd(params), "source_param", "foo_bc")
+        params
+        |> hd()
+        |> Map.put("source_param", "foo_bc")
+        |> Map.put("concept_type", "type_foo_bc")
 
-      business_concept_mock("foo_bc", domain_id, {:ok, nil})
+      business_concept_mock("foo_bc", domain_id, "type_foo_bc", {:ok, nil})
       data_structure_mock(data_structure_external_id, {:ok, data_structure})
 
       assert {:ok, %{"created" => [], "updated" => [], "errors" => [error]}} =
@@ -1620,9 +1661,12 @@ defmodule TdLm.ResourcesTest do
         )
 
       bulk_insert_params =
-        Map.put(hd(params), "source_param", "foo_bc")
+        params
+        |> hd()
+        |> Map.put("source_param", "foo_bc")
+        |> Map.put("concept_type", "type_foo_bc")
 
-      business_concept_mock("foo_bc", domain_id, {:ok, nil})
+      business_concept_mock("foo_bc", domain_id, "type_foo_bc", {:ok, nil})
       data_structure_mock(data_structure_external_id, {:ok, nil})
 
       assert {:ok, %{"created" => [], "updated" => [], "errors" => [error]}} =
@@ -1647,11 +1691,13 @@ defmodule TdLm.ResourcesTest do
           domain: [external_id: "domain_external_id_1"],
           concept: [
             name: "foo_bc",
+            type: "type_bc",
             versions: [%{status: "published", version: 1}]
           ]
         )
 
-      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      concept_type = Map.get(concept, :type) || nil
+      business_concept_mock(concept_name, domain_id, concept_type, {:ok, concept})
       data_structure_mock("bar_ds_external_id", {:ok, nil})
 
       bulk_insert_params =
@@ -1680,6 +1726,7 @@ defmodule TdLm.ResourcesTest do
           domain: [external_id: "domain_external_id_1"],
           concept: [
             name: "foo_bc",
+            type: "type_bc",
             versions: [%{status: "published", version: 1}]
           ],
           structure: [
@@ -1688,7 +1735,8 @@ defmodule TdLm.ResourcesTest do
           ]
         )
 
-      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      concept_type = Map.get(concept, :type) || nil
+      business_concept_mock(concept_name, domain_id, concept_type, {:ok, concept})
       data_structure_mock(data_structure_external_id, {:ok, data_structure})
 
       assert {:ok, %{"created" => [], "updated" => [], "errors" => [error]}} =
@@ -1711,13 +1759,14 @@ defmodule TdLm.ResourcesTest do
           claims: [role: "admin"],
           domain: [external_id: "domain_external_id_1"],
           tag: [value: %{"type" => "foo", "target_type" => "data_structure"}],
-          concept: [name: "foo_bc"],
+          concept: [name: "foo_bc", type: "type_bc"],
           structure: [external_id: "bar_ds_external_id"]
         )
 
       bulk_insert_params = [params, %{params | "row_number" => 2}]
 
-      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      concept_type = Map.get(concept, :type) || nil
+      business_concept_mock(concept_name, domain_id, concept_type, {:ok, concept})
       data_structure_mock(data_structure_external_id, {:ok, data_structure})
 
       assert {:ok, %{"created" => [_created], "updated" => [], "errors" => [error]}} =
@@ -1727,6 +1776,65 @@ defmodule TdLm.ResourcesTest do
       assert error["body"]["context"]["error"] == ""
       assert error["body"]["context"]["row"] == 2
       assert error["body"]["message"] == "bulk_creation_link.upload.failed.duplicate_in_file"
+    end
+
+    test "Validate duplicates params with different concept_type are not considered duplicates" do
+      %{
+        claims: claims,
+        domain: %{id: domain_id, external_id: domain_external_id},
+        concept: %{id: concept_id, name: concept_name, type: "template_1"} = concept,
+        data_structure: %{external_id: data_structure_external_id} = data_structure
+      } =
+        create_mock_data(
+          claims: [role: "admin"],
+          domain: [external_id: "domain_external_id_1"],
+          concept: [name: "foo_bc", type: "template_1"],
+          structure: [external_id: "bar_ds_external_id"]
+        )
+
+      concept2 = %{concept | id: concept_id + 1, type: "template_2"}
+
+      MockHelper.setup_cluster_stub_with_multiple_concept_types(
+        concept_name: concept_name,
+        domain_id: domain_id,
+        concept_type_fn: fn
+          "template_1" -> {:ok, concept}
+          "template_2" -> {:ok, concept2}
+          _ -> {:ok, concept}
+        end,
+        data_structure_external_id: data_structure_external_id,
+        data_structure: data_structure
+      )
+
+      bulk_insert_params = [
+        %{
+          "row_number" => 1,
+          "source_type" => "business_concept",
+          "target_type" => "data_structure",
+          "domain_external_id" => domain_external_id,
+          "source_param" => concept_name,
+          "target_param" => data_structure_external_id,
+          "concept_type" => "template_1",
+          "link_type" => nil,
+          "tag_target_type" => nil
+        },
+        %{
+          "row_number" => 2,
+          "source_type" => "business_concept",
+          "target_type" => "data_structure",
+          "domain_external_id" => domain_external_id,
+          "source_param" => concept_name,
+          "target_param" => data_structure_external_id,
+          "concept_type" => "template_2",
+          "link_type" => nil,
+          "tag_target_type" => nil
+        }
+      ]
+
+      assert {:ok, %{"created" => created, "updated" => [], "errors" => []}} =
+               Resources.bulk_create_relations(bulk_insert_params, claims)
+
+      assert length(created) == 2
     end
 
     test "Validate duplicates params without tag" do
@@ -1740,14 +1848,15 @@ defmodule TdLm.ResourcesTest do
         create_mock_data(
           claims: [role: "admin"],
           domain: [external_id: "domain_external_id_1"],
-          concept: [name: "foo_bc"],
+          concept: [name: "foo_bc", type: "type_bc"],
           structure: [external_id: "bar_ds_external_id"]
         )
 
       bulk_insert_params =
         [params, %{params | "row_number" => 2}, %{params | "row_number" => 3}]
 
-      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      concept_type = Map.get(concept, :type) || nil
+      business_concept_mock(concept_name, domain_id, concept_type, {:ok, concept})
       data_structure_mock(data_structure_external_id, {:ok, data_structure})
 
       assert {:ok, %{"created" => [_created], "updated" => [], "errors" => [error, error2]}} =
@@ -1785,7 +1894,8 @@ defmodule TdLm.ResourcesTest do
 
       CacheHelpers.put_concept(concept)
 
-      business_concept_mock(concept_name, domain_id, {:ok, concept})
+      concept_type = Map.get(concept, :type) || nil
+      business_concept_mock(concept_name, domain_id, concept_type, {:ok, concept})
       data_structure_mock(data_structure_external_id, {:ok, data_structure})
 
       bulk_insert_params = [Map.put(params, "tag", "")]
@@ -1885,6 +1995,11 @@ defmodule TdLm.ResourcesTest do
       |> Map.get(:concept, %{})
       |> Map.get(:name, "")
 
+    concept_type =
+      acc
+      |> Map.get(:concept, %{})
+      |> Map.get(:type, "")
+
     ds_external_id =
       acc
       |> Map.get(:data_structure, %{})
@@ -1900,6 +2015,7 @@ defmodule TdLm.ResourcesTest do
         "domain_external_id" => domain_external_id
       }
       |> maybe_put("source_param", concept_name)
+      |> maybe_put("concept_type", concept_type)
       |> maybe_put("target_param", ds_external_id)
       |> maybe_put("link_type", tag_type)
       |> Map.put("tag_target_type", tag_target_type)
@@ -1912,16 +2028,17 @@ defmodule TdLm.ResourcesTest do
   defp maybe_put(map, _k, nil), do: map
   defp maybe_put(map, k, v), do: Map.put(map, k, v)
 
-  defp business_concept_mock(name, domain_id, result) do
-    TdBgMock.get_concept_by_name_in_domain(&Mox.expect/4, name, domain_id, result)
+  defp business_concept_mock(name, domain_id, concept_type, result) do
+    TdBgMock.get_unique_concept(&Mox.expect/4, name, domain_id, concept_type, result)
   end
 
-  defp data_structure_mock(external_id, result) do
+  defp data_structure_mock(external_id, result, times \\ 1) do
     TdDdMock.get_data_structure_by_external_id(
       &Mox.expect/4,
       external_id,
       :latest_version,
-      result
+      result,
+      times
     )
   end
 
