@@ -46,8 +46,10 @@ defmodule TdLm.Relations.ElasticDocument do
       |> Map.put(:domain_ids, Enum.uniq(source_domains ++ target_domains))
       |> Map.put(:source_domain_ids, source_domains)
       |> Map.put(:source_name, source_name)
+      |> Map.put(:ngram_source_name, source_name)
       |> Map.put(:target_domain_ids, target_domains)
       |> Map.put(:target_name, target_name)
+      |> Map.put(:ngram_target_name, target_name)
       |> Map.put(:tag_type, get_tag_type(relation))
     end
 
@@ -59,6 +61,8 @@ defmodule TdLm.Relations.ElasticDocument do
     use ElasticDocument
 
     @search_fields ~w(source_name target_name)
+    @search_as_you_type_fields ~w(ngram_source_name ngram_target_name)
+    @exact_fields ~w(source_name target_name)
 
     def mappings(_) do
       properties = %{
@@ -67,11 +71,13 @@ defmodule TdLm.Relations.ElasticDocument do
         tag_type: %{type: "text", fields: @raw_sort},
         source_id: %{type: "long", index: false},
         source_type: %{type: "keyword"},
-        source_name: %{type: "text", fields: @raw_sort},
+        source_name: %{type: "text", fields: Map.merge(@raw_sort, @exact)},
+        ngram_source_name: %{type: "search_as_you_type"},
         source_domain_ids: %{type: "long"},
         target_id: %{type: "long", index: false},
         target_type: %{type: "keyword"},
-        target_name: %{type: "text", fields: @raw_sort},
+        target_name: %{type: "text", fields: Map.merge(@raw_sort, @exact)},
+        ngram_target_name: %{type: "search_as_you_type"},
         target_domain_ids: %{type: "long"},
         origin: %{type: "keyword"},
         status: %{type: "keyword"},
@@ -85,7 +91,11 @@ defmodule TdLm.Relations.ElasticDocument do
 
     def query_data(_) do
       %{
-        fields: @search_fields,
+        query: %{
+          simple: @search_fields,
+          as_you_type: @search_as_you_type_fields,
+          exact: @exact_fields
+        },
         aggs: aggregations(nil)
       }
     end

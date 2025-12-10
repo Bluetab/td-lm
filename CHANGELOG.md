@@ -1,5 +1,21 @@
 # Changelog
 
+## [7.14.0] 2025-12-10
+
+### Added
+
+- [TD-7711]:
+  - Ensure consistent use of the default analyzer across all services
+  - Support for quoted (exact match) search queries
+  - Phrase prefix search to highlight stricter text matches
+
+### Changed
+
+- [TD-7678]:
+  - Update bulk relations creation to support concept type filtering
+  - Fix duplicate detection to preserve first occurrence
+  - Normalize link_type and concept_type values
+
 ## [7.13.0] 2025-11-18
 
 ### Added

@@ -2,6 +2,7 @@ defmodule TdLm.Xlsx.UploadWorkerTest do
   use TdLm.DataCase
 
   import ExUnit.CaptureLog
+  import Mox
 
   alias TdLm.MockHelper
   alias TdLm.Resources
@@ -14,6 +15,8 @@ defmodule TdLm.Xlsx.UploadWorkerTest do
     start_supervised({Task.Supervisor, name: TdLm.TaskSupervisor})
     :ok
   end
+
+  setup :set_mox_from_context
 
   describe "TdLm.XLSX.Jobs.UploadWorker.perform/1" do
     setup %{test_pid: test_pid} do
@@ -34,6 +37,7 @@ defmodule TdLm.Xlsx.UploadWorkerTest do
           domain: [external_id: "foo_domain"],
           concept: [
             name: "foo",
+            type: "foo_type",
             versions: [%{status: "published", version: 1}]
           ],
           structure: [
@@ -45,22 +49,16 @@ defmodule TdLm.Xlsx.UploadWorkerTest do
 
       hash = Base.encode16(tmp_path)
 
-      MockHelper.event_mock(%{
-        user_id: claims.user_id,
-        status: "STARTED",
-        file_hash: hash,
-        filename: tmp_path
-      })
+      concept_type = Map.get(concept, :type)
 
-      MockHelper.business_concept_mock(concept_name, domain_id, {:ok, concept})
-      MockHelper.data_structure_mock(data_structure_external_id, {:ok, data_structure})
-
-      MockHelper.event_mock(%{
-        user_id: claims.user_id,
-        status: "COMPLETED",
-        file_hash: hash,
-        filename: tmp_path
-      })
+      MockHelper.setup_cluster_stub(
+        concept_name: concept_name,
+        domain_id: domain_id,
+        concept_type: concept_type,
+        concept: concept,
+        data_structure_external_id: data_structure_external_id,
+        data_structure: data_structure
+      )
 
       opts =
         %{
@@ -104,20 +102,7 @@ defmodule TdLm.Xlsx.UploadWorkerTest do
       claims = build(:claims)
       hash = Base.encode16(tmp_path)
 
-      MockHelper.event_mock(%{
-        user_id: claims.user_id,
-        status: "STARTED",
-        file_hash: hash,
-        filename: tmp_path
-      })
-
-      MockHelper.event_mock(%{
-        user_id: claims.user_id,
-        status: "FAILED",
-        file_hash: hash,
-        message: "Please contact Truedat's team: \"invalid zip file\"",
-        filename: tmp_path
-      })
+      MockHelper.setup_cluster_stub([])
 
       opts =
         %{

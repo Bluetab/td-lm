@@ -11,7 +11,13 @@ defmodule TdLm.Xlsx.Reader do
 
   require Logger
 
-  @required_headers ["concept_name", "structure_external_id", "domain_external_id", "link_type"]
+  @required_headers [
+    "concept_name",
+    "concept_type",
+    "structure_external_id",
+    "domain_external_id",
+    "link_type"
+  ]
 
   @excel_columns_by_type %{
     "business_concept" => "concept_name",
