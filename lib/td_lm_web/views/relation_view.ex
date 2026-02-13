@@ -37,5 +37,12 @@ defmodule TdLmWeb.RelationView do
       :tag,
       :tags
     ])
+    |> add_tag_type()
   end
+
+  defp add_tag_type(%{tag: %{value: %{"type" => type}}} = relation) do
+    Map.put(relation, :tag_type, type)
+  end
+
+  defp add_tag_type(relation), do: Map.put(relation, :tag_type, nil)
 end

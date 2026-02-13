@@ -246,9 +246,10 @@ defmodule TdLm.Cache.LinkLoader do
   defp with_tags(link), do: Map.put(link, :tags, [])
 
   defp may_be_clean_cache do
-    if acquire_lock?("TdLM.Cache.Migration:TD-7420") do
+    if acquire_lock?("TdLM.Cache.Migration:TD-7420") ||
+         acquire_lock?("TdLM.Cache.Migration:TD-7861") do
       response = Redix.del!(["link:keys", "link:*", "*:links", "*:links:*"])
-      Logger.info("Deleted #{response} keys from migration TD-7420")
+      Logger.info("Deleted #{response} keys from migration TD-7420 or TD-7861")
     end
   end
 

@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- [TD-7861]:
+  - Bulk upsert relations from third party services
+  - Fetch store data for data structure indexing
+
+### Fixed
+
+- [TD-7861] Relation uniqueness constraint
+
 ## [7.14.0] 2025-12-10
 
 ### Added

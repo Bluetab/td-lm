@@ -159,7 +159,8 @@ config :td_core, TdCore.Search.Cluster,
     "origin" => System.get_env("AGG_ORIGIN_SIZE", "500") |> String.to_integer(),
     "taxonomy" => System.get_env("AGG_TAXONOMY_SIZE", "500") |> String.to_integer(),
     "source_taxonomy" => System.get_env("AGG_SOURCE_TAXONOMY_SIZE", "500") |> String.to_integer(),
-    "target_taxonomy" => System.get_env("AGG_TARGET_TAXONOMY_SIZE", "500") |> String.to_integer()
+    "target_taxonomy" => System.get_env("AGG_TARGET_TAXONOMY_SIZE", "500") |> String.to_integer(),
+    "deleted" => System.get_env("AGG_DELETED_SIZE", "500") |> String.to_integer()
   }
 
 config :td_lm, :oban, attempts: System.get_env("OBAN_FILE_ATTEMPTS", "5") |> String.to_integer()

@@ -22,6 +22,7 @@ defmodule TdLm.ResourcesTest do
   end
 
   setup do
+    IndexWorkerMock.clear()
     start_supervised!(TdLm.Cache.LinkLoader)
 
     on_exit(fn ->
@@ -160,6 +161,45 @@ defmodule TdLm.ResourcesTest do
 
       assert {:ok, nil} == LinkCache.get(id)
       assert [{:reindex, :relations, [^id]}] = IndexWorkerMock.calls()
+    end
+
+    test "raises duplicate error if relation already exists", %{claims: claims} do
+      relation = insert(:relation)
+
+      params = %{
+        "source_id" => relation.source_id,
+        "source_type" => relation.source_type,
+        "target_id" => relation.target_id,
+        "target_type" => relation.target_type,
+        "tag_id" => relation.tag_id
+      }
+
+      assert {:error, :relation, %Ecto.Changeset{errors: errors}, _} =
+               Resources.create_relation(params, claims)
+
+      assert errors[:source_id] ==
+               {"has already been taken",
+                [constraint: :unique, constraint_name: "relations_unique_index"]}
+
+      valid_params = Map.put(params, "tag_id", nil)
+      assert {:ok, %{relation: _relation}} = Resources.create_relation(valid_params, claims)
+
+      relation = insert(:relation, tag_id: nil, tag: nil)
+
+      params = %{
+        "source_id" => relation.source_id,
+        "source_type" => relation.source_type,
+        "target_id" => relation.target_id,
+        "target_type" => relation.target_type,
+        "tag_id" => nil
+      }
+
+      assert {:error, :relation, %Ecto.Changeset{errors: errors}, _} =
+               Resources.create_relation(params, claims)
+
+      assert errors[:source_id] ==
+               {"has already been taken",
+                [constraint: :unique, constraint_name: "relations_unique_index"]}
     end
   end
 
@@ -765,7 +805,7 @@ defmodule TdLm.ResourcesTest do
 
       assert {2, [%{id: ^id1}, %{id: ^id2}]} = deprecated
 
-      assert [{:delete, :relations, [^id1, ^id2]}] = IndexWorkerMock.calls()
+      assert [{:reindex, :relations, [^id1, ^id2]}] = IndexWorkerMock.calls()
     end
 
     test "publishes audit events", %{concept: %{id: concept_id, domain_id: domain_id}} do
@@ -785,12 +825,17 @@ defmodule TdLm.ResourcesTest do
 
       assert {:ok, %{audit: audit}} = Resources.deprecate("data_structure", [tid1, tid2, tid3])
       assert length(audit) == 2
-      [event_id | _] = audit
+      [event_id_1, event_id_2] = audit
 
-      assert {:ok, [%{id: ^event_id, payload: payload}]} =
-               Stream.range(:redix, @stream, event_id, event_id, transform: :range)
+      assert {:ok, [%{id: ^event_id_1, payload: payload_1}]} =
+               Stream.range(:redix, @stream, event_id_1, event_id_1, transform: :range)
 
-      assert %{"domain_ids" => ^domain_ids} = Jason.decode!(payload)
+      assert {:ok, [%{id: ^event_id_2, payload: payload_2}]} =
+               Stream.range(:redix, @stream, event_id_2, event_id_2, transform: :range)
+
+      payloads = [Jason.decode!(payload_1), Jason.decode!(payload_2)]
+      payload_with_domains = Enum.find(payloads, &Map.has_key?(&1, "domain_ids"))
+      assert %{"domain_ids" => ^domain_ids} = payload_with_domains
     end
   end
 
@@ -1917,6 +1962,406 @@ defmodule TdLm.ResourcesTest do
                "domain_ids" => [^domain_id]
              } =
                Jason.decode!(payload)
+    end
+  end
+
+  describe "refresh_search_data/2" do
+    test "calls reindex with relation ids" do
+      source_type = "business_concept"
+      source_id = :rand.uniform(100_000)
+
+      %{id: id} =
+        insert(:relation, source_type: source_type, source_id: source_id, deleted_at: nil)
+
+      assert Resources.refresh_search_data(:concepts, [source_id]) == :ok
+
+      assert [{:reindex, :relations, [^id]}] = IndexWorkerMock.calls()
+    end
+
+    test "calls reindex with all relation ids when resource_ids is :all" do
+      target_type = "business_concept"
+      relations = insert_list(10, :relation, target_type: target_type, deleted_at: nil)
+
+      _quality_controls_data_structures =
+        insert_list(10, :relation,
+          source_type: "quality_control",
+          target_type: "data_structure",
+          deleted_at: nil
+        )
+
+      assert Resources.refresh_search_data(:concepts, :all) == :ok
+
+      assert [{:reindex, :relations, ids}] = IndexWorkerMock.calls()
+      assert Enum.sort(ids) == Enum.sort(Enum.map(relations, & &1.id))
+    end
+
+    test "calls for quality control resources" do
+      source_id = :rand.uniform(100_000)
+
+      relation =
+        insert(:relation, source_type: "quality_control", source_id: source_id, deleted_at: nil)
+
+      insert(:relation, source_type: "business_concept", source_id: source_id, deleted_at: nil)
+      insert(:relation, source_type: "data_structure", source_id: source_id, deleted_at: nil)
+
+      assert Resources.refresh_search_data(:quality_controls, [source_id]) == :ok
+
+      assert [{:reindex, :relations, [id]}] = IndexWorkerMock.calls()
+      assert id == relation.id
+    end
+  end
+
+  describe "search_data/1" do
+    test "returns search data for concepts" do
+      bg_store_mock = :bg_mock
+      bg_schema_mock = :bg_schema_mock
+      dd_store_mock = :dd_mock
+      dd_schema_mock = :dd_schema_mock
+
+      structure = %{data_structure_id: System.unique_integer([:positive]), name: "structure_name"}
+      concept = %{business_concept_id: System.unique_integer([:positive]), name: "concept_name"}
+
+      relation =
+        insert(:relation,
+          source_id: concept.business_concept_id,
+          target_id: structure.data_structure_id,
+          source_type: "business_concept",
+          target_type: "data_structure"
+        )
+
+      Mox.expect(MockClusterHandler, :call, 4, fn
+        :bg, TdBg.BusinessConcept.Search, :store, [] ->
+          {:ok, %{schema: bg_schema_mock, store: bg_store_mock}}
+
+        :dd, TdDd.DataStructures.Search, :store, [] ->
+          {:ok, %{schema: dd_schema_mock, store: dd_store_mock}}
+
+        :bg, ^bg_store_mock, :fetch, [^bg_schema_mock, _param_concept_ids] ->
+          {:ok, [concept]}
+
+        :dd, ^dd_store_mock, :fetch, [^dd_schema_mock, _param_data_structure_ids] ->
+          {:ok, [structure]}
+      end)
+
+      assert Resources.search_data([relation]) == %{
+               "business_concept" => %{concept.business_concept_id => concept},
+               "data_structure" => %{structure.data_structure_id => structure}
+             }
+    end
+
+    test "returns search data for quality controls" do
+      qx_store_mock = :qx_mock
+      bg_store_mock = :bg_mock
+      bg_schema_mock = :bg_schema_mock
+      qx_schema_mock = :qx_schema_mock
+
+      concept = %{business_concept_id: :rand.uniform(100_000), name: "concept_name"}
+
+      quality_control = %{
+        quality_control_id: :rand.uniform(100_000),
+        name: "quality_control_name"
+      }
+
+      relation =
+        insert(:relation,
+          source_id: concept.business_concept_id,
+          target_id: quality_control.quality_control_id,
+          source_type: "business_concept",
+          target_type: "quality_control",
+          deleted_at: nil
+        )
+
+      Mox.expect(MockClusterHandler, :call, 4, fn
+        :bg, TdBg.BusinessConcept.Search, :store, [] ->
+          {:ok, %{schema: bg_schema_mock, store: bg_store_mock}}
+
+        :qx, TdQx.Search, :store, [:quality_control_versions] ->
+          {:ok, %{schema: qx_schema_mock, store: qx_store_mock}}
+
+        :bg, ^bg_store_mock, :fetch, [^bg_schema_mock, _param_concept_ids] ->
+          {:ok, [concept]}
+
+        :qx, ^qx_store_mock, :fetch, [^qx_schema_mock, param_quality_control_ids] ->
+          assert param_quality_control_ids == [
+                   quality_control_ids: [quality_control.quality_control_id]
+                 ]
+
+          {:ok, [quality_control]}
+      end)
+
+      assert Resources.search_data([relation]) == %{
+               "business_concept" => %{concept.business_concept_id => concept},
+               "quality_control" => %{quality_control.quality_control_id => quality_control}
+             }
+    end
+  end
+
+  describe "delete_stale_relations/2" do
+    test "deletes stale relations" do
+      source_type = "business_concept"
+      source_id = :rand.uniform(100_000)
+
+      %{id: id} =
+        insert(:relation, source_type: source_type, source_id: source_id, deleted_at: nil)
+
+      insert(:relation, source_type: source_type, source_id: source_id + 1, deleted_at: nil)
+      insert(:relation, source_type: "data_structure", source_id: source_id + 2, deleted_at: nil)
+
+      assert {:ok, %{stale_relations: {1, [%{id: ^id}]}}} =
+               Resources.delete_stale_relations(source_type, [source_id])
+
+      assert [{:delete, :relations, [^id]}] = IndexWorkerMock.calls()
+    end
+
+    test "does nothing if there are no stale relations" do
+      relation =
+        insert(:relation,
+          source_type: "data_structure",
+          deleted_at: nil,
+          target_type: "business_concept"
+        )
+
+      assert {:ok, %{stale_relations: {0, []}}} =
+               Resources.delete_stale_relations("data_structure", [relation.source_id + 1])
+    end
+  end
+
+  describe "count_relations/3" do
+    test "returns the number of relations for a given resource type and resource id" do
+      insert(:relation,
+        source_type: "business_concept",
+        source_id: 1,
+        deleted_at: nil,
+        target_type: "data_structure"
+      )
+
+      insert(:relation,
+        source_type: "business_concept",
+        source_id: 1,
+        deleted_at: nil,
+        target_type: "business_concept"
+      )
+
+      insert(:relation,
+        source_type: "business_concept",
+        source_id: 1,
+        target_type: "quality_control"
+      )
+
+      insert(:relation,
+        source_type: "data_structure",
+        source_id: 1,
+        target_type: "business_concept",
+        deleted_at: nil
+      )
+
+      assert Resources.count_relations(source_type: "business_concept", source_id: 1) == 3
+
+      assert Resources.count_relations(
+               source_type: "business_concept",
+               source_id: 1,
+               target_type: "quality_control"
+             ) == 1
+
+      assert Resources.count_relations(source_id: 1) == 4
+      assert Resources.count_relations(target_type: "business_concept") == 2
+      assert Resources.count_relations() == 4
+    end
+  end
+
+  describe "upsert_relations/2" do
+    test "creates relations and updates existing relations" do
+      relation_date = DateTime.add(DateTime.utc_now(), -1, :hour)
+      source_id = System.unique_integer([:positive])
+
+      relation =
+        insert(:relation,
+          source_type: "business_concept",
+          source_id: source_id,
+          target_type: "data_structure",
+          target_id: 1,
+          tag_id: nil,
+          tag: nil,
+          inserted_at: relation_date,
+          updated_at: relation_date
+        )
+
+      relations = [
+        %{
+          source_type: "business_concept",
+          source_id: source_id,
+          target_type: "data_structure",
+          target_id: 1
+        },
+        %{
+          source_type: "business_concept",
+          source_id: source_id,
+          target_type: "business_concept",
+          target_id: 2
+        }
+      ]
+
+      assert {:ok, %{relations: {2, relations}}} =
+               Resources.upsert_relations(relations)
+
+      assert updated_relation = Enum.find(relations, fn %{id: id} -> relation.id == id end)
+      assert DateTime.compare(updated_relation.updated_at, relation_date) == :gt
+
+      assert [inserted_relation] = Enum.reject(relations, fn %{id: id} -> relation.id == id end)
+      assert inserted_relation.source_id == source_id
+      assert inserted_relation.source_type == "business_concept"
+      assert inserted_relation.target_id == 2
+      assert inserted_relation.target_type == "business_concept"
+      assert inserted_relation.tag_id == nil
+    end
+
+    test "upserts existing relations and cleans up stale relations given params" do
+      source_id = System.unique_integer([:positive])
+      source_type = "quality_control"
+      target_type = "data_structure"
+
+      system_relations_to_upsert =
+        insert_list(3, :relation,
+          source_type: source_type,
+          source_id: source_id,
+          target_type: target_type,
+          origin: "td_system",
+          tag_id: nil,
+          tag: nil
+        )
+
+      stale_relation =
+        insert(:relation,
+          source_type: source_type,
+          source_id: source_id,
+          target_type: target_type,
+          origin: "td_system",
+          tag_id: nil,
+          tag: nil
+        )
+
+      manual_relation_to_keep =
+        insert(:relation,
+          source_type: source_type,
+          source_id: source_id,
+          target_type: target_type,
+          origin: nil,
+          tag_id: nil,
+          tag: nil
+        )
+
+      other_target_type_relation =
+        insert(:relation,
+          source_type: source_type,
+          source_id: source_id,
+          target_type: "business_concept",
+          target_id: 2,
+          origin: "td_system",
+          tag_id: nil,
+          tag: nil
+        )
+
+      system_relation_to_insert_params =
+        params_for(:relation,
+          source_type: source_type,
+          source_id: source_id,
+          target_type: target_type,
+          origin: "td_system",
+          tag_id: nil,
+          tag: nil
+        )
+        |> Map.take([:source_id, :source_type, :target_id, :target_type, :origin])
+
+      before = Resources.list_relations()
+      assert Enum.count(before) == 6
+
+      relations =
+        Enum.map(system_relations_to_upsert, fn relation ->
+          %{
+            source_id: relation.source_id,
+            source_type: relation.source_type,
+            target_id: relation.target_id,
+            target_type: relation.target_type,
+            origin: relation.origin
+          }
+        end) ++ [system_relation_to_insert_params]
+
+      cleanup_params = [
+        {:origin, "td_system"},
+        {:source_id, source_id},
+        {:source_type, source_type},
+        {:target_type, target_type}
+      ]
+
+      Mox.expect(MockClusterHandler, :call, 5, fn :qx, TdQx.QualityControls, :get, [^source_id] ->
+        {:ok, %{domain_ids: [1]}}
+      end)
+
+      {:ok, %{relations: {4, _upserted_relations}, stale_relations: {1, [cleanup_relation]}}} =
+        Resources.upsert_relations(relations, cleanup_params: cleanup_params)
+
+      after_deletion = Resources.list_relations()
+      assert Enum.count(after_deletion) == 6
+      assert cleanup_relation.id == stale_relation.id
+
+      for relation <- system_relations_to_upsert do
+        assert Enum.find(after_deletion, fn %{id: id} -> id == relation.id end)
+      end
+
+      assert Enum.find(after_deletion, fn relation ->
+               system_relation_to_insert_params.source_id == relation.source_id and
+                 system_relation_to_insert_params.source_type == relation.source_type and
+                 system_relation_to_insert_params.target_id == relation.target_id and
+                 system_relation_to_insert_params.target_type == relation.target_type and
+                 system_relation_to_insert_params.origin == relation.origin
+             end)
+
+      refute Enum.find(after_deletion, fn relation -> stale_relation.id == relation.id end)
+
+      assert Enum.find(after_deletion, fn relation ->
+               other_target_type_relation.id == relation.id
+             end)
+
+      assert Enum.find(after_deletion, fn relation ->
+               manual_relation_to_keep.id == relation.id
+             end)
+    end
+
+    test "does nothing if there are no relations to upsert or cleanup" do
+      source_id = System.unique_integer([:positive])
+      source_type = "quality_control"
+      target_type = "data_structure"
+
+      cleanup_params = [
+        {:origin, "td_system"},
+        {:source_id, source_id},
+        {:source_type, source_type},
+        {:target_type, target_type}
+      ]
+
+      _manual_relation_to_keep =
+        insert(:relation,
+          source_type: source_type,
+          source_id: source_id,
+          target_type: target_type,
+          origin: nil,
+          tag_id: nil,
+          tag: nil
+        )
+
+      _other_target_type_relation =
+        insert(:relation,
+          source_type: source_type,
+          source_id: source_id,
+          target_type: "business_concept",
+          target_id: 2,
+          origin: "td_system",
+          tag_id: nil,
+          tag: nil
+        )
+
+      assert {:ok, %{relations: {0, []}, stale_relations: {0, []}}} =
+               Resources.upsert_relations([], cleanup_params: cleanup_params)
     end
   end
 

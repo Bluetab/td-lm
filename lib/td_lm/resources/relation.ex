@@ -15,7 +15,8 @@ defmodule TdLm.Resources.Relation do
     "data_field",
     "data_structure",
     "ingest",
-    "implementation_ref"
+    "implementation_ref",
+    "quality_control"
   ]
 
   @valid_create_statuses ["pending"]
@@ -61,6 +62,9 @@ defmodule TdLm.Resources.Relation do
     |> validate_inclusion(:source_type, @valid_types)
     |> validate_inclusion(:target_type, @valid_types)
     |> validate_inclusion(:status, @valid_create_statuses)
+    |> unique_constraint([:source_id, :source_type, :target_id, :target_type, :tag_id],
+      name: :relations_unique_index
+    )
     |> assoc_constraint(:tag)
     |> validate_change(:context, &Validation.validate_safe/2)
   end
