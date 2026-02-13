@@ -4,6 +4,7 @@ defmodule TdLm.Relations.ElasticDocument do
   """
 
   alias Elasticsearch.Document
+  alias TdCache.I18nCache
   alias TdCore.Search.ElasticDocument
   alias TdCore.Search.ElasticDocumentProtocol
   alias TdLm.Resources.Relation
@@ -19,7 +20,8 @@ defmodule TdLm.Relations.ElasticDocument do
       :target_type,
       :origin,
       :status,
-      :updated_at
+      :updated_at,
+      :deleted_at
     ]
 
     @impl Document
@@ -30,16 +32,17 @@ defmodule TdLm.Relations.ElasticDocument do
 
     @impl Document
     def encode(%Relation{} = relation) do
-      source_data =
-        Map.get(relation, :source_data)
-
-      target_data =
-        Map.get(relation, :target_data)
+      {:ok, default_locale} = I18nCache.get_default_locale()
+      active_locales = I18nCache.get_active_locales!() -- [default_locale]
+      name_fields = fields_for_locales(active_locales)
+      source_data = Map.get(relation, :source_data)
+      target_data = Map.get(relation, :target_data)
 
       source_domains = Map.get(source_data, :domain_ids, [])
       source_name = Map.get(source_data, :name, "")
       target_domains = Map.get(target_data, :domain_ids, [])
       target_name = Map.get(target_data, :name, "")
+      deleted = not is_nil(relation.deleted_at)
 
       relation
       |> Map.take(@keys)
@@ -51,17 +54,60 @@ defmodule TdLm.Relations.ElasticDocument do
       |> Map.put(:target_name, target_name)
       |> Map.put(:ngram_target_name, target_name)
       |> Map.put(:tag_type, get_tag_type(relation))
+      |> Map.put(:source_data, source_data)
+      |> Map.put(:target_data, target_data)
+      |> Map.put(:deleted, deleted)
+      |> add_locale_fields(source_data, :source, name_fields)
+      |> add_locale_fields(target_data, :target, name_fields)
     end
 
     defp get_tag_type(%{tag: %{value: %{"type" => type}}}), do: type
     defp get_tag_type(_), do: nil
+
+    defp add_locale_fields(payload, data, type, name_fields) do
+      Enum.reduce(name_fields, payload, fn field, acc ->
+        default = Map.get(payload, field[type][:default])
+        Map.put(acc, field[type][:name], Map.get(data, field[:name], default))
+      end)
+    end
+
+    defp fields_for_locales(active_locales) do
+      Enum.reduce(active_locales, [], fn locale, acc ->
+        acc ++
+          [
+            %{
+              name: String.to_atom("name_#{locale}"),
+              source: %{
+                name: String.to_atom("source_name_#{locale}"),
+                default: String.to_atom("source_name")
+              },
+              target: %{
+                name: String.to_atom("target_name_#{locale}"),
+                default: String.to_atom("target_name")
+              }
+            },
+            %{
+              name: String.to_atom("ngram_name_#{locale}"),
+              source: %{
+                name: String.to_atom("ngram_source_name_#{locale}"),
+                default: String.to_atom("ngram_source_name")
+              },
+              target: %{
+                name: String.to_atom("ngram_target_name_#{locale}"),
+                default: String.to_atom("ngram_target_name")
+              }
+            }
+          ]
+      end)
+    end
   end
 
   defimpl ElasticDocumentProtocol, for: Relation do
     use ElasticDocument
 
+    @translatable_fields ~w(source_name target_name ngram_source_name ngram_target_name)a
     @search_fields ~w(source_name target_name)
-    @search_as_you_type_fields ~w(ngram_source_name ngram_target_name)
+    @search_as_you_type_fields ~w(ngram_source_name* ngram_target_name*)
     @exact_fields ~w(source_name target_name)
 
     def mappings(_) do
@@ -81,20 +127,41 @@ defmodule TdLm.Relations.ElasticDocument do
         target_domain_ids: %{type: "long"},
         origin: %{type: "keyword"},
         status: %{type: "keyword"},
-        updated_at: %{type: "date", format: "strict_date_optional_time||epoch_millis"}
+        source_data: %{
+          dynamic: false,
+          properties: %{
+            confidential: %{type: "boolean", fields: @raw},
+            domain_ids: %{type: "long"},
+            status: %{type: "keyword"}
+          }
+        },
+        target_data: %{
+          dynamic: false,
+          properties: %{
+            confidential: %{type: "boolean", fields: @raw},
+            domain_ids: %{type: "long"},
+            status: %{type: "keyword"}
+          }
+        },
+        updated_at: %{type: "date", format: "strict_date_optional_time||epoch_millis"},
+        deleted_at: %{type: "date", format: "strict_date_optional_time||epoch_millis"},
+        deleted: %{type: "boolean"}
       }
 
       settings = Cluster.setting(:relations)
 
-      %{mappings: %{properties: properties}, settings: settings}
+      %{
+        mappings: %{properties: add_locales_fields_mapping(properties, @translatable_fields)},
+        settings: settings
+      }
     end
 
     def query_data(_) do
       %{
         query: %{
-          simple: @search_fields,
+          simple: add_locales(@search_fields),
           as_you_type: @search_as_you_type_fields,
-          exact: @exact_fields
+          exact: add_locales(@exact_fields)
         },
         aggs: aggregations(nil)
       }
@@ -113,6 +180,9 @@ defmodule TdLm.Relations.ElasticDocument do
         "target_taxonomy" => %{
           terms: %{field: "target_domain_ids", size: Cluster.get_size_field("target_taxonomy")},
           meta: %{type: "domain"}
+        },
+        "deleted" => %{
+          terms: %{field: "deleted", size: Cluster.get_size_field("deleted")}
         }
       }
     end

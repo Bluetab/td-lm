@@ -27,7 +27,7 @@ defmodule TdLm.Search.Store do
       |> Repo.stream()
       |> Repo.stream_preload(1000, :tag)
 
-    cache_data = Resources.get_cache_data(relations)
+    cache_data = Resources.search_data(relations)
     Tasks.log_progress(count)
     stream_relations_map(relations, cache_data)
   end
@@ -55,24 +55,22 @@ defmodule TdLm.Search.Store do
       |> Repo.stream()
       |> Repo.stream_preload(1000, :tag)
 
+    cache_data = Resources.search_data(relations)
     Tasks.log_progress(count)
-    cache_data = Resources.get_cache_data(relations)
-
     stream_relations_map(relations, cache_data)
   end
 
   defp base_query(Relation = schema) do
     schema
-    |> where([r], r.source_type == "business_concept")
-    |> where([r], r.target_type == "data_structure")
-    |> where([r], is_nil(r.deleted_at))
+    |> where([r], r.source_type in ["business_concept", "quality_control"])
+    |> where([r], r.target_type in ["data_structure", "quality_control"])
   end
 
   defp stream_relations_map(relations, cache_data) do
-    Stream.map(relations, fn relation ->
-      source_data = Resources.get_data(relation.source_type, relation.source_id, cache_data)
-
-      target_data = Resources.get_data(relation.target_type, relation.target_id, cache_data)
+    relations
+    |> Stream.map(fn relation ->
+      source_data = get_in(cache_data, [relation.source_type, relation.source_id]) || %{}
+      target_data = get_in(cache_data, [relation.target_type, relation.target_id]) || %{}
 
       if map_size(source_data) > 0 or map_size(target_data) > 0 do
         relation

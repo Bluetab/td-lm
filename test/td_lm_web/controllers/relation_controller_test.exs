@@ -831,7 +831,12 @@ defmodule TdLmWeb.RelationControllerTest do
                |> post(Routes.relation_path(conn, :create), relation: params)
                |> json_response(:bad_request)
 
-      params = %{"source_id" => nil, "source_type" => "foo"}
+      params = %{
+        "source_id" => nil,
+        "source_type" => "foo",
+        "target_type" => "bar",
+        "target_id" => 1
+      }
 
       assert %{"errors" => _} =
                conn
@@ -865,6 +870,131 @@ defmodule TdLmWeb.RelationControllerTest do
       assert event == "relation_created"
       assert %{"event_via" => "single_update", "id" => ^relation_id} = Jason.decode!(payload)
     end
+
+    @tag authentication: [
+           permissions: ["link_quality_control_to_concept"]
+         ]
+    test "creates relation with business concept and quality control", %{
+      conn: conn,
+      domain: %{id: domain_id}
+    } do
+      tag = insert(:tag)
+
+      %{
+        "context" => context,
+        "source_id" => source_id,
+        "source_type" => source_type,
+        "target_id" => target_id,
+        "target_type" => target_type
+      } =
+        params =
+        string_params_for(:relation,
+          source_id: System.unique_integer([:positive]),
+          source_type: "business_concept",
+          target_type: "quality_control"
+        )
+
+      Mox.expect(MockClusterHandler, :call, fn :qx, TdQx.QualityControls, :get, [^target_id] ->
+        {:ok, %{domain_ids: [domain_id]}}
+      end)
+
+      assert %{"data" => data} =
+               conn
+               |> post(Routes.relation_path(conn, :create),
+                 relation: Map.put(params, "tag_ids", [tag.id])
+               )
+               |> json_response(:created)
+
+      assert %{
+               "id" => _id,
+               "source_id" => ^source_id,
+               "source_type" => ^source_type,
+               "target_id" => ^target_id,
+               "target_type" => ^target_type,
+               "context" => ^context,
+               "tags" => [_],
+               "tag_type" => tag_type
+             } = data
+
+      assert tag_type == tag.value["type"]
+    end
+
+    @tag authentication: [
+           permissions: ["link_quality_control_to_structure"]
+         ]
+    test "creates relation with quality control and data structure", %{
+      conn: conn,
+      domain: %{id: domain_id}
+    } do
+      tag = insert(:tag)
+      quality_control_id = System.unique_integer([:positive])
+
+      %{
+        "context" => context,
+        "source_id" => source_id,
+        "source_type" => source_type,
+        "target_id" => target_id,
+        "target_type" => target_type
+      } =
+        params =
+        string_params_for(:relation,
+          source_id: quality_control_id,
+          source_type: "quality_control",
+          target_type: "data_structure"
+        )
+
+      Mox.expect(MockClusterHandler, :call, 2, fn :qx,
+                                                  TdQx.QualityControls,
+                                                  :get,
+                                                  [^quality_control_id] ->
+        {:ok, %{domain_ids: [domain_id]}}
+      end)
+
+      assert %{"data" => data} =
+               conn
+               |> post(Routes.relation_path(conn, :create),
+                 relation: Map.put(params, "tag_ids", [tag.id])
+               )
+               |> json_response(:created)
+
+      assert %{
+               "id" => _id,
+               "source_id" => ^source_id,
+               "source_type" => ^source_type,
+               "target_id" => ^target_id,
+               "target_type" => ^target_type,
+               "context" => ^context,
+               "tags" => [_],
+               "tag_type" => tag_type
+             } = data
+
+      assert tag_type == tag.value["type"]
+    end
+
+    @tag authentication: [user_name: "not_an_admin"]
+    test "error when user has not permissions to create a quality control to data structure link",
+         %{conn: conn} do
+      quality_control_id = System.unique_integer([:positive])
+
+      params =
+        string_params_for(:relation,
+          source_id: quality_control_id,
+          source_type: "quality_control",
+          target_type: "data_structure"
+        )
+
+      Mox.expect(MockClusterHandler, :call, fn :qx,
+                                               TdQx.QualityControls,
+                                               :get,
+                                               [^quality_control_id] ->
+        {:ok, %{domain_ids: [1]}}
+      end)
+
+      assert %{"errors" => _} =
+               conn
+               |> post(Routes.relation_path(conn, :create), relation: params)
+               |> json_response(:forbidden)
+    end
   end
 
   describe "delete relation" do
@@ -895,6 +1025,8 @@ defmodule TdLmWeb.RelationControllerTest do
       conn: conn,
       relation: %{id: relation_id, target_id: target_id} = relation
     } do
+      Redix.del!(@stream)
+
       assert conn
              |> delete(Routes.relation_path(conn, :delete, relation))
              |> response(:no_content)
@@ -906,6 +1038,114 @@ defmodule TdLmWeb.RelationControllerTest do
 
       assert %{"event_via" => "single_update", "id" => ^relation_id, "target_id" => ^target_id} =
                Jason.decode!(payload)
+    end
+
+    @tag authentication: [
+           permissions: ["link_quality_control_to_concept"]
+         ]
+    test "deletes relation between quality control and business concept", %{
+      conn: conn,
+      domain: %{id: domain_id}
+    } do
+      quality_control_id = System.unique_integer([:positive])
+
+      relation =
+        insert(:relation,
+          source_type: "business_concept",
+          source_id: System.unique_integer([:positive]),
+          target_id: quality_control_id,
+          target_type: "quality_control"
+        )
+
+      Mox.expect(MockClusterHandler, :call, fn :qx,
+                                               TdQx.QualityControls,
+                                               :get,
+                                               [^quality_control_id] ->
+        {:ok, %{domain_ids: [domain_id]}}
+      end)
+
+      assert conn
+             |> delete(Routes.relation_path(conn, :delete, relation))
+             |> response(:no_content)
+    end
+
+    @tag authentication: [
+           permissions: ["link_quality_control_to_structure"]
+         ]
+    test "deletes relation between quality control and data structure", %{
+      conn: conn,
+      domain: %{id: domain_id}
+    } do
+      quality_control_id = System.unique_integer([:positive])
+
+      relation =
+        insert(:relation,
+          source_type: "quality_control",
+          source_id: quality_control_id,
+          target_type: "data_structure"
+        )
+
+      Mox.expect(MockClusterHandler, :call, 2, fn :qx,
+                                                  TdQx.QualityControls,
+                                                  :get,
+                                                  [^quality_control_id] ->
+        {:ok, %{domain_ids: [domain_id]}}
+      end)
+
+      assert conn
+             |> delete(Routes.relation_path(conn, :delete, relation))
+             |> response(:no_content)
+    end
+
+    @tag authentication: [user_name: "not_an_admin"]
+    test "error when user has not permissions to delete a quality control to business concept link",
+         %{conn: conn} do
+      quality_control_id = System.unique_integer([:positive])
+
+      relation =
+        insert(:relation,
+          source_type: "business_concept",
+          source_id: 1,
+          target_id: quality_control_id,
+          target_type: "quality_control"
+        )
+
+      Mox.expect(MockClusterHandler, :call, fn :qx,
+                                               TdQx.QualityControls,
+                                               :get,
+                                               [^quality_control_id] ->
+        {:ok, %{domain_ids: [1]}}
+      end)
+
+      assert %{"errors" => _} =
+               conn
+               |> delete(Routes.relation_path(conn, :delete, relation))
+               |> json_response(:forbidden)
+    end
+
+    @tag authentication: [user_name: "not_an_admin"]
+    test "error when user has not permissions to delete a quality control to data structure link",
+         %{conn: conn} do
+      quality_control_id = System.unique_integer([:positive])
+
+      relation =
+        insert(:relation,
+          source_type: "quality_control",
+          source_id: quality_control_id,
+          target_type: "data_structure"
+        )
+
+      Mox.expect(MockClusterHandler, :call, fn :qx,
+                                               TdQx.QualityControls,
+                                               :get,
+                                               [^quality_control_id] ->
+        {:ok, %{domain_ids: [1]}}
+      end)
+
+      assert %{"errors" => _} =
+               conn
+               |> delete(Routes.relation_path(conn, :delete, relation))
+               |> json_response(:forbidden)
     end
   end
 

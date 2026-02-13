@@ -136,7 +136,8 @@ defmodule TdLm.Resources.RelationTest do
                    "data_field",
                    "data_structure",
                    "ingest",
-                   "implementation_ref"
+                   "implementation_ref",
+                   "quality_control"
                  ]}
               ]} =
                errors[:source_type]

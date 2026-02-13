@@ -80,7 +80,8 @@ defmodule TdLm.MockHelper do
   end
 
   defp handle_cluster_call(
-         {:bg, TdBg.BusinessConcepts, :get_unique_concept, [arg_name, arg_domain_id, arg_concept_type]},
+         {:bg, TdBg.BusinessConcepts, :get_unique_concept,
+          [arg_name, arg_domain_id, arg_concept_type]},
          concept_name,
          domain_id,
          concept_type,
@@ -89,11 +90,20 @@ defmodule TdLm.MockHelper do
          _data_structure
        )
        when not is_nil(concept_name) do
-    handle_get_unique_concept(arg_name, arg_domain_id, arg_concept_type, concept_name, domain_id, concept_type, concept)
+    handle_get_unique_concept(
+      arg_name,
+      arg_domain_id,
+      arg_concept_type,
+      concept_name,
+      domain_id,
+      concept_type,
+      concept
+    )
   end
 
   defp handle_cluster_call(
-         {:dd, TdDd.DataStructures, :get_data_structure_by_external_id, [arg_external_id, arg_preload]},
+         {:dd, TdDd.DataStructures, :get_data_structure_by_external_id,
+          [arg_external_id, arg_preload]},
          _concept_name,
          _domain_id,
          _concept_type,
@@ -102,22 +112,49 @@ defmodule TdLm.MockHelper do
          data_structure
        )
        when not is_nil(data_structure_external_id) do
-    handle_get_data_structure(arg_external_id, arg_preload, data_structure_external_id, data_structure)
+    handle_get_data_structure(
+      arg_external_id,
+      arg_preload,
+      data_structure_external_id,
+      data_structure
+    )
   end
 
-  defp handle_cluster_call(other, _concept_name, _domain_id, _concept_type, _concept, _data_structure_external_id, _data_structure) do
+  defp handle_cluster_call(
+         other,
+         _concept_name,
+         _domain_id,
+         _concept_type,
+         _concept,
+         _data_structure_external_id,
+         _data_structure
+       ) do
     raise "Unexpected call: #{inspect(other)}"
   end
 
-  defp handle_get_unique_concept(arg_name, arg_domain_id, arg_concept_type, concept_name, domain_id, concept_type, concept) do
-    if arg_name == concept_name and arg_domain_id == domain_id and arg_concept_type == concept_type do
+  defp handle_get_unique_concept(
+         arg_name,
+         arg_domain_id,
+         arg_concept_type,
+         concept_name,
+         domain_id,
+         concept_type,
+         concept
+       ) do
+    if arg_name == concept_name and arg_domain_id == domain_id and
+         arg_concept_type == concept_type do
       {:ok, concept}
     else
       raise "Unexpected get_unique_concept call: name=#{arg_name}, domain_id=#{arg_domain_id}, concept_type=#{inspect(arg_concept_type)}"
     end
   end
 
-  defp handle_get_data_structure(arg_external_id, arg_preload, data_structure_external_id, data_structure) do
+  defp handle_get_data_structure(
+         arg_external_id,
+         arg_preload,
+         data_structure_external_id,
+         data_structure
+       ) do
     if arg_external_id == data_structure_external_id and arg_preload == :latest_version do
       {:ok, data_structure}
     else

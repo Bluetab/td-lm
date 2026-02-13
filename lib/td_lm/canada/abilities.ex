@@ -8,6 +8,7 @@ defmodule TdLm.Canada.Abilities do
   alias TdLm.Canada.DataStructureAbilities
   alias TdLm.Canada.ImplementationAbilities
   alias TdLm.Canada.IngestAbilities
+  alias TdLm.Canada.QualityControlAbilities
   alias TdLm.Resources.Relation
 
   defimpl Canada.Can, for: Claims do
@@ -29,12 +30,44 @@ defmodule TdLm.Canada.Abilities do
       can?(claims, action, resource_key)
     end
 
+    def can?(
+          %Claims{} = claims,
+          :create,
+          %{resource_type: "business_concept", target_type: "quality_control"} = params
+        ) do
+      QualityControlAbilities.can?(claims, :link_quality_control_to_concept, params.target_id)
+    end
+
+    def can?(
+          %Claims{} = claims,
+          :delete,
+          %{resource_type: "business_concept", target_type: "quality_control"} = params
+        ) do
+      QualityControlAbilities.can?(claims, :link_quality_control_to_concept, params.target_id)
+    end
+
     def can?(%Claims{} = claims, :search, %{resource_type: "business_concept"} = params) do
       BusinessConceptAbilities.can?(claims, :search, params)
     end
 
     def can?(%Claims{} = claims, :create, %{resource_type: "business_concept"} = params) do
       BusinessConceptAbilities.can?(claims, :create, params)
+    end
+
+    def can?(
+          %Claims{} = claims,
+          :create,
+          %{resource_type: "quality_control", target_type: "data_structure"} = params
+        ) do
+      QualityControlAbilities.can?(claims, :link_quality_control_to_structure, params.resource_id)
+    end
+
+    def can?(
+          %Claims{} = claims,
+          :delete,
+          %{resource_type: "quality_control", target_type: "data_structure"} = params
+        ) do
+      QualityControlAbilities.can?(claims, :link_quality_control_to_structure, params.resource_id)
     end
 
     def can?(%{jti: jti}, action, Relation) when action in [:update_status, :search] do
@@ -92,9 +125,15 @@ defmodule TdLm.Canada.Abilities do
     defp get_resource_key(%Relation{
            source_type: source_type,
            source_id: source_id,
-           target_type: target_type
+           target_type: target_type,
+           target_id: target_id
          }) do
-      %{resource_id: source_id, resource_type: source_type, target_type: target_type}
+      %{
+        resource_id: source_id,
+        resource_type: source_type,
+        target_type: target_type,
+        target_id: target_id
+      }
     end
   end
 end

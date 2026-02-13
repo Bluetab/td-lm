@@ -21,8 +21,6 @@ config :td_lm, TdLm.Repo,
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: 1
 
-config :td_cluster, TdCluster.ClusterHandler, MockClusterHandler
-
 config :td_core, TdCore.Search.Cluster, api: ElasticsearchMock
 config :td_core, TdCore.Search.IndexWorker, TdCore.Search.IndexWorkerMock
 

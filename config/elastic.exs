@@ -29,6 +29,16 @@ config :td_core, TdCore.Search.Cluster,
               tokenizer: "whitespace",
               filter: ["lowercase", "word_delimiter", "asciifolding"]
             },
+            es_analyzer: %{
+              type: "custom",
+              tokenizer: "whitespace",
+              filter: ["lowercase", "word_delimiter", "asciifolding", "es_stem"]
+            },
+            en_analyzer: %{
+              type: "custom",
+              tokenizer: "whitespace",
+              filter: ["lowercase", "word_delimiter", "asciifolding", "porter_stem"]
+            },
             exact_analyzer: %{
               type: "custom",
               tokenizer: "split_on_non_word",

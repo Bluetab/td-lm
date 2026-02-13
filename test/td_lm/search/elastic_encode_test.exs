@@ -2,6 +2,10 @@ defmodule TdLm.Search.ElasticEncodeTest do
   use TdLmWeb.ConnCase
 
   alias Elasticsearch.Document
+  alias TdCache.I18nCache
+  alias TdCache.Redix
+
+  @locales ["en", "es"]
 
   describe "encode/1" do
     test "Encode the correct information from relations" do
@@ -42,6 +46,42 @@ defmodule TdLm.Search.ElasticEncodeTest do
                tag_type: ^type
              } =
                Document.encode(relation)
+    end
+
+    test "Encode the correct information from relations with locales" do
+      on_exit(fn -> Redix.del!("i18n:*") end)
+
+      I18nCache.put_default_locale("en")
+
+      Enum.each(@locales, fn locale ->
+        I18nCache.put(locale, %{message_id: "#{locale}_id", definition: "#{locale}"})
+      end)
+
+      relation = insert(:relation, source_type: "business_concept", target_type: "data_structure")
+
+      source_data = %{
+        name: "Source",
+        name_es: "Origen",
+        ngram_name: "Source",
+        ngram_name_es: "Origen"
+      }
+
+      target_data = %{name: "Target", ngram_name: "Target"}
+
+      relation =
+        relation
+        |> Map.put(:source_data, source_data)
+        |> Map.put(:target_data, target_data)
+
+      encoded = Document.encode(relation)
+      assert encoded.source_name == "Source"
+      assert encoded.source_name_es == "Origen"
+      assert encoded.target_name == "Target"
+      assert encoded.target_name_es == "Target"
+      assert encoded.ngram_source_name == "Source"
+      assert encoded.ngram_source_name_es == "Origen"
+      assert encoded.ngram_target_name == "Target"
+      assert encoded.ngram_target_name_es == "Target"
     end
   end
 
