@@ -4,6 +4,9 @@
 
 ### Added
 
+- [TD-7696]:
+  - Access qx and bg store data for elastic indexing
+  - Enable indexing source and target data in elastic
 - [TD-7861]:
   - Bulk upsert relations from third party services
   - Fetch store data for data structure indexing
