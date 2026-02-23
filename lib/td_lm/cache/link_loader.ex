@@ -29,7 +29,8 @@ defmodule TdLm.Cache.LinkLoader do
   end
 
   def refresh(ids) when is_list(ids) do
-    GenServer.call(__MODULE__, {:refresh, ids})
+    timeout = Application.get_env(:td_cache, :link_cache)[:timeout]
+    GenServer.call(__MODULE__, {:refresh, ids}, timeout)
   end
 
   def refresh(id) do

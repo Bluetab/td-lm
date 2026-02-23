@@ -58,6 +58,8 @@ config :td_cache, :audit,
   service: "td_lm",
   stream: "audit:events"
 
+config :td_cache, :link_cache, timeout: 120_000
+
 config :td_cache, :event_stream,
   consumer_id: "default",
   consumer_group: "lm",
