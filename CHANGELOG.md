@@ -10,6 +10,8 @@
 - [TD-7861]:
   - Bulk upsert relations from third party services
   - Fetch store data for data structure indexing
+- [TD-7883]
+  - Added environment variable to customize cache timeout
 
 ### Fixed
 
