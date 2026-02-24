@@ -5,7 +5,22 @@ defmodule TdLm.SearchTest do
 
   alias TdLM.Search
 
-  @permissions ["manage_business_concept_links", "link_data_structure"]
+  @permissions [
+    "view_draft_business_concepts",
+    "manage_business_concept_links",
+    "link_data_structure"
+  ]
+
+  @concept_permissions [
+    "manage_business_concept_links",
+    "manage_confidential_business_concepts",
+    "view_approval_pending_business_concepts",
+    "view_deprecated_business_concepts",
+    "view_draft_business_concepts",
+    "view_published_business_concepts",
+    "view_rejected_business_concepts",
+    "view_versioned_business_concepts"
+  ]
 
   @aggs %{
     "foo" => %{
@@ -19,10 +34,107 @@ defmodule TdLm.SearchTest do
     for role <- ["admin", "service"] do
       @tag authentication: [role: role]
       test "searches and returns filters for #{role} account", %{claims: claims} do
-        ElasticsearchMock
-        |> expect(:request, fn
+        Mox.expect(MockClusterHandler, :call, 6, fn
+          :bg, TdBg.Permissions, :get_default_permissions, [] ->
+            {:ok, @concept_permissions}
+
+          :bg, TdBg.BusinessConcepts.Search.Query, :build_filters, [permissions, opts] ->
+            assert permissions == %{
+                     "manage_business_concept_links" => :all,
+                     "manage_confidential_business_concepts" => :all,
+                     "view_approval_pending_business_concepts" => :all,
+                     "view_deprecated_business_concepts" => :all,
+                     "view_draft_business_concepts" => :all,
+                     "view_published_business_concepts" => :all,
+                     "view_rejected_business_concepts" => :all,
+                     "view_versioned_business_concepts" => :all
+                   }
+
+            assert opts[:field_prefix] in ["source_data.", "target_data."]
+
+            {:ok, [%{match_all: %{}}]}
+
+          :dd, TdDd.DataStructures.Search.Query, :build_filters, [permissions, opts] ->
+            assert permissions == %{
+                     "view_data_structure" => :all,
+                     "manage_confidential_structures" => :all
+                   }
+
+            assert opts[:field_prefix] in ["source_data.", "target_data."]
+
+            {:ok, %{match_all: %{}}}
+        end)
+
+        expect(ElasticsearchMock, :request, fn
           _, :post, "/relations/_search", %{aggs: _, query: query, size: 0}, _ ->
-            assert %{bool: %{filter: %{match_all: %{}}}} == query
+            assert %{
+                     bool: %{
+                       filter: [
+                         %{
+                           bool: %{
+                             should: [
+                               %{
+                                 bool: %{
+                                   filter: [
+                                     %{term: %{"target_type" => "business_concept"}},
+                                     %{match_all: %{}}
+                                   ]
+                                 }
+                               },
+                               %{
+                                 bool: %{
+                                   filter: [
+                                     %{term: %{"target_type" => "data_structure"}},
+                                     %{match_all: %{}}
+                                   ]
+                                 }
+                               },
+                               %{
+                                 bool: %{
+                                   filter: [
+                                     %{term: %{"target_type" => "quality_control"}},
+                                     %{match_all: %{}}
+                                   ]
+                                 }
+                               }
+                             ]
+                           }
+                         },
+                         %{
+                           bool: %{
+                             should: [
+                               %{
+                                 bool: %{
+                                   filter: [
+                                     %{term: %{"source_type" => "business_concept"}},
+                                     %{match_all: %{}}
+                                   ]
+                                 }
+                               },
+                               %{
+                                 bool: %{
+                                   filter: [
+                                     %{term: %{"source_type" => "data_structure"}},
+                                     %{match_all: %{}}
+                                   ]
+                                 }
+                               },
+                               %{
+                                 bool: %{
+                                   filter: [
+                                     %{term: %{"source_type" => "quality_control"}},
+                                     %{match_all: %{}}
+                                   ]
+                                 }
+                               }
+                             ]
+                           }
+                         }
+                       ],
+                       must_not: %{exists: %{field: "deleted_at"}}
+                     }
+                   } == query
+
             SearchHelpers.aggs_response(@aggs)
         end)
 
@@ -36,10 +148,151 @@ defmodule TdLm.SearchTest do
       claims: claims,
       domain: %{id: domain_id}
     } do
-      ElasticsearchMock
-      |> expect(:request, fn
+      Mox.expect(MockClusterHandler, :call, 6, fn
+        :bg, TdBg.Permissions, :get_default_permissions, [] ->
+          {:ok, @concept_permissions}
+
+        :bg, TdBg.BusinessConcepts.Search.Query, :build_filters, [permissions, opts] ->
+          assert permissions == %{
+                   "manage_business_concept_links" => [domain_id],
+                   "manage_confidential_business_concepts" => :none,
+                   "view_approval_pending_business_concepts" => :none,
+                   "view_deprecated_business_concepts" => :none,
+                   "view_draft_business_concepts" => [domain_id],
+                   "view_published_business_concepts" => :none,
+                   "view_rejected_business_concepts" => :none,
+                   "view_versioned_business_concepts" => :none
+                 }
+
+          assert opts[:field_prefix] in ["source_data.", "target_data."]
+
+          {:ok,
+           [
+             %{
+               bool: %{
+                 filter: [%{term: %{"status" => "draft"}}, %{term: %{"domain_ids" => domain_id}}]
+               }
+             },
+             %{bool: %{must_not: [%{term: %{"#{opts[:field_prefix]}confidential.raw" => true}}]}},
+             %{term: %{"#{opts[:field_prefix]}domain_ids" => domain_id}}
+           ]}
+
+        :dd, TdDd.DataStructures.Search.Query, :build_filters, [permissions, opts] ->
+          assert permissions == %{
+                   "manage_confidential_structures" => :none,
+                   "link_data_structure" => [domain_id]
+                 }
+
+          assert opts[:field_prefix] in ["source_data.", "target_data."]
+
+          {:ok,
+           [
+             %{term: %{"#{opts[:field_prefix]}domain_ids" => domain_id}},
+             %{term: %{"#{opts[:field_prefix]}confidential" => false}}
+           ]}
+      end)
+
+      expect(ElasticsearchMock, :request, fn
         _, :post, "/relations/_search", %{aggs: _, query: query, size: 0}, _ ->
-          assert %{bool: %{filter: %{term: %{"domain_ids" => ^domain_id}}}} = query
+          assert query == %{
+                   bool: %{
+                     filter: [
+                       %{
+                         bool: %{
+                           should: [
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"target_type" => "business_concept"}},
+                                   %{
+                                     bool: %{
+                                       filter: [
+                                         %{term: %{"status" => "draft"}},
+                                         %{term: %{"domain_ids" => domain_id}}
+                                       ]
+                                     }
+                                   },
+                                   %{
+                                     bool: %{
+                                       must_not: [
+                                         %{term: %{"target_data.confidential.raw" => true}}
+                                       ]
+                                     }
+                                   },
+                                   %{term: %{"target_data.domain_ids" => domain_id}}
+                                 ]
+                               }
+                             },
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"target_type" => "data_structure"}},
+                                   %{term: %{"target_data.domain_ids" => domain_id}},
+                                   %{term: %{"target_data.confidential" => false}}
+                                 ]
+                               }
+                             },
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"target_type" => "quality_control"}},
+                                   %{match_none: %{}}
+                                 ]
+                               }
+                             }
+                           ]
+                         }
+                       },
+                       %{
+                         bool: %{
+                           should: [
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"source_type" => "business_concept"}},
+                                   %{
+                                     bool: %{
+                                       filter: [
+                                         %{term: %{"status" => "draft"}},
+                                         %{term: %{"domain_ids" => domain_id}}
+                                       ]
+                                     }
+                                   },
+                                   %{
+                                     bool: %{
+                                       must_not: [
+                                         %{term: %{"source_data.confidential.raw" => true}}
+                                       ]
+                                     }
+                                   },
+                                   %{term: %{"source_data.domain_ids" => domain_id}}
+                                 ]
+                               }
+                             },
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"source_type" => "data_structure"}},
+                                   %{term: %{"source_data.domain_ids" => domain_id}},
+                                   %{term: %{"source_data.confidential" => false}}
+                                 ]
+                               }
+                             },
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"source_type" => "quality_control"}},
+                                   %{match_none: %{}}
+                                 ]
+                               }
+                             }
+                           ]
+                         }
+                       }
+                     ],
+                     must_not: %{exists: %{field: "deleted_at"}}
+                   }
+                 }
 
           SearchHelpers.aggs_response(@aggs)
       end)
@@ -49,27 +302,162 @@ defmodule TdLm.SearchTest do
                 "foo" => %{
                   values: ["bar", "baz"]
                 }
-              }} = Search.get_filter_values(claims, %{})
+              }} = Search.get_filter_values(claims, %{"linkable" => true})
     end
 
     @tag authentication: [role: "user", permissions: @permissions]
     test "include filters from request parameters", %{claims: claims, domain: %{id: domain_id}} do
-      ElasticsearchMock
-      |> expect(:request, fn
+      Mox.expect(MockClusterHandler, :call, 6, fn
+        :bg, TdBg.Permissions, :get_default_permissions, [] ->
+          {:ok, @concept_permissions}
+
+        :bg, TdBg.BusinessConcepts.Search.Query, :build_filters, [permissions, opts] ->
+          assert permissions == %{
+                   "manage_business_concept_links" => [domain_id],
+                   "manage_confidential_business_concepts" => :none,
+                   "view_approval_pending_business_concepts" => :none,
+                   "view_deprecated_business_concepts" => :none,
+                   "view_draft_business_concepts" => [domain_id],
+                   "view_published_business_concepts" => :none,
+                   "view_rejected_business_concepts" => :none,
+                   "view_versioned_business_concepts" => :none
+                 }
+
+          assert opts[:field_prefix] in ["source_data.", "target_data."]
+
+          {:ok,
+           [
+             %{
+               bool: %{
+                 filter: [%{term: %{"status" => "draft"}}, %{term: %{"domain_ids" => domain_id}}]
+               }
+             },
+             %{bool: %{must_not: [%{term: %{"#{opts[:field_prefix]}confidential.raw" => true}}]}},
+             %{term: %{"#{opts[:field_prefix]}domain_ids" => domain_id}}
+           ]}
+
+        :dd, TdDd.DataStructures.Search.Query, :build_filters, [permissions, opts] ->
+          assert permissions == %{
+                   "manage_confidential_structures" => :none,
+                   "link_data_structure" => [domain_id]
+                 }
+
+          assert opts[:field_prefix] in ["source_data.", "target_data."]
+
+          {:ok,
+           [
+             %{term: %{"#{opts[:field_prefix]}domain_ids" => domain_id}},
+             %{term: %{"#{opts[:field_prefix]}confidential" => false}}
+           ]}
+      end)
+
+      expect(ElasticsearchMock, :request, fn
         _, :post, "/relations/_search", %{aggs: _, query: query, size: 0}, _ ->
-          assert %{
+          assert query == %{
                    bool: %{
                      filter: [
                        %{term: %{"foo" => "bar"}},
-                       %{term: %{"domain_ids" => ^domain_id}}
-                     ]
+                       %{
+                         bool: %{
+                           should: [
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"target_type" => "business_concept"}},
+                                   %{
+                                     bool: %{
+                                       filter: [
+                                         %{term: %{"status" => "draft"}},
+                                         %{term: %{"domain_ids" => domain_id}}
+                                       ]
+                                     }
+                                   },
+                                   %{
+                                     bool: %{
+                                       must_not: [
+                                         %{term: %{"target_data.confidential.raw" => true}}
+                                       ]
+                                     }
+                                   },
+                                   %{term: %{"target_data.domain_ids" => domain_id}}
+                                 ]
+                               }
+                             },
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"target_type" => "data_structure"}},
+                                   %{term: %{"target_data.domain_ids" => domain_id}},
+                                   %{term: %{"target_data.confidential" => false}}
+                                 ]
+                               }
+                             },
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"target_type" => "quality_control"}},
+                                   %{match_none: %{}}
+                                 ]
+                               }
+                             }
+                           ]
+                         }
+                       },
+                       %{
+                         bool: %{
+                           should: [
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"source_type" => "business_concept"}},
+                                   %{
+                                     bool: %{
+                                       filter: [
+                                         %{term: %{"status" => "draft"}},
+                                         %{term: %{"domain_ids" => domain_id}}
+                                       ]
+                                     }
+                                   },
+                                   %{
+                                     bool: %{
+                                       must_not: [
+                                         %{term: %{"source_data.confidential.raw" => true}}
+                                       ]
+                                     }
+                                   },
+                                   %{term: %{"source_data.domain_ids" => domain_id}}
+                                 ]
+                               }
+                             },
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"source_type" => "data_structure"}},
+                                   %{term: %{"source_data.domain_ids" => domain_id}},
+                                   %{term: %{"source_data.confidential" => false}}
+                                 ]
+                               }
+                             },
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"source_type" => "quality_control"}},
+                                   %{match_none: %{}}
+                                 ]
+                               }
+                             }
+                           ]
+                         }
+                       }
+                     ],
+                     must_not: %{exists: %{field: "deleted_at"}}
                    }
-                 } = query
+                 }
 
           SearchHelpers.aggs_response(@aggs)
       end)
 
-      params = %{"filters" => %{"foo" => ["bar"]}}
+      params = %{"filters" => %{"foo" => ["bar"]}, "linkable" => true}
 
       assert {:ok,
               %{
@@ -88,8 +476,38 @@ defmodule TdLm.SearchTest do
       test "searches relations for #{role} account", %{claims: claims} do
         %{"relations" => relations} = create_relations()
 
-        ElasticsearchMock
-        |> expect(:request, fn
+        Mox.expect(MockClusterHandler, :call, 6, fn
+          :bg, TdBg.Permissions, :get_default_permissions, [] ->
+            {:ok, @concept_permissions}
+
+          :bg, TdBg.BusinessConcepts.Search.Query, :build_filters, [permissions, opts] ->
+            assert permissions == %{
+                     "manage_business_concept_links" => :all,
+                     "manage_confidential_business_concepts" => :all,
+                     "view_approval_pending_business_concepts" => :all,
+                     "view_deprecated_business_concepts" => :all,
+                     "view_draft_business_concepts" => :all,
+                     "view_published_business_concepts" => :all,
+                     "view_rejected_business_concepts" => :all,
+                     "view_versioned_business_concepts" => :all
+                   }
+
+            assert opts[:field_prefix] in ["source_data.", "target_data."]
+
+            {:ok, [%{match_all: %{}}]}
+
+          :dd, TdDd.DataStructures.Search.Query, :build_filters, [permissions, opts] ->
+            assert permissions == %{
+                     "view_data_structure" => :all,
+                     "manage_confidential_structures" => :all
+                   }
+
+            assert opts[:field_prefix] in ["source_data.", "target_data."]
+
+            {:ok, %{match_all: %{}}}
+        end)
+
+        expect(ElasticsearchMock, :request, fn
           _,
           :post,
           "/relations/_search",
@@ -100,7 +518,74 @@ defmodule TdLm.SearchTest do
             query: query
           },
           _ ->
-            assert %{bool: %{filter: %{match_all: %{}}}} = query
+            assert query == %{
+                     bool: %{
+                       filter: [
+                         %{
+                           bool: %{
+                             should: [
+                               %{
+                                 bool: %{
+                                   filter: [
+                                     %{term: %{"target_type" => "business_concept"}},
+                                     %{match_all: %{}}
+                                   ]
+                                 }
+                               },
+                               %{
+                                 bool: %{
+                                   filter: [
+                                     %{term: %{"target_type" => "data_structure"}},
+                                     %{match_all: %{}}
+                                   ]
+                                 }
+                               },
+                               %{
+                                 bool: %{
+                                   filter: [
+                                     %{term: %{"target_type" => "quality_control"}},
+                                     %{match_all: %{}}
+                                   ]
+                                 }
+                               }
+                             ]
+                           }
+                         },
+                         %{
+                           bool: %{
+                             should: [
+                               %{
+                                 bool: %{
+                                   filter: [
+                                     %{term: %{"source_type" => "business_concept"}},
+                                     %{match_all: %{}}
+                                   ]
+                                 }
+                               },
+                               %{
+                                 bool: %{
+                                   filter: [
+                                     %{term: %{"source_type" => "data_structure"}},
+                                     %{match_all: %{}}
+                                   ]
+                                 }
+                               },
+                               %{
+                                 bool: %{
+                                   filter: [
+                                     %{term: %{"source_type" => "quality_control"}},
+                                     %{match_all: %{}}
+                                   ]
+                                 }
+                               }
+                             ]
+                           }
+                         }
+                       ],
+                       must_not: %{exists: %{field: "deleted_at"}}
+                     }
+                   }
+
             SearchHelpers.hits_response(relations)
         end)
 
@@ -134,8 +619,54 @@ defmodule TdLm.SearchTest do
         target_data: %{name: relation_target_name, domain_ids: relation_target_domain_ids}
       } = relation = List.first(relations)
 
-      ElasticsearchMock
-      |> expect(:request, fn
+      Mox.expect(MockClusterHandler, :call, 6, fn
+        :bg, TdBg.Permissions, :get_default_permissions, [] ->
+          {:ok, @concept_permissions}
+
+        :bg, TdBg.BusinessConcepts.Search.Query, :build_filters, [permissions, opts] ->
+          assert permissions == %{
+                   "manage_business_concept_links" => [user_domain_id],
+                   "manage_confidential_business_concepts" => :none,
+                   "view_approval_pending_business_concepts" => :none,
+                   "view_deprecated_business_concepts" => :none,
+                   "view_draft_business_concepts" => [user_domain_id],
+                   "view_published_business_concepts" => :none,
+                   "view_rejected_business_concepts" => :none,
+                   "view_versioned_business_concepts" => :none
+                 }
+
+          assert opts[:field_prefix] in ["source_data.", "target_data."]
+
+          {:ok,
+           [
+             %{
+               bool: %{
+                 filter: [
+                   %{term: %{"status" => "draft"}},
+                   %{term: %{"domain_ids" => user_domain_id}}
+                 ]
+               }
+             },
+             %{bool: %{must_not: [%{term: %{"#{opts[:field_prefix]}confidential.raw" => true}}]}},
+             %{term: %{"#{opts[:field_prefix]}domain_ids" => user_domain_id}}
+           ]}
+
+        :dd, TdDd.DataStructures.Search.Query, :build_filters, [permissions, opts] ->
+          assert permissions == %{
+                   "manage_confidential_structures" => :none,
+                   "link_data_structure" => [user_domain_id]
+                 }
+
+          assert opts[:field_prefix] in ["source_data.", "target_data."]
+
+          {:ok,
+           [
+             %{term: %{"#{opts[:field_prefix]}domain_ids" => user_domain_id}},
+             %{term: %{"#{opts[:field_prefix]}confidential" => false}}
+           ]}
+      end)
+
+      expect(ElasticsearchMock, :request, fn
         _,
         :post,
         "/relations/_search",
@@ -145,7 +676,105 @@ defmodule TdLm.SearchTest do
           query: query
         },
         _ ->
-          assert %{bool: %{filter: %{term: %{"domain_ids" => ^user_domain_id}}}} = query
+          assert query == %{
+                   bool: %{
+                     filter: [
+                       %{
+                         bool: %{
+                           should: [
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"target_type" => "business_concept"}},
+                                   %{
+                                     bool: %{
+                                       filter: [
+                                         %{term: %{"status" => "draft"}},
+                                         %{term: %{"domain_ids" => user_domain_id}}
+                                       ]
+                                     }
+                                   },
+                                   %{
+                                     bool: %{
+                                       must_not: [
+                                         %{term: %{"target_data.confidential.raw" => true}}
+                                       ]
+                                     }
+                                   },
+                                   %{term: %{"target_data.domain_ids" => user_domain_id}}
+                                 ]
+                               }
+                             },
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"target_type" => "data_structure"}},
+                                   %{term: %{"target_data.domain_ids" => user_domain_id}},
+                                   %{term: %{"target_data.confidential" => false}}
+                                 ]
+                               }
+                             },
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"target_type" => "quality_control"}},
+                                   %{match_none: %{}}
+                                 ]
+                               }
+                             }
+                           ]
+                         }
+                       },
+                       %{
+                         bool: %{
+                           should: [
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"source_type" => "business_concept"}},
+                                   %{
+                                     bool: %{
+                                       filter: [
+                                         %{term: %{"status" => "draft"}},
+                                         %{term: %{"domain_ids" => user_domain_id}}
+                                       ]
+                                     }
+                                   },
+                                   %{
+                                     bool: %{
+                                       must_not: [
+                                         %{term: %{"source_data.confidential.raw" => true}}
+                                       ]
+                                     }
+                                   },
+                                   %{term: %{"source_data.domain_ids" => user_domain_id}}
+                                 ]
+                               }
+                             },
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"source_type" => "data_structure"}},
+                                   %{term: %{"source_data.domain_ids" => user_domain_id}},
+                                   %{term: %{"source_data.confidential" => false}}
+                                 ]
+                               }
+                             },
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"source_type" => "quality_control"}},
+                                   %{match_none: %{}}
+                                 ]
+                               }
+                             }
+                           ]
+                         }
+                       }
+                     ],
+                     must_not: %{exists: %{field: "deleted_at"}}
+                   }
+                 }
 
           SearchHelpers.hits_response([relation])
       end)
@@ -170,13 +799,47 @@ defmodule TdLm.SearchTest do
                    "target_type" => ^relation_target_type
                  }
                ]
-             } = Search.search(%{}, claims)
+             } = Search.search(%{"linkable" => true}, claims)
     end
 
     @tag authentication: [role: "user"]
     test "returns empty for non admin user account", %{claims: claims} do
-      ElasticsearchMock
-      |> expect(:request, fn
+      Mox.expect(MockClusterHandler, :call, 6, fn
+        :bg, TdBg.Permissions, :get_default_permissions, [] ->
+          {:ok, @concept_permissions}
+
+        :bg, TdBg.BusinessConcepts.Search.Query, :build_filters, [permissions, opts] ->
+          assert permissions == %{
+                   "manage_business_concept_links" => :none,
+                   "manage_confidential_business_concepts" => :none,
+                   "view_approval_pending_business_concepts" => :none,
+                   "view_deprecated_business_concepts" => :none,
+                   "view_draft_business_concepts" => :none,
+                   "view_published_business_concepts" => :none,
+                   "view_rejected_business_concepts" => :none,
+                   "view_versioned_business_concepts" => :none
+                 }
+
+          assert opts[:field_prefix] in ["source_data.", "target_data."]
+
+          {:ok,
+           [
+             %{match_none: %{}},
+             %{bool: %{must_not: [%{term: %{"#{opts[:field_prefix]}confidential.raw" => true}}]}}
+           ]}
+
+        :dd, TdDd.DataStructures.Search.Query, :build_filters, [permissions, opts] ->
+          assert permissions == %{
+                   "view_data_structure" => :none,
+                   "manage_confidential_structures" => :none
+                 }
+
+          assert opts[:field_prefix] in ["source_data.", "target_data."]
+
+          {:ok, %{match_none: %{}}}
+      end)
+
+      expect(ElasticsearchMock, :request, fn
         _,
         :post,
         "/relations/_search",
@@ -186,7 +849,87 @@ defmodule TdLm.SearchTest do
           query: query
         },
         _ ->
-          assert %{bool: %{filter: %{match_none: %{}}}} = query
+          assert query == %{
+                   bool: %{
+                     filter: [
+                       %{
+                         bool: %{
+                           should: [
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"target_type" => "business_concept"}},
+                                   %{match_none: %{}},
+                                   %{
+                                     bool: %{
+                                       must_not: [
+                                         %{term: %{"target_data.confidential.raw" => true}}
+                                       ]
+                                     }
+                                   }
+                                 ]
+                               }
+                             },
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"target_type" => "data_structure"}},
+                                   %{match_none: %{}}
+                                 ]
+                               }
+                             },
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"target_type" => "quality_control"}},
+                                   %{match_none: %{}}
+                                 ]
+                               }
+                             }
+                           ]
+                         }
+                       },
+                       %{
+                         bool: %{
+                           should: [
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"source_type" => "business_concept"}},
+                                   %{match_none: %{}},
+                                   %{
+                                     bool: %{
+                                       must_not: [
+                                         %{term: %{"source_data.confidential.raw" => true}}
+                                       ]
+                                     }
+                                   }
+                                 ]
+                               }
+                             },
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"source_type" => "data_structure"}},
+                                   %{match_none: %{}}
+                                 ]
+                               }
+                             },
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"source_type" => "quality_control"}},
+                                   %{match_none: %{}}
+                                 ]
+                               }
+                             }
+                           ]
+                         }
+                       }
+                     ],
+                     must_not: %{exists: %{field: "deleted_at"}}
+                   }
+                 }
 
           SearchHelpers.hits_response([])
       end)
@@ -197,6 +940,37 @@ defmodule TdLm.SearchTest do
     @tag authentication: [role: "admin"]
     test "includes scroll_id in response", %{claims: claims} do
       %{"relations" => relations} = create_relations()
+
+      Mox.expect(MockClusterHandler, :call, 6, fn
+        :bg, TdBg.Permissions, :get_default_permissions, [] ->
+          {:ok, @concept_permissions}
+
+        :bg, TdBg.BusinessConcepts.Search.Query, :build_filters, [permissions, opts] ->
+          assert permissions == %{
+                   "manage_business_concept_links" => :all,
+                   "manage_confidential_business_concepts" => :all,
+                   "view_approval_pending_business_concepts" => :all,
+                   "view_deprecated_business_concepts" => :all,
+                   "view_draft_business_concepts" => :all,
+                   "view_published_business_concepts" => :all,
+                   "view_rejected_business_concepts" => :all,
+                   "view_versioned_business_concepts" => :all
+                 }
+
+          assert opts[:field_prefix] in ["source_data.", "target_data."]
+
+          {:ok, [%{match_all: %{}}]}
+
+        :dd, TdDd.DataStructures.Search.Query, :build_filters, [permissions, opts] ->
+          assert permissions == %{
+                   "view_data_structure" => :all,
+                   "manage_confidential_structures" => :all
+                 }
+
+          assert opts[:field_prefix] in ["source_data.", "target_data."]
+
+          {:ok, %{match_all: %{}}}
+      end)
 
       ElasticsearchMock
       |> expect(:request, fn _, :post, "/relations/_search", _, [params: %{"scroll" => "1m"}] ->
@@ -218,8 +992,38 @@ defmodule TdLm.SearchTest do
       %{"relations" => relations} = create_relations()
       insert(:relation, status: "approved")
 
-      ElasticsearchMock
-      |> expect(:request, fn
+      Mox.expect(MockClusterHandler, :call, 6, fn
+        :bg, TdBg.Permissions, :get_default_permissions, [] ->
+          {:ok, @concept_permissions}
+
+        :bg, TdBg.BusinessConcepts.Search.Query, :build_filters, [permissions, opts] ->
+          assert permissions == %{
+                   "manage_business_concept_links" => :all,
+                   "manage_confidential_business_concepts" => :all,
+                   "view_approval_pending_business_concepts" => :all,
+                   "view_deprecated_business_concepts" => :all,
+                   "view_draft_business_concepts" => :all,
+                   "view_published_business_concepts" => :all,
+                   "view_rejected_business_concepts" => :all,
+                   "view_versioned_business_concepts" => :all
+                 }
+
+          assert opts[:field_prefix] in ["source_data.", "target_data."]
+
+          {:ok, [%{match_all: %{}}]}
+
+        :dd, TdDd.DataStructures.Search.Query, :build_filters, [permissions, opts] ->
+          assert permissions == %{
+                   "view_data_structure" => :all,
+                   "manage_confidential_structures" => :all
+                 }
+
+          assert opts[:field_prefix] in ["source_data.", "target_data."]
+
+          {:ok, %{match_all: %{}}}
+      end)
+
+      expect(ElasticsearchMock, :request, fn
         _,
         :post,
         "/relations/_search",
@@ -229,7 +1033,74 @@ defmodule TdLm.SearchTest do
           query: query
         },
         _ ->
-          assert %{bool: %{filter: %{term: %{"status" => "pending"}}}} == query
+          assert query == %{
+                   bool: %{
+                     filter: [
+                       %{term: %{"status" => "pending"}},
+                       %{
+                         bool: %{
+                           should: [
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"target_type" => "business_concept"}},
+                                   %{match_all: %{}}
+                                 ]
+                               }
+                             },
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"target_type" => "data_structure"}},
+                                   %{match_all: %{}}
+                                 ]
+                               }
+                             },
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"target_type" => "quality_control"}},
+                                   %{match_all: %{}}
+                                 ]
+                               }
+                             }
+                           ]
+                         }
+                       },
+                       %{
+                         bool: %{
+                           should: [
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"source_type" => "business_concept"}},
+                                   %{match_all: %{}}
+                                 ]
+                               }
+                             },
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"source_type" => "data_structure"}},
+                                   %{match_all: %{}}
+                                 ]
+                               }
+                             },
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"source_type" => "quality_control"}},
+                                   %{match_all: %{}}
+                                 ]
+                               }
+                             }
+                           ]
+                         }
+                       }
+                     ],
+                     must_not: %{exists: %{field: "deleted_at"}}
+                   }
+                 }
 
           SearchHelpers.hits_response(relations)
       end)
@@ -244,8 +1115,38 @@ defmodule TdLm.SearchTest do
     test "admin can search all relations with taxonomy filter", %{claims: claims} do
       %{"relations" => [relation | _], "domains" => [%{id: domain_id} | _]} = create_relations()
 
-      ElasticsearchMock
-      |> expect(:request, fn
+      Mox.expect(MockClusterHandler, :call, 6, fn
+        :bg, TdBg.Permissions, :get_default_permissions, [] ->
+          {:ok, @concept_permissions}
+
+        :bg, TdBg.BusinessConcepts.Search.Query, :build_filters, [permissions, opts] ->
+          assert permissions == %{
+                   "manage_business_concept_links" => :all,
+                   "manage_confidential_business_concepts" => :all,
+                   "view_approval_pending_business_concepts" => :all,
+                   "view_deprecated_business_concepts" => :all,
+                   "view_draft_business_concepts" => :all,
+                   "view_published_business_concepts" => :all,
+                   "view_rejected_business_concepts" => :all,
+                   "view_versioned_business_concepts" => :all
+                 }
+
+          assert opts[:field_prefix] in ["source_data.", "target_data."]
+
+          {:ok, [%{match_all: %{}}]}
+
+        :dd, TdDd.DataStructures.Search.Query, :build_filters, [permissions, opts] ->
+          assert permissions == %{
+                   "view_data_structure" => :all,
+                   "manage_confidential_structures" => :all
+                 }
+
+          assert opts[:field_prefix] in ["source_data.", "target_data."]
+
+          {:ok, %{match_all: %{}}}
+      end)
+
+      expect(ElasticsearchMock, :request, fn
         _,
         :post,
         "/relations/_search",
@@ -255,7 +1156,74 @@ defmodule TdLm.SearchTest do
           query: query
         },
         _ ->
-          assert %{bool: %{filter: %{term: %{"domain_ids" => ^domain_id}}}} = query
+          assert query == %{
+                   bool: %{
+                     filter: [
+                       %{term: %{"domain_ids" => domain_id}},
+                       %{
+                         bool: %{
+                           should: [
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"target_type" => "business_concept"}},
+                                   %{match_all: %{}}
+                                 ]
+                               }
+                             },
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"target_type" => "data_structure"}},
+                                   %{match_all: %{}}
+                                 ]
+                               }
+                             },
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"target_type" => "quality_control"}},
+                                   %{match_all: %{}}
+                                 ]
+                               }
+                             }
+                           ]
+                         }
+                       },
+                       %{
+                         bool: %{
+                           should: [
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"source_type" => "business_concept"}},
+                                   %{match_all: %{}}
+                                 ]
+                               }
+                             },
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"source_type" => "data_structure"}},
+                                   %{match_all: %{}}
+                                 ]
+                               }
+                             },
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"source_type" => "quality_control"}},
+                                   %{match_all: %{}}
+                                 ]
+                               }
+                             }
+                           ]
+                         }
+                       }
+                     ],
+                     must_not: %{exists: %{field: "deleted_at"}}
+                   }
+                 }
 
           SearchHelpers.hits_response([relation])
       end)
@@ -277,8 +1245,38 @@ defmodule TdLm.SearchTest do
           target_data: %{domain_ids: [target_domain.id], name: "Target"}
         })
 
-      ElasticsearchMock
-      |> expect(:request, fn
+      Mox.expect(MockClusterHandler, :call, 6, fn
+        :bg, TdBg.Permissions, :get_default_permissions, [] ->
+          {:ok, @concept_permissions}
+
+        :bg, TdBg.BusinessConcepts.Search.Query, :build_filters, [permissions, opts] ->
+          assert permissions == %{
+                   "manage_business_concept_links" => :all,
+                   "manage_confidential_business_concepts" => :all,
+                   "view_approval_pending_business_concepts" => :all,
+                   "view_deprecated_business_concepts" => :all,
+                   "view_draft_business_concepts" => :all,
+                   "view_published_business_concepts" => :all,
+                   "view_rejected_business_concepts" => :all,
+                   "view_versioned_business_concepts" => :all
+                 }
+
+          assert opts[:field_prefix] in ["source_data.", "target_data."]
+
+          {:ok, [%{match_all: %{}}]}
+
+        :dd, TdDd.DataStructures.Search.Query, :build_filters, [permissions, opts] ->
+          assert permissions == %{
+                   "view_data_structure" => :all,
+                   "manage_confidential_structures" => :all
+                 }
+
+          assert opts[:field_prefix] in ["source_data.", "target_data."]
+
+          {:ok, %{match_all: %{}}}
+      end)
+
+      expect(ElasticsearchMock, :request, fn
         _,
         :post,
         "/relations/_search",
@@ -288,7 +1286,74 @@ defmodule TdLm.SearchTest do
           query: query
         },
         _ ->
-          assert %{bool: %{filter: %{term: %{"origin" => "suggested"}}}} = query
+          assert query == %{
+                   bool: %{
+                     filter: [
+                       %{term: %{"origin" => "suggested"}},
+                       %{
+                         bool: %{
+                           should: [
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"target_type" => "business_concept"}},
+                                   %{match_all: %{}}
+                                 ]
+                               }
+                             },
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"target_type" => "data_structure"}},
+                                   %{match_all: %{}}
+                                 ]
+                               }
+                             },
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"target_type" => "quality_control"}},
+                                   %{match_all: %{}}
+                                 ]
+                               }
+                             }
+                           ]
+                         }
+                       },
+                       %{
+                         bool: %{
+                           should: [
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"source_type" => "business_concept"}},
+                                   %{match_all: %{}}
+                                 ]
+                               }
+                             },
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"source_type" => "data_structure"}},
+                                   %{match_all: %{}}
+                                 ]
+                               }
+                             },
+                             %{
+                               bool: %{
+                                 filter: [
+                                   %{term: %{"source_type" => "quality_control"}},
+                                   %{match_all: %{}}
+                                 ]
+                               }
+                             }
+                           ]
+                         }
+                       }
+                     ],
+                     must_not: %{exists: %{field: "deleted_at"}}
+                   }
+                 }
 
           SearchHelpers.hits_response([relation])
       end)

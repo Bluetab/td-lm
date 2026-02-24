@@ -27,6 +27,7 @@ Run all aplication tests with `mix test`
 
 - `REDIS_AUDIT_STREAM_MAXLEN` (Optional) Maximum length for Redis audit stream. Default: 100
 - `REDIS_STREAM_MAXLEN` (Optional) Maximum length for Redis stream. Default: 100
+- `REDIS_CACHE_TIMEOUT` (Optional) environment variable configures the timeout (in milliseconds) for Redis cache operations, preventing indefinite waits during bulk link creation. Default value is 120000 (2 minutes)
 
 ### SSL conection
 
@@ -50,7 +51,6 @@ with value `Basic <ES_USERNAME>:<ES_PASSWORD>`
 
 - ES_USERNAME: Username
 - ES_PASSWORD: Password
-
 
 #### (Optional) ApiKey authentication
 
@@ -82,7 +82,6 @@ These environment variables control the force merge operation for ElasticSearch 
   - **Default**: `5`
   - **Usage**: Controls how aggressively the force merge operation consolidates segments. Lower values result in fewer, larger segments
   - **Performance**: Fewer segments generally improve search performance but may increase memory usage during the merge operation
-
 
 ### Oban configuration
 

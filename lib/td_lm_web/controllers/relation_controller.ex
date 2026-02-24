@@ -95,15 +95,29 @@ defmodule TdLmWeb.RelationController do
 
   def create(conn, %{"relation" => params}) do
     claims = conn.assigns[:current_resource]
-
     Process.put(:event_via, "single_update")
 
     updated_relation_params = add_tag_id(params)
 
-    with {:params, %{"source_id" => source_id, "source_type" => source_type}} <-
+    with {:params,
+          %{
+            "source_id" => source_id,
+            "source_type" => source_type,
+            "target_type" => target_type,
+            "target_id" => target_id
+          }} <-
            {:params, updated_relation_params},
          {:can, true} <-
-           {:can, can?(claims, create(%{resource_id: source_id, resource_type: source_type}))},
+           {:can,
+            can?(
+              claims,
+              create(%{
+                resource_id: source_id,
+                resource_type: source_type,
+                target_type: target_type,
+                target_id: target_id
+              })
+            )},
          {:ok, %{relation: relation}} <-
            Resources.create_relation(updated_relation_params, claims) do
       conn

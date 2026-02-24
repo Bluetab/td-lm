@@ -6,6 +6,7 @@ defmodule TdLm.Audit do
   """
   alias TdCache.ConceptCache
   alias TdCache.IngestCache
+  alias TdCluster.Cluster.TdQx
   alias TdDfLib.Templates
 
   @doc """
@@ -13,6 +14,17 @@ defmodule TdLm.Audit do
   """
   def relation_deleted(_repo, %{relation: relation}, user_id) do
     do_relation_deleted(relation, user_id)
+  end
+
+  def relation_deleted(_repo, %{stale_relations: {_count, relations}}, user_id) do
+    relations
+    |> Enum.map(&do_relation_deleted(&1, user_id))
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+    |> then(fn
+      response when map_size(response) == 0 -> {:ok, []}
+      %{error: errors} -> {:error, errors}
+      %{ok: event_ids} -> {:ok, event_ids}
+    end)
   end
 
   @doc """
@@ -169,6 +181,16 @@ defmodule TdLm.Audit do
     end
   end
 
+  defp put_domain_ids(payload, %{source_type: "quality_control", source_id: source_id}) do
+    case TdQx.get_quality_control(source_id) do
+      {:ok, %{domain_ids: domain_ids}} ->
+        Map.put(payload, :domain_ids, domain_ids)
+
+      _ ->
+        payload
+    end
+  end
+
   defp put_domain_ids(payload, %{source_type: "ingest", source_id: source_id})
        when not is_integer(source_id) do
     Map.put(payload, :domain_ids, IngestCache.get_domain_ids(source_id))
@@ -194,25 +216,37 @@ defmodule TdLm.Audit do
   @doc """
   Inserts multiple relation created audits into the multi.
   """
-  def bulk_relation_creation(_repo, data, user_id) do
+  def bulk_relation_creation(_repo, %{relations: {_count, relations}}, user_id) do
     result =
-      Enum.map(data, fn {_, relation} ->
-        payload =
-          %{
-            id: relation.id,
-            source_id: relation.source_id,
-            source_type: relation.source_type,
-            target_id: relation.target_id,
-            target_types: [relation.target_type],
-            tag_id: relation.tag_id
-          }
-          |> put_subscribable_fields(relation)
-          |> put_domain_ids(relation)
-          |> add_event_via()
-
+      Enum.map(relations, fn relation ->
+        payload = relation_creation_payload(relation)
         publish("relation_created", relation.source_type, relation.source_id, user_id, payload)
       end)
 
     {:ok, result}
+  end
+
+  def bulk_relation_creation(_repo, data, user_id) do
+    result =
+      Enum.map(data, fn {_, relation} ->
+        payload = relation_creation_payload(relation)
+        publish("relation_created", relation.source_type, relation.source_id, user_id, payload)
+      end)
+
+    {:ok, result}
+  end
+
+  defp relation_creation_payload(relation) do
+    %{
+      id: relation.id,
+      source_id: relation.source_id,
+      source_type: relation.source_type,
+      target_id: relation.target_id,
+      target_types: [relation.target_type],
+      tag_id: relation.tag_id
+    }
+    |> put_subscribable_fields(relation)
+    |> put_domain_ids(relation)
+    |> add_event_via()
   end
 end

@@ -92,6 +92,56 @@ defmodule TdLm.AuditTest do
 
       assert %{"event_via" => nil, "id" => ^relation_id} = Jason.decode!(payload)
     end
+
+    test "publishes audit event for quality control", %{
+      user: %{id: user_id}
+    } do
+      source_id = System.unique_integer([:positive])
+      domain_id = System.unique_integer([:positive])
+      source_type = "quality_control"
+      target_type = "data_structure"
+
+      %{target_id: target_id} =
+        relation =
+        build(:relation,
+          source_id: source_id,
+          source_type: source_type,
+          target_type: target_type,
+          tags: []
+        )
+
+      changes = %{
+        source_id: source_id,
+        source_type: source_type,
+        target_id: target_id,
+        target_type: target_type
+      }
+
+      Mox.expect(MockClusterHandler, :call, 2, fn :qx, TdQx.QualityControls, :get, [^source_id] ->
+        {:ok, %{domain_ids: [domain_id]}}
+      end)
+
+      Process.put(:event_via, "single_update")
+
+      assert {:ok, _event_id} =
+               Audit.relation_created(
+                 nil,
+                 %{relation_with_optional_tag: relation},
+                 %{changes: changes},
+                 user_id
+               )
+
+      assert {:ok, [%{event: event, payload: payload}]} =
+               Stream.read(:redix, @stream, transform: true)
+
+      assert event == "relation_created"
+
+      assert %{
+               "event_via" => "single_update",
+               "source_id" => ^source_id,
+               "domain_ids" => [^domain_id]
+             } = Jason.decode!(payload)
+    end
   end
 
   describe "relation_deleted/3" do
@@ -160,6 +210,47 @@ defmodule TdLm.AuditTest do
                "event_via" => nil,
                "id" => ^relation_id,
                "target_id" => ^target_id
+             } = Jason.decode!(payload)
+    end
+
+    test "publishes audit event for quality control", %{
+      user: %{id: user_id}
+    } do
+      source_id = System.unique_integer([:positive])
+      domain_id = System.unique_integer([:positive])
+      source_type = "quality_control"
+      target_type = "data_structure"
+
+      relation =
+        build(:relation,
+          source_id: source_id,
+          source_type: source_type,
+          target_type: target_type,
+          tags: []
+        )
+
+      Mox.expect(MockClusterHandler, :call, 2, fn :qx, TdQx.QualityControls, :get, [^source_id] ->
+        {:ok, %{domain_ids: [domain_id]}}
+      end)
+
+      Process.put(:event_via, "single_update")
+
+      assert {:ok, _event_id} =
+               Audit.relation_deleted(
+                 nil,
+                 %{relation: relation},
+                 user_id
+               )
+
+      assert {:ok, [%{event: event, payload: payload}]} =
+               Stream.read(:redix, @stream, transform: true)
+
+      assert event == "relation_deleted"
+
+      assert %{
+               "event_via" => "single_update",
+               "domain_ids" => [^domain_id],
+               "target_type" => ^target_type
              } = Jason.decode!(payload)
     end
   end

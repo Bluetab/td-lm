@@ -12,9 +12,11 @@ defmodule TdLm.Resources do
 
   alias TdCache.ConceptCache
   alias TdCache.DomainCache
+  alias TdCache.LinkCache
   alias TdCache.StructureCache
   alias TdCluster.Cluster.TdBg
   alias TdCluster.Cluster.TdDd
+  alias TdCore.Search.Store
   alias TdLm.Audit
   alias TdLm.Auth.Claims
   alias TdLm.Cache.LinkLoader
@@ -32,6 +34,14 @@ defmodule TdLm.Resources do
     "target_type",
     "domain_external_id"
   ]
+
+  @index_to_resource_type %{
+    concepts: "business_concept",
+    quality_controls: "quality_control",
+    structures: "data_structure"
+  }
+
+  @system_user_id 0
 
   def list_relations(params \\ %{}) do
     params
@@ -59,23 +69,6 @@ defmodule TdLm.Resources do
 
     Enum.reduce(value, q, fn {k, v}, q ->
       where(q, [_, rt], rt.value[^k] in ^List.wrap(v))
-    end)
-  end
-
-  @spec count_relations_by_source(any, any) :: map
-  def count_relations_by_source(source_type, target_type) do
-    Relation
-    |> Repo.all()
-    |> Enum.group_by(& &1.source_id)
-    |> Enum.map(fn {key, value} ->
-      {key, count_valid_relations(value, source_type, target_type)}
-    end)
-    |> Map.new()
-  end
-
-  defp count_valid_relations(value, source_type, target_type) do
-    Enum.count(value, fn r ->
-      r.source_type == source_type and r.target_type == target_type
     end)
   end
 
@@ -135,6 +128,70 @@ defmodule TdLm.Resources do
         error
     end)
   end
+
+  def upsert_relations(relations, opts \\ []) do
+    user_id = Keyword.get(opts, :user_id, @system_user_id)
+    cleanup_params = Keyword.get(opts, :cleanup_params, [])
+    now = DateTime.utc_now()
+
+    placeholders = %{
+      inserted_at: {:placeholder, :now},
+      updated_at: {:placeholder, :now}
+    }
+
+    relations = Enum.map(relations, &Map.merge(&1, placeholders))
+
+    Multi.new()
+    |> Multi.insert_all(:relations, Relation, relations,
+      placeholders: %{now: now},
+      on_conflict: {:replace, [:updated_at, :origin]},
+      conflict_target:
+        {:unsafe_fragment,
+         "(source_id, source_type, target_id, target_type, COALESCE(tag_id, -1)) WHERE deleted_at IS NULL"},
+      returning: true
+    )
+    |> maybe_cleanup_relations(cleanup_params, user_id)
+    |> Multi.run(:audit_creation, Audit, :bulk_relation_creation, [user_id])
+    |> Repo.transaction()
+    |> tap(fn
+      {:ok, %{relations: {_count, relations}, stale_relations: {_count_stale, stale_relations}}} ->
+        upserted_ids = Enum.map(relations, & &1.id)
+        LinkLoader.refresh(upserted_ids)
+        Indexer.reindex(upserted_ids)
+
+        stale_ids = Enum.map(stale_relations, & &1.id)
+        Enum.each(stale_ids, &LinkCache.delete(&1, publish: false))
+        Indexer.delete(stale_ids)
+
+      {:ok, %{relations: {_count, relations}}} ->
+        upserted_ids = Enum.map(relations, & &1.id)
+        LinkLoader.refresh(upserted_ids)
+        Indexer.reindex(upserted_ids)
+
+      _other ->
+        :noop
+    end)
+  end
+
+  defp maybe_cleanup_relations(multi, [_ | _] = cleanup_params, user_id) do
+    multi
+    |> Multi.delete_all(:stale_relations, fn %{relations: {_count, relations}} ->
+      cleanup_params
+      |> Enum.reduce(Relation, fn
+        {:origin, origin}, q -> where(q, [r], r.origin == ^origin)
+        {:source_id, source_id}, q -> where(q, [r], r.source_id == ^source_id)
+        {:source_type, source_type}, q -> where(q, [r], r.source_type == ^source_type)
+        {:target_id, target_id}, q -> where(q, [r], r.target_id == ^target_id)
+        {:target_type, target_type}, q -> where(q, [r], r.target_type == ^target_type)
+      end)
+      |> where([r], r.id not in ^Enum.map(relations, & &1.id))
+      |> where([r], is_nil(r.deleted_at))
+      |> select([r], r)
+    end)
+    |> Multi.run(:audit_deletion, Audit, :relation_deleted, [user_id])
+  end
+
+  defp maybe_cleanup_relations(multi, [], _user_id), do: multi
 
   defp maybe_preload_tag(%{relation: %{tag_id: nil} = relation}),
     do: {:ok, Map.put(relation, :tag, nil)}
@@ -273,8 +330,7 @@ defmodule TdLm.Resources do
     Indexer.reindex(updated_relation_ids)
 
     errors =
-      (allowed_errors ++ validation_errors)
-      |> Enum.map(fn {relation, errors} ->
+      Enum.map(allowed_errors ++ validation_errors, fn {relation, errors} ->
         {relations_map(relation, cache_data), errors}
       end)
 
@@ -831,6 +887,76 @@ defmodule TdLm.Resources do
     res
   end
 
+  def delete_stale_relations(resource_type, resource_ids) do
+    Multi.new()
+    |> Multi.delete_all(
+      :stale_relations,
+      Relation
+      |> where([r], r.source_type == ^resource_type and r.source_id in ^resource_ids)
+      |> or_where([r], r.target_type == ^resource_type and r.target_id in ^resource_ids)
+      |> select([r], r)
+    )
+    |> Multi.run(:audit, Audit, :relation_deleted, [@system_user_id])
+    |> Repo.transaction()
+    |> tap(fn
+      {:ok, %{stale_relations: {_count, relations}}} ->
+        ids = Enum.map(relations, & &1.id)
+        Enum.each(ids, &LinkCache.delete(&1, publish: false))
+        Indexer.delete(ids)
+
+      _other ->
+        :noop
+    end)
+  end
+
+  def refresh_search_data(index, resource_ids) do
+    @index_to_resource_type
+    |> Map.get(index)
+    |> list_relation_ids(resource_ids)
+    |> Indexer.reindex()
+  end
+
+  def count_relations(params \\ []) do
+    params
+    |> Enum.reduce(Relation, fn
+      {:source_type, source_type}, query ->
+        where(query, [r], r.source_type == ^source_type)
+
+      {:source_id, source_id}, query ->
+        where(query, [r], r.source_id == ^source_id)
+
+      {:target_type, target_type}, query ->
+        where(query, [r], r.target_type == ^target_type)
+
+      {:target_id, target_id}, query ->
+        where(query, [r], r.target_id == ^target_id)
+    end)
+    |> where([r], is_nil(r.deleted_at))
+    |> Repo.aggregate(:count, :id)
+  end
+
+  defp list_relation_ids(resource_type, :all) when is_binary(resource_type) do
+    Relation
+    |> where([r], is_nil(r.deleted_at))
+    |> where([r], r.source_type == ^resource_type)
+    |> or_where([r], r.target_type == ^resource_type)
+    |> select([r], r.id)
+    |> Repo.all()
+  end
+
+  defp list_relation_ids(resource_type, resource_ids) when is_binary(resource_type) do
+    resource_ids = List.wrap(resource_ids)
+
+    Relation
+    |> where([r], is_nil(r.deleted_at))
+    |> where([r], r.source_type == ^resource_type and r.source_id in ^resource_ids)
+    |> or_where([r], r.target_type == ^resource_type and r.target_id in ^resource_ids)
+    |> select([r], r.id)
+    |> Repo.all()
+  end
+
+  defp list_relation_ids(_resource_type, _resource_id), do: []
+
   @doc """
   Returns the list of tags.
   """
@@ -961,18 +1087,17 @@ defmodule TdLm.Resources do
     |> Multi.update_all(:deprecated, query, set: [deleted_at: ts])
     |> Multi.run(:audit, Audit, :relations_deprecated, [])
     |> Repo.transaction()
-    |> on_deprecate()
+    |> tap(&on_deprecate/1)
   end
 
   def deprecate(_resource_type, []), do: {:ok, %{deprecated: {0, []}}}
 
-  defp on_deprecate({:ok, %{deprecated: {_count, relations}}} = res) do
+  defp on_deprecate({:ok, %{deprecated: {_count, relations}}}) do
     ids = Enum.map(relations, & &1.id)
-    Indexer.delete(ids)
-    res
+    Indexer.reindex(ids)
   end
 
-  defp on_deprecate(res), do: res
+  defp on_deprecate(_res), do: :noop
 
   def migrate_impl_id_to_impl_ref([]), do: []
 
@@ -1147,5 +1272,49 @@ defmodule TdLm.Resources do
 
   def get_data("data_structure", id, %{data_structures: data_structures}) do
     Map.get(data_structures, id, %{})
+  end
+
+  def search_data(relations) do
+    relations
+    |> Enum.reduce(%{}, fn %{
+                             source_type: source_type,
+                             source_id: source_id,
+                             target_type: target_type,
+                             target_id: target_id
+                           },
+                           acc ->
+      acc
+      |> Map.update(source_type, [source_id], fn ids -> [source_id | ids] end)
+      |> Map.update(target_type, [target_id], fn ids -> [target_id | ids] end)
+    end)
+    |> Map.take(["business_concept", "data_structure", "quality_control"])
+    |> Task.async_stream(fn
+      {"business_concept", ids} ->
+        concept_map =
+          :concepts
+          |> Store.fetch(ids)
+          |> Map.new(fn concept -> {concept.business_concept_id, concept} end)
+
+        {"business_concept", concept_map}
+
+      {"data_structure", ids} ->
+        structure_map =
+          :structures
+          |> Store.fetch(ids)
+          |> Map.new(fn structure -> {structure.data_structure_id, structure} end)
+
+        {"data_structure", structure_map}
+
+      {"quality_control", ids} ->
+        quality_control_map =
+          :quality_controls
+          |> Store.fetch(ids)
+          |> Map.new(fn quality_control ->
+            {quality_control.quality_control_id, quality_control}
+          end)
+
+        {"quality_control", quality_control_map}
+    end)
+    |> Map.new(fn {:ok, pairs} -> pairs end)
   end
 end

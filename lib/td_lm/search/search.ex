@@ -5,7 +5,6 @@ defmodule TdLM.Search do
 
   alias TdCore.Search
   alias TdCore.Search.ElasticDocumentProtocol
-  alias TdCore.Search.Permissions
   alias TdCore.Search.Query
   alias TdLm.Auth.Claims
   alias TdLm.Resources.Relation
@@ -13,7 +12,6 @@ defmodule TdLM.Search do
   @default_page 0
   @default_size 20
   @index :relations
-  @permissions ["manage_business_concept_links", "link_data_structure"]
   @accepted_wildcards ["\"", ")"]
 
   def search(%{"scroll_id" => _} = params, _claims) do
@@ -28,7 +26,7 @@ defmodule TdLM.Search do
 
     sort = Map.get(params, "sort", ["_score", "updated_at"])
 
-    {query, _} = build_query(params, claims)
+    query = build_query(params, claims)
 
     do_search(%{from: page * size, size: size, query: query, sort: sort}, params)
   end
@@ -54,18 +52,17 @@ defmodule TdLM.Search do
   end
 
   defp build_query(params, claims) do
-    permissions_filter =
-      Permissions.filter_for_permissions(
-        ["manage_business_concept_links", "link_data_structure"],
-        claims
-      )
+    permissions_filter = TdLm.Search.Query.build_permissions(claims, linkable: params["linkable"])
 
-    query_data = %{aggs: aggs} = fetch_query_data(%Relation{}, params)
+    params =
+      params
+      |> include_deleted()
+      |> Map.drop(["linkable", "document"])
+
+    query_data = fetch_query_data(%Relation{}, params)
     opts = Keyword.new(query_data)
 
-    query = Query.build_query(permissions_filter, params, opts)
-
-    {query, aggs}
+    Query.build_query(permissions_filter, params, opts)
   end
 
   defp transform_response({:ok, response}), do: transform_response(response)
@@ -100,10 +97,14 @@ defmodule TdLM.Search do
 
     opts = Keyword.new(query_data)
 
-    query =
-      @permissions
-      |> Permissions.filter_for_permissions(claims)
-      |> Query.build_query(params, opts)
+    permissions = TdLm.Search.Query.build_permissions(claims, linkable: params["linkable"])
+
+    params =
+      params
+      |> include_deleted()
+      |> Map.drop(["linkable", "document"])
+
+    query = Query.build_query(permissions, params, opts)
 
     search = %{query: query, aggs: aggs, size: 0}
 
@@ -139,4 +140,16 @@ defmodule TdLM.Search do
   end
 
   defp strict_clause(_query_data), do: %{}
+
+  defp include_deleted(%{"with" => "deleted_at"} = params) do
+    params
+  end
+
+  defp include_deleted(%{"document" => "all"} = params) do
+    Map.delete(params, "document")
+  end
+
+  defp include_deleted(params) do
+    Map.put_new(params, "without", "deleted_at")
+  end
 end
